@@ -1,7 +1,7 @@
 # Virtual Garden Management System API
 
 A robust RESTful API for a virtual garden management game built with Go, featuring plant growth mechanics, weather systems, and real-time updates.
-
+<img width="1740" height="820" alt="{180D47E5-04B8-434E-BC21-EE084CB99C26}" src="https://github.com/user-attachments/assets/e5a769e1-416d-490e-b497-1e311bdd0498" />
 ## Features
 
 - 🌱 **Plant Management**: Plant, water, harvest, and manage various plant types

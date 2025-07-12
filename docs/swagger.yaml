@@ -1,0 +1,1084 @@
+basePath: /api/v1
+definitions:
+  handlers.AuthResponse:
+    properties:
+      expires_at:
+        example: "2024-01-02T00:00:00Z"
+        type: string
+      token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      user:
+        $ref: '#/definitions/models.User'
+    type: object
+  handlers.CreateGardenRequest:
+    properties:
+      description:
+        example: A beautiful garden for growing vegetables
+        type: string
+      name:
+        example: My First Garden
+        maxLength: 100
+        minLength: 1
+        type: string
+    required:
+    - name
+    type: object
+  handlers.FertilizePlantRequest:
+    properties:
+      amount:
+        example: 20
+        maximum: 100
+        minimum: 1
+        type: integer
+    required:
+    - amount
+    type: object
+  handlers.LoginRequest:
+    properties:
+      password:
+        example: securepassword123
+        type: string
+      username:
+        example: gardener123
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  handlers.PlantRequest:
+    properties:
+      plant_type_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      position:
+        example: 0
+        maximum: 8
+        minimum: 0
+        type: integer
+    required:
+    - plant_type_id
+    - position
+    type: object
+  handlers.RegisterRequest:
+    properties:
+      email:
+        example: gardener@example.com
+        type: string
+      first_name:
+        example: John
+        type: string
+      last_name:
+        example: Doe
+        type: string
+      password:
+        example: securepassword123
+        minLength: 6
+        type: string
+      username:
+        example: gardener123
+        maxLength: 20
+        minLength: 3
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  handlers.UpdateGardenRequest:
+    properties:
+      description:
+        example: Updated garden description
+        type: string
+      name:
+        example: Updated Garden Name
+        type: string
+    type: object
+  handlers.WaterPlantRequest:
+    properties:
+      amount:
+        example: 30
+        maximum: 100
+        minimum: 1
+        type: integer
+    required:
+    - amount
+    type: object
+  models.Achievement:
+    properties:
+      category:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      icon:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      points:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  models.Garden:
+    properties:
+      created_at:
+        description: Timestamps
+        type: string
+      description:
+        type: string
+      fertilizer_level:
+        description: 0-100
+        type: integer
+      has_composter:
+        type: boolean
+      has_greenhouse:
+        type: boolean
+      has_sprinkler:
+        description: Garden upgrades
+        type: boolean
+      id:
+        type: string
+      last_fertilized_at:
+        type: string
+      last_watered_at:
+        type: string
+      name:
+        type: string
+      plants:
+        items:
+          $ref: '#/definitions/models.Plant'
+        type: array
+      size:
+        description: Garden properties
+        type: integer
+      soil_quality:
+        description: 0-100
+        type: integer
+      updated_at:
+        type: string
+      user:
+        allOf:
+        - $ref: '#/definitions/models.User'
+        description: Relationships
+      user_id:
+        type: string
+      water_level:
+        description: 0-100
+        type: integer
+    type: object
+  models.Plant:
+    properties:
+      created_at:
+        type: string
+      garden:
+        allOf:
+        - $ref: '#/definitions/models.Garden'
+        description: Relationships
+      garden_id:
+        type: string
+      growth_progress:
+        description: 0-100
+        type: number
+      harvested_at:
+        type: string
+      health:
+        description: 0-100
+        type: integer
+      id:
+        type: string
+      last_fertilized_at:
+        type: string
+      last_watered_at:
+        type: string
+      plant_type:
+        $ref: '#/definitions/models.PlantType'
+      plant_type_id:
+        type: string
+      planted_at:
+        description: Timestamps
+        type: string
+      position:
+        description: Position in garden grid (0-8 for 3x3 grid)
+        type: integer
+      stage:
+        allOf:
+        - $ref: '#/definitions/models.PlantStage'
+        description: Plant state
+      updated_at:
+        type: string
+      water_level:
+        description: 0-100
+        type: integer
+    type: object
+  models.PlantStage:
+    enum:
+    - seed
+    - sprout
+    - growing
+    - mature
+    - harvestable
+    - withered
+    type: string
+    x-enum-varnames:
+    - PlantStageSeed
+    - PlantStageSprout
+    - PlantStageGrowing
+    - PlantStageMature
+    - PlantStageHarvestable
+    - PlantStageWithered
+  models.PlantType:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      experience_value:
+        description: XP per harvest
+        type: integer
+      fertilizer_needs:
+        description: 0-100
+        type: integer
+      growth_time:
+        description: Growth properties
+        type: integer
+      harvest_value:
+        description: coins per item
+        type: integer
+      icon:
+        type: string
+      id:
+        type: string
+      min_level:
+        description: Requirements
+        type: integer
+      name:
+        type: string
+      rarity:
+        description: Rarity
+        type: string
+      season:
+        description: spring, summer, autumn, winter, all
+        type: string
+      updated_at:
+        type: string
+      water_needs:
+        description: 0-100
+        type: integer
+      weather:
+        description: sunny, cloudy, rainy, all
+        type: string
+      yield:
+        description: Harvest properties
+        type: integer
+    type: object
+  models.User:
+    properties:
+      achievements:
+        items:
+          $ref: '#/definitions/models.UserAchievement'
+        type: array
+      avatar:
+        type: string
+      coins:
+        type: integer
+      created_at:
+        description: Timestamps
+        type: string
+      email:
+        type: string
+      experience:
+        type: integer
+      first_name:
+        type: string
+      gardens:
+        description: Relationships
+        items:
+          $ref: '#/definitions/models.Garden'
+        type: array
+      id:
+        type: string
+      language:
+        type: string
+      last_login_at:
+        type: string
+      last_name:
+        type: string
+      level:
+        description: Game progression
+        type: integer
+      timezone:
+        description: Game settings
+        type: string
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+  models.UserAchievement:
+    properties:
+      achievement:
+        $ref: '#/definitions/models.Achievement'
+      achievement_id:
+        type: string
+      id:
+        type: string
+      unlocked_at:
+        type: string
+      user:
+        allOf:
+        - $ref: '#/definitions/models.User'
+        description: Relationships
+      user_id:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: A robust RESTful API for a virtual garden management game built with
+    Go.
+  title: Virtual Garden Management System API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Login with username and password to get JWT token
+      parameters:
+      - description: User login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized - Invalid credentials
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Authenticate user
+      tags:
+      - authentication
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Logout user (client-side token removal)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Logout success message
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - bearer: []
+      summary: Logout user
+      tags:
+      - authentication
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refresh the current JWT token to get a new one with extended expiry
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: New token and expiry
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized - Invalid token
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - bearer: []
+      summary: Refresh JWT token
+      tags:
+      - authentication
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account with the provided information
+      parameters:
+      - description: User registration data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict - Username or email already exists
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Register a new user
+      tags:
+      - authentication
+  /gardens:
+    get:
+      consumes:
+      - application/json
+      description: Get all gardens for the current user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of user gardens
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - bearer: []
+      summary: Get user gardens
+      tags:
+      - gardens
+    post:
+      consumes:
+      - application/json
+      description: Create a new garden for the current user
+      parameters:
+      - description: Garden creation data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateGardenRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created garden
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - bearer: []
+      summary: Create a new garden
+      tags:
+      - gardens
+  /gardens/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a garden and all its plants
+      parameters:
+      - description: Garden ID
+        example: '"123e4567-e89b-12d3-a456-426614174000"'
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Garden deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request - Invalid garden ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Garden not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - bearer: []
+      summary: Delete garden
+      tags:
+      - gardens
+    get:
+      consumes:
+      - application/json
+      description: Get a specific garden with all its plants
+      parameters:
+      - description: Garden ID
+        example: '"123e4567-e89b-12d3-a456-426614174000"'
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Garden details with plants
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request - Invalid garden ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Garden not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - bearer: []
+      summary: Get garden details
+      tags:
+      - gardens
+    put:
+      consumes:
+      - application/json
+      description: Update garden information
+      parameters:
+      - description: Garden ID
+        example: '"123e4567-e89b-12d3-a456-426614174000"'
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Garden update data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateGardenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated garden
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Garden not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - bearer: []
+      summary: Update garden
+      tags:
+      - gardens
+  /gardens/{id}/plants:
+    post:
+      consumes:
+      - application/json
+      description: Plant a seed in a garden
+      parameters:
+      - description: Garden ID
+        example: '"123e4567-e89b-12d3-a456-426614174000"'
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Plant data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.PlantRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Planted seed
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Garden or plant type not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Position already occupied
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - bearer: []
+      summary: Plant a seed
+      tags:
+      - plants
+  /gardens/{id}/plants/{plantId}:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a plant from the garden
+      parameters:
+      - description: Garden ID
+        example: '"123e4567-e89b-12d3-a456-426614174000"'
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Plant ID
+        example: '"123e4567-e89b-12d3-a456-426614174001"'
+        in: path
+        name: plantId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Plant removed successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Plant not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - bearer: []
+      summary: Remove a plant
+      tags:
+      - plants
+    put:
+      consumes:
+      - application/json
+      description: Water a plant to increase its water level
+      parameters:
+      - description: Garden ID
+        example: '"123e4567-e89b-12d3-a456-426614174000"'
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Plant ID
+        example: '"123e4567-e89b-12d3-a456-426614174001"'
+        in: path
+        name: plantId
+        required: true
+        type: string
+      - description: Water amount
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.WaterPlantRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated plant
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Plant not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - bearer: []
+      summary: Water a plant
+      tags:
+      - plants
+  /gardens/{id}/plants/{plantId}/fertilize:
+    post:
+      consumes:
+      - application/json
+      description: Apply fertilizer to a plant
+      parameters:
+      - description: Garden ID
+        example: '"123e4567-e89b-12d3-a456-426614174000"'
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Plant ID
+        example: '"123e4567-e89b-12d3-a456-426614174001"'
+        in: path
+        name: plantId
+        required: true
+        type: string
+      - description: Fertilizer amount
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.FertilizePlantRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated plant
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Plant not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - bearer: []
+      summary: Fertilize a plant
+      tags:
+      - plants
+  /gardens/{id}/plants/{plantId}/harvest:
+    post:
+      consumes:
+      - application/json
+      description: Harvest a mature plant to get rewards
+      parameters:
+      - description: Garden ID
+        example: '"123e4567-e89b-12d3-a456-426614174000"'
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Plant ID
+        example: '"123e4567-e89b-12d3-a456-426614174001"'
+        in: path
+        name: plantId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Harvest results
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request - Plant not ready for harvest
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Plant not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - bearer: []
+      summary: Harvest a plant
+      tags:
+      - plants
+  /users/profile:
+    get:
+      consumes:
+      - application/json
+      description: Get the current user's profile and achievements
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User profile with achievements
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - bearer: []
+      summary: Get user profile
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Update the current user's profile information
+      parameters:
+      - description: Profile update data
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated user profile
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - bearer: []
+      summary: Update user profile
+      tags:
+      - users
+  /weather/current:
+    get:
+      consumes:
+      - application/json
+      description: Get current weather conditions and season
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Current weather and season
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get current weather
+      tags:
+      - weather
+  /weather/forecast:
+    get:
+      consumes:
+      - application/json
+      description: Get weather predictions for next 24 hours
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Weather forecasts
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get weather forecast
+      tags:
+      - weather
+  /weather/history:
+    get:
+      consumes:
+      - application/json
+      description: Get historical weather data for the last 24 records
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Weather history
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get weather history
+      tags:
+      - weather
+securityDefinitions:
+  bearer:
+    description: Enter the token with the `Bearer ` prefix, e.g. "Bearer abcde12345"
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

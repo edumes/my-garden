@@ -26,33 +26,6 @@ A robust RESTful API for a virtual garden management game built with Go, featuri
 - **Validation**: Go validator
 - **Configuration**: Environment variables
 
-## Project Structure
-
-```
-├── cmd/
-│   └── server/
-│       └── main.go
-├── internal/
-│   ├── config/
-│   ├── database/
-│   ├── handlers/
-│   ├── middleware/
-│   ├── models/
-│   ├── repositories/
-│   ├── services/
-│   └── utils/
-├── pkg/
-│   ├── auth/
-│   ├── game/
-│   └── websocket/
-├── migrations/
-├── docs/
-├── go.mod
-├── go.sum
-├── env.example
-└── README.md
-```
-
 ## Quick Start
 
 ### Prerequisites

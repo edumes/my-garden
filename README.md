@@ -38,7 +38,7 @@ A robust RESTful API for a virtual garden management game built with Go, featuri
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/edumes/my-garden.git
    cd my-garden
    ```
 
@@ -57,8 +57,6 @@ A robust RESTful API for a virtual garden management game built with Go, featuri
    ```bash
    # Create PostgreSQL database
    createdb my_garden
-   
-   # Run migrations (if using a migration tool)
    ```
 
 5. **Run the application**
@@ -155,14 +153,3 @@ go build -o bin/server cmd/server/main.go
 ```bash
 swag init -g cmd/server/main.go -o docs
 ```
-
-## Configuration
-
-Key configuration options in `.env`:
-
-- `PORT`: Server port (default: 8080)
-- `DB_*`: Database connection settings
-- `REDIS_*`: Redis connection settings
-- `JWT_SECRET`: JWT signing secret
-- `GAME_TICK_INTERVAL`: Game update frequency
-- `WEATHER_UPDATE_INTERVAL`: Weather change frequency

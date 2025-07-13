@@ -19,12 +19,12 @@ const stageIcons = {
 };
 
 const stageColors = {
-  seed: 'bg-yellow-100 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-600',
+  seed: 'bg-accent border-accent-foreground/20',
   sprout: 'bg-green-100 dark:bg-green-900/20 border-green-300 dark:border-green-600',
   growing: 'bg-green-200 dark:bg-green-800/20 border-green-400 dark:border-green-500',
   mature: 'bg-green-300 dark:bg-green-700/20 border-green-500 dark:border-green-400',
   harvestable: 'bg-yellow-200 dark:bg-yellow-800/20 border-yellow-400 dark:border-yellow-500',
-  withered: 'bg-gray-200 dark:bg-gray-700/20 border-gray-400 dark:border-gray-500',
+  withered: 'bg-muted border-muted-foreground/30',
 };
 
 export function PlantCell({ position, plant, onPlantAction, onPlantSeed }: PlantCellProps) {
@@ -34,9 +34,9 @@ export function PlantCell({ position, plant, onPlantAction, onPlantSeed }: Plant
     return (
       <div
         onClick={() => onPlantSeed(position)}
-        className="aspect-square bg-brown-100 dark:bg-brown-900/20 border-2 border-brown-300 dark:border-brown-600 rounded-lg flex items-center justify-center cursor-pointer hover:bg-brown-200 dark:hover:bg-brown-800/20 transition-colors group min-h-[60px] sm:min-h-[80px]"
+        className="aspect-square bg-secondary border-2 border-border rounded-lg flex items-center justify-center cursor-pointer hover:bg-accent transition-colors group min-h-[60px] sm:min-h-[80px]"
       >
-        <Plus className="w-6 h-6 sm:w-8 sm:h-8 text-brown-500 dark:text-brown-400 group-hover:text-brown-600 dark:group-hover:text-brown-300" />
+        <Plus className="w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground group-hover:text-foreground" />
       </div>
     );
   }
@@ -60,7 +60,7 @@ export function PlantCell({ position, plant, onPlantAction, onPlantSeed }: Plant
 
         {/* Health and water indicators */}
         <div className="absolute top-1 sm:top-2 right-1 sm:right-2 flex flex-col space-y-1">
-          <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-red-500" style={{ opacity: plant.health / 100 }} />
+          <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-destructive" style={{ opacity: plant.health / 100 }} />
           <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-500" style={{ opacity: plant.water_level / 100 }} />
         </div>
       </div>
@@ -113,10 +113,10 @@ export function PlantCell({ position, plant, onPlantAction, onPlantSeed }: Plant
                 onPlantAction(plant.id, 'remove');
                 setShowActions(false);
               }}
-              className="p-1.5 sm:p-2 bg-red-100 dark:bg-red-900/20 hover:bg-red-200 dark:hover:bg-red-800/20 rounded-lg transition-colors"
+              className="p-1.5 sm:p-2 bg-destructive/10 hover:bg-destructive/20 rounded-lg transition-colors"
               title="Remove plant"
             >
-              <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
+              <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 text-destructive" />
             </button>
           </div>
         </div>

@@ -897,6 +897,37 @@ const docTemplate = `{
                 }
             }
         },
+        "/plants": {
+            "get": {
+                "description": "Get a list of all available plant types",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plants"
+                ],
+                "summary": "List all plant types",
+                "responses": {
+                    "200": {
+                        "description": "List of plant types",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/users/profile": {
             "get": {
                 "security": [

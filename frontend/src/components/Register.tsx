@@ -1,9 +1,13 @@
 import { Eye, EyeOff, Leaf, Lock, Mail, User } from 'lucide-react';
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Link } from 'react-router-dom';
 
 interface RegisterProps {
-  onToggleMode: () => void;
+  onToggleMode?: () => void;
 }
 
 export function Register({ onToggleMode }: RegisterProps) {
@@ -45,13 +49,13 @@ export function Register({ onToggleMode }: RegisterProps) {
             <p className="text-sm sm:text-base text-muted-foreground mt-2">Start your gardening journey</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
+                <Label className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
                   First Name
-                </label>
-                <input
+                </Label>
+                <Input
                   type="text"
                   value={formData.first_name}
                   onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
@@ -60,10 +64,10 @@ export function Register({ onToggleMode }: RegisterProps) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
+                <Label className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
                   Last Name
-                </label>
-                <input
+                </Label>
+                <Input
                   type="text"
                   value={formData.last_name}
                   onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
@@ -74,12 +78,12 @@ export function Register({ onToggleMode }: RegisterProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
+              <Label className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
                 Username
-              </label>
+              </Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
+                <Input
                   type="text"
                   required
                   value={formData.username}
@@ -91,12 +95,12 @@ export function Register({ onToggleMode }: RegisterProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
+              <Label className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
                 Email
-              </label>
+              </Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
+                <Input
                   type="email"
                   required
                   value={formData.email}
@@ -108,12 +112,12 @@ export function Register({ onToggleMode }: RegisterProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
+              <Label className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
                 Password
-              </label>
+              </Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
+                <Input
                   type={showPassword ? 'text' : 'password'}
                   required
                   minLength={6}
@@ -138,24 +142,33 @@ export function Register({ onToggleMode }: RegisterProps) {
               </div>
             )}
 
-            <button
+            <Button
               type="submit"
               disabled={loading}
               className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold py-2.5 sm:py-3 px-4 text-sm sm:text-base rounded-lg transition-colors"
             >
               {loading ? 'Creating Account...' : 'Create Account'}
-            </button>
+            </Button>
           </form>
 
-          <div className="mt-4 sm:mt-6 text-center">
+          <div className="mt-2 sm:mt-3 text-center">
             <p className="text-sm sm:text-base text-muted-foreground">
               Already have an account?{' '}
-              <button
-                onClick={onToggleMode}
-                className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-semibold"
-              >
-                Sign in
-              </button>
+              {onToggleMode ? (
+                <button
+                  onClick={onToggleMode}
+                  className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-semibold"
+                >
+                  Sign in
+                </button>
+              ) : (
+                <Link
+                  to="/login"
+                  className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-semibold"
+                >
+                  Sign in
+                </Link>
+              )}
             </p>
           </div>
         </div>

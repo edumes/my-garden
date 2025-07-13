@@ -123,6 +123,11 @@ class ApiService {
     return this.request(`/gardens/${gardenId}/plants/${plantId}`, { method: 'DELETE' });
   }
 
+  // Plant Types
+  async getPlantTypes() {
+    return this.request<{ plant_types: import('../types/api').PlantType[] }>('/plants');
+  }
+
   // User Profile
   async getUserProfile() {
     return this.request<{ user: any }>('/users/profile');

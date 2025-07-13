@@ -136,10 +136,7 @@ func main() {
 		}
 
 		// Public routes
-		api.GET("/plants", func(c *gin.Context) {
-			// TODO: Implement plant types endpoint
-			c.JSON(http.StatusOK, gin.H{"message": "Plant types endpoint - coming soon"})
-		})
+		api.GET("/plants", gardenHandler.ListPlantTypes)
 
 		api.GET("/weather/current", weatherHandler.GetCurrentWeather)
 		api.GET("/weather/forecast", weatherHandler.GetWeatherForecast)

@@ -4,72 +4,24 @@ import { apiService } from '../services/api';
 import { Garden } from '../types/api';
 import { GardenGrid } from './GardenGrid';
 import { PlantSeedModal } from './PlantSeedModal';
+import { Button } from './ui/button';
 
 interface GardenDetailProps {
   garden: Garden;
   onBack: () => void;
 }
 
-// Mock plant types for demo
-const MOCK_PLANT_TYPES = [
-  {
-    id: '57b89191-3429-453d-9718-14f3c67d83f8',
-    name: 'Tomato',
-    description: 'Juicy red tomatoes',
-    icon: '🍅',
-    rarity: 'common',
-    season: 'summer',
-    weather: 'sunny',
-    growth_time: 7,
-    water_needs: 80,
-    fertilizer_needs: 60,
-    min_level: 1,
-    yield: 3,
-    harvest_value: 10,
-    experience_value: 15,
-  },
-  {
-    id: 'd904633e-9317-43a3-af0a-abfcb11cd0ea',
-    name: 'Carrot',
-    description: 'Crunchy orange carrots',
-    icon: '🥕',
-    rarity: 'common',
-    season: 'spring',
-    weather: 'cloudy',
-    growth_time: 5,
-    water_needs: 60,
-    fertilizer_needs: 40,
-    min_level: 1,
-    yield: 2,
-    harvest_value: 8,
-    experience_value: 12,
-  },
-  {
-    id: 'a81ab4f6-4a88-43e1-ac64-f14208cd220e',
-    name: 'Sunflower',
-    description: 'Bright yellow sunflowers',
-    icon: '🌻',
-    rarity: 'rare',
-    season: 'summer',
-    weather: 'sunny',
-    growth_time: 10,
-    water_needs: 70,
-    fertilizer_needs: 50,
-    min_level: 3,
-    yield: 1,
-    harvest_value: 25,
-    experience_value: 30,
-  },
-];
-
 export function GardenDetail({ garden: initialGarden, onBack }: GardenDetailProps) {
   const [garden, setGarden] = useState<Garden>(initialGarden);
   const [showPlantModal, setShowPlantModal] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [plantTypes, setPlantTypes] = useState<import('../types/api').PlantType[]>([]);
+  const [plantTypesLoading, setPlantTypesLoading] = useState(true);
 
   useEffect(() => {
     loadGardenDetails();
+    loadPlantTypes();
   }, []);
 
   const loadGardenDetails = async () => {
@@ -78,6 +30,18 @@ export function GardenDetail({ garden: initialGarden, onBack }: GardenDetailProp
       setGarden(response.garden);
     } catch (error) {
       console.error('Failed to load garden details:', error);
+    }
+  };
+
+  const loadPlantTypes = async () => {
+    setPlantTypesLoading(true);
+    try {
+      const response = await apiService.getPlantTypes();
+      setPlantTypes(response.plant_types);
+    } catch (error) {
+      console.error('Failed to load plant types:', error);
+    } finally {
+      setPlantTypesLoading(false);
     }
   };
 
@@ -136,15 +100,16 @@ export function GardenDetail({ garden: initialGarden, onBack }: GardenDetailProp
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <button
+          <Button
             onClick={onBack}
+            variant="secondary"
             className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
-          </button>
+          </Button>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-foreground">{garden.name}</h1>
             {garden.description && (
@@ -240,9 +205,12 @@ export function GardenDetail({ garden: initialGarden, onBack }: GardenDetailProp
             setSelectedPosition(null);
           }}
           onSubmit={handlePlantSubmit}
-          plantTypes={MOCK_PLANT_TYPES}
+          plantTypes={plantTypes}
           position={selectedPosition!}
         />
+      )}
+      {plantTypesLoading && (
+        <div className="text-center text-muted-foreground">Loading plant types...</div>
       )}
     </div>
   );

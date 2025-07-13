@@ -1,6 +1,7 @@
 import { Calendar, Droplet, Settings, TreePine, Zap } from 'lucide-react';
 import { Garden } from '../types/api';
 import { Card } from './ui/card';
+import { Button } from './ui/button';
 
 interface GardenCardProps {
   garden: Garden;
@@ -17,15 +18,16 @@ export function GardenCard({ garden, onClick, onEdit }: GardenCardProps) {
       <div onClick={onClick} className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-foreground">{garden.name}</h3>
-          <button
+          <Button
             onClick={(e) => {
               e.stopPropagation();
               onEdit();
             }}
+            variant="ghost"
             className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
           >
             <Settings className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
 
         {garden.description && (

@@ -31,7 +31,7 @@ type UpdateGardenRequest struct {
 
 type PlantRequest struct {
 	PlantTypeID uuid.UUID `json:"plant_type_id" binding:"required" example:"123e4567-e89b-12d3-a456-426614174000"`
-	Position    int       `json:"position" binding:"required,min=0,max=8" example:"0"`
+	Position    *int      `json:"position" binding:"required,min=0,max=8" example:"0"`
 }
 
 type WaterPlantRequest struct {
@@ -324,7 +324,7 @@ func (h *GardenHandler) PlantSeed(c *gin.Context) {
 	plant := models.Plant{
 		GardenID:    gardenID,
 		PlantTypeID: req.PlantTypeID,
-		Position:    req.Position,
+		Position:    *req.Position,
 		PlantedAt:   time.Now(),
 	}
 
@@ -633,6 +633,24 @@ func (h *GardenHandler) RemovePlant(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Plant removed successfully"})
+}
+
+// ListPlantTypes godoc
+// @Summary List all plant types
+// @Description Get a list of all available plant types
+// @Tags plants
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{} "List of plant types"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /plants [get]
+func (h *GardenHandler) ListPlantTypes(c *gin.Context) {
+	var plantTypes []models.PlantType
+	if err := h.db.DB.Find(&plantTypes).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch plant types"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"plant_types": plantTypes})
 }
 
 // Helper function to calculate level from experience

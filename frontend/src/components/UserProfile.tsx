@@ -2,6 +2,7 @@ import { Calendar, Coins, Medal, Star, Trophy } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
+import { Label } from './ui/label';
 
 export function UserProfile() {
   const { user } = useAuth();
@@ -88,11 +89,11 @@ export function UserProfile() {
         <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Account Information</h3>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Email</label>
+            <Label className="block text-sm font-medium text-foreground mb-1">Email</Label>
             <p className="text-sm sm:text-base text-foreground">{profile.email}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Member Since</label>
+            <Label className="block text-sm font-medium text-foreground mb-1">Member Since</Label>
             <div className="flex items-center space-x-2">
               <Calendar className="w-4 h-4 text-muted-foreground" />
               <p className="text-sm sm:text-base text-foreground">
@@ -102,7 +103,7 @@ export function UserProfile() {
           </div>
           {profile.last_login_at && (
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Last Login</label>
+              <Label className="block text-sm font-medium text-foreground mb-1">Last Login</Label>
               <p className="text-sm sm:text-base text-foreground">
                 {new Date(profile.last_login_at).toLocaleDateString()}
               </p>

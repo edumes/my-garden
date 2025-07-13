@@ -76,15 +76,14 @@ export function Header() {
                 <ThemeToggle />
               </div>
 
-
               <div className="md:hidden flex items-center space-x-2">
                 <ThemeToggle />
-                <button
+                <Button
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                   className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-accent transition-colors"
                 >
                   <User className="w-5 h-5" />
-                </button>
+                </Button>
               </div>
             </>
           )}
@@ -109,17 +108,20 @@ export function Header() {
                 </div>
               </div>
               <div className="flex flex-col space-y-2">
-                <button className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-muted-foreground hover:bg-accent rounded-lg text-left">
+                <Button
+                  variant="secondary"
+                  className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-muted-foreground hover:bg-accent rounded-lg text-left">
                   <Settings className="w-4 h-4" />
                   <span>Settings</span>
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={logout}
+                  variant="ghost"
                   className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-lg text-left"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Logout</span>
-                </button>
+                </Button>
               </div>
             </div>
           </div>

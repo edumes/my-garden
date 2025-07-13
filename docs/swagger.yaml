@@ -934,6 +934,27 @@ paths:
       summary: Harvest a plant
       tags:
       - plants
+  /plants:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all available plant types
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of plant types
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List all plant types
+      tags:
+      - plants
   /users/profile:
     get:
       consumes:

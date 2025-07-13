@@ -1,13 +1,18 @@
 import { Eye, EyeOff, Leaf, Lock, User } from 'lucide-react';
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Link, useNavigate } from 'react-router-dom';
 
 interface LoginProps {
-  onToggleMode: () => void;
+  onToggleMode?: () => void;
 }
 
 export function Login({ onToggleMode }: LoginProps) {
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -23,6 +28,7 @@ export function Login({ onToggleMode }: LoginProps) {
 
     try {
       await login(formData.username, formData.password);
+      navigate('/');
     } catch (err) {
       setError('Invalid username or password');
     } finally {
@@ -34,7 +40,7 @@ export function Login({ onToggleMode }: LoginProps) {
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-3 sm:p-4 transition-colors duration-200">
       <div className="max-w-md w-full">
         <div className="bg-card rounded-2xl shadow-xl p-6 sm:p-8 transition-colors duration-200">
-          <div className="text-center mb-6 sm:mb-8">
+          <div className="text-center mb-3 sm:mb-4">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full mb-4">
               <Leaf className="w-8 h-8 text-green-600" />
             </div>
@@ -42,14 +48,14 @@ export function Login({ onToggleMode }: LoginProps) {
             <p className="text-sm sm:text-base text-muted-foreground mt-2">Sign in to your garden account</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-3">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
+              <Label className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
                 Username
-              </label>
+              </Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
+                <Input
                   type="text"
                   required
                   value={formData.username}
@@ -61,12 +67,12 @@ export function Login({ onToggleMode }: LoginProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
+              <Label className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
                 Password
-              </label>
+              </Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
+                <Input
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={formData.password}
@@ -90,24 +96,33 @@ export function Login({ onToggleMode }: LoginProps) {
               </div>
             )}
 
-            <button
+            <Button
               type="submit"
               disabled={loading}
               className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold py-2.5 sm:py-3 px-4 text-sm sm:text-base rounded-lg transition-colors"
             >
               {loading ? 'Signing In...' : 'Sign In'}
-            </button>
+            </Button>
           </form>
 
           <div className="mt-4 sm:mt-6 text-center">
             <p className="text-sm sm:text-base text-muted-foreground">
               Don't have an account?{' '}
-              <button
-                onClick={onToggleMode}
-                className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-semibold"
-              >
-                Sign up
-              </button>
+              {onToggleMode ? (
+                <button
+                  onClick={onToggleMode}
+                  className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-semibold"
+                >
+                  Sign up
+                </button>
+              ) : (
+                <Link
+                  to="/register"
+                  className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-semibold"
+                >
+                  Sign up
+                </Link>
+              )}
             </p>
           </div>
         </div>

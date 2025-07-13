@@ -6,20 +6,11 @@ import { UserProfile } from './UserProfile';
 import { WeatherWidget } from './WeatherWidget';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 import { Card } from './ui/card';
+import { useNavigate } from 'react-router-dom';
 
 export function Dashboard() {
-  const [selectedGarden, setSelectedGarden] = useState<Garden | null>(null);
-
-  if (selectedGarden) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <GardenDetail
-          garden={selectedGarden}
-          onBack={() => setSelectedGarden(null)}
-        />
-      </div>
-    );
-  }
+  const navigate = useNavigate();
+  // Remove selectedGarden state and GardenDetail rendering
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
@@ -31,7 +22,7 @@ export function Dashboard() {
               <TabsTrigger value="profile">Profile</TabsTrigger>
             </TabsList>
             <TabsContent value="gardens">
-              <GardenList onSelectGarden={setSelectedGarden} />
+              <GardenList onSelectGarden={(garden) => navigate(`/garden/${garden.id}`)} />
             </TabsContent>
             <TabsContent value="profile">
               <UserProfile />

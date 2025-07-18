@@ -41,9 +41,6 @@ export function PlantCell({ position, plant, onPlantAction, onPlantSeed }: Plant
     );
   }
 
-  const canWater = plant.water_level < 100;
-  const canFertilize = plant.last_fertilized_at === null ||
-    (plant.last_fertilized_at && new Date().getTime() - new Date(plant.last_fertilized_at).getTime() > 24 * 60 * 60 * 1000);
   const canHarvest = plant.stage === 'harvestable';
 
   return (
@@ -68,32 +65,6 @@ export function PlantCell({ position, plant, onPlantAction, onPlantSeed }: Plant
       {showActions && (
         <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-card rounded-lg shadow-lg border border-border p-1 sm:p-2 z-10">
           <div className="flex space-x-1 sm:space-x-2">
-            {canWater && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onPlantAction(plant.id, 'water');
-                  setShowActions(false);
-                }}
-                className="p-1.5 sm:p-2 bg-blue-100 dark:bg-blue-900/20 hover:bg-blue-200 dark:hover:bg-blue-800/20 rounded-lg transition-colors"
-                title="Water plant"
-              >
-                <Droplet className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
-              </button>
-            )}
-            {canFertilize && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onPlantAction(plant.id, 'fertilize');
-                  setShowActions(false);
-                }}
-                className="p-1.5 sm:p-2 bg-yellow-100 dark:bg-yellow-900/20 hover:bg-yellow-200 dark:hover:bg-yellow-800/20 rounded-lg transition-colors"
-                title="Fertilize plant"
-              >
-                <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-600" />
-              </button>
-            )}
             {canHarvest && (
               <button
                 onClick={(e) => {

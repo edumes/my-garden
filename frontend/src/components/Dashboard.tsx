@@ -36,16 +36,6 @@ export function Dashboard() {
           <Card className="rounded-xl shadow-sm border border-border p-6">
             <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Quick Tips</h3>
             <div className="space-y-3">
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-                <p className="text-sm text-blue-800 dark:text-blue-300">
-                  💧 Water your plants regularly to keep them healthy
-                </p>
-              </div>
-              <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
-                <p className="text-sm text-yellow-800 dark:text-yellow-300">
-                  ⚡ Use fertilizer to speed up growth
-                </p>
-              </div>
               <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
                 <p className="text-sm text-green-500 dark:text-green-300">
                   🌾 Harvest plants when they're ready for maximum rewards

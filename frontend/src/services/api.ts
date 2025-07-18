@@ -99,20 +99,6 @@ class ApiService {
     });
   }
 
-  async waterPlant(gardenId: string, plantId: string, amount: number) {
-    return this.request<{ plant: any }>(`/gardens/${gardenId}/plants/${plantId}`, {
-      method: 'PUT',
-      body: JSON.stringify({ amount }),
-    });
-  }
-
-  async fertilizePlant(gardenId: string, plantId: string, amount: number) {
-    return this.request<{ plant: any }>(`/gardens/${gardenId}/plants/${plantId}/fertilize`, {
-      method: 'POST',
-      body: JSON.stringify({ amount }),
-    });
-  }
-
   async harvestPlant(gardenId: string, plantId: string) {
     return this.request<{ harvest: any }>(`/gardens/${gardenId}/plants/${plantId}/harvest`, {
       method: 'POST',

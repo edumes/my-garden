@@ -34,14 +34,6 @@ type PlantRequest struct {
 	Position    *int      `json:"position" binding:"required,min=0,max=8" example:"0"`
 }
 
-type WaterPlantRequest struct {
-	Amount int `json:"amount" binding:"required,min=1,max=100" example:"30"`
-}
-
-type FertilizePlantRequest struct {
-	Amount int `json:"amount" binding:"required,min=1,max=100" example:"20"`
-}
-
 // GetGardens godoc
 // @Summary Get user gardens
 // @Description Get all gardens for the current user
@@ -339,139 +331,6 @@ func (h *GardenHandler) PlantSeed(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"plant": plant})
 }
 
-// WaterPlant godoc
-// @Summary Water a plant
-// @Description Water a plant to increase its water level
-// @Tags plants
-// @Accept json
-// @Produce json
-// @Security bearer
-// @Param id path string true "Garden ID" example("123e4567-e89b-12d3-a456-426614174000")
-// @Param plantId path string true "Plant ID" example("123e4567-e89b-12d3-a456-426614174001")
-// @Param request body WaterPlantRequest true "Water amount"
-// @Success 200 {object} map[string]interface{} "Updated plant"
-// @Failure 400 {object} map[string]interface{} "Bad Request"
-// @Failure 401 {object} map[string]interface{} "Unauthorized"
-// @Failure 404 {object} map[string]interface{} "Plant not found"
-// @Failure 500 {object} map[string]interface{} "Internal Server Error"
-// @Router /gardens/{id}/plants/{plantId} [put]
-func (h *GardenHandler) WaterPlant(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
-		return
-	}
-
-	gardenID, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid garden ID"})
-		return
-	}
-
-	plantID, err := uuid.Parse(c.Param("plantId"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plant ID"})
-		return
-	}
-
-	var req WaterPlantRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Check if plant exists and belongs to user's garden
-	var plant models.Plant
-	if err := h.db.DB.Joins("JOIN gardens ON plants.garden_id = gardens.id").
-		Where("plants.id = ? AND gardens.id = ? AND gardens.user_id = ?", plantID, gardenID, userID).
-		First(&plant).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Plant not found"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch plant"})
-		return
-	}
-
-	// Update water level
-	now := time.Now()
-	plant.WaterLevel = min(100, plant.WaterLevel+req.Amount)
-	plant.LastWateredAt = &now
-
-	if err := h.db.DB.Save(&plant).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to water plant"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"plant": plant})
-}
-
-// FertilizePlant godoc
-// @Summary Fertilize a plant
-// @Description Apply fertilizer to a plant
-// @Tags plants
-// @Accept json
-// @Produce json
-// @Security bearer
-// @Param id path string true "Garden ID" example("123e4567-e89b-12d3-a456-426614174000")
-// @Param plantId path string true "Plant ID" example("123e4567-e89b-12d3-a456-426614174001")
-// @Param request body FertilizePlantRequest true "Fertilizer amount"
-// @Success 200 {object} map[string]interface{} "Updated plant"
-// @Failure 400 {object} map[string]interface{} "Bad Request"
-// @Failure 401 {object} map[string]interface{} "Unauthorized"
-// @Failure 404 {object} map[string]interface{} "Plant not found"
-// @Failure 500 {object} map[string]interface{} "Internal Server Error"
-// @Router /gardens/{id}/plants/{plantId}/fertilize [post]
-func (h *GardenHandler) FertilizePlant(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
-		return
-	}
-
-	gardenID, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid garden ID"})
-		return
-	}
-
-	plantID, err := uuid.Parse(c.Param("plantId"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plant ID"})
-		return
-	}
-
-	var req FertilizePlantRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Check if plant exists and belongs to user's garden
-	var plant models.Plant
-	if err := h.db.DB.Joins("JOIN gardens ON plants.garden_id = gardens.id").
-		Where("plants.id = ? AND gardens.id = ? AND gardens.user_id = ?", plantID, gardenID, userID).
-		First(&plant).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Plant not found"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch plant"})
-		return
-	}
-
-	// Update fertilizer level
-	now := time.Now()
-	plant.LastFertilizedAt = &now
-
-	if err := h.db.DB.Save(&plant).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fertilize plant"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"plant": plant})
-}
-
 // HarvestPlant godoc
 // @Summary Harvest a plant
 // @Description Harvest a mature plant to get rewards
@@ -535,20 +394,13 @@ func (h *GardenHandler) HarvestPlant(c *gin.Context) {
 
 	// Calculate harvest rewards
 	coinsEarned := plant.PlantType.HarvestValue * plant.PlantType.Yield
-	experienceEarned := plant.PlantType.ExperienceValue
 
 	// Update user stats
 	user.Coins += coinsEarned
-	user.Experience += experienceEarned
 
 	// Check for level up
 	oldLevel := user.Level
 	user.Level = calculateLevel(user.Experience)
-
-	// Update plant status
-	now := time.Now()
-	plant.HarvestedAt = &now
-	plant.Stage = models.PlantStageWithered
 
 	// Save changes in a transaction
 	tx := h.db.DB.Begin()
@@ -569,10 +421,9 @@ func (h *GardenHandler) HarvestPlant(c *gin.Context) {
 	response := gin.H{
 		"plant": plant,
 		"harvest": gin.H{
-			"coins_earned":      coinsEarned,
-			"experience_earned": experienceEarned,
-			"level_up":          user.Level > oldLevel,
-			"new_level":         user.Level,
+			"coins_earned": coinsEarned,
+			"level_up":     user.Level > oldLevel,
+			"new_level":    user.Level,
 		},
 	}
 

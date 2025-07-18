@@ -52,12 +52,6 @@ export function GardenDetail({ garden: initialGarden, onBack }: GardenDetailProp
       if (!plant) return;
 
       switch (action) {
-        case 'water':
-          await apiService.waterPlant(garden.id, plantId, 30);
-          break;
-        case 'fertilize':
-          await apiService.fertilizePlant(garden.id, plantId, 20);
-          break;
         case 'harvest':
           await apiService.harvestPlant(garden.id, plantId);
           break;
@@ -125,7 +119,7 @@ export function GardenDetail({ garden: initialGarden, onBack }: GardenDetailProp
             <h2 className="text-base sm:text-lg font-semibold text-foreground mb-4">Garden Grid</h2>
             <GardenGrid
               plants={garden.plants || []}
-              onPlantAction={handlePlantAction}
+              onPlantAction={(plantId, action) => handlePlantAction(plantId, action)}
               onPlantSeed={handlePlantSeed}
             />
           </div>
@@ -145,22 +139,6 @@ export function GardenDetail({ garden: initialGarden, onBack }: GardenDetailProp
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Droplet className="w-4 h-4 text-blue-500" />
-                  <span className="text-sm text-muted-foreground">Water Level</span>
-                </div>
-                <span className="text-sm sm:text-base font-medium">{garden.water_level}%</span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Zap className="w-4 h-4 text-yellow-500" />
-                  <span className="text-sm text-muted-foreground">Fertilizer</span>
-                </div>
-                <span className="text-sm sm:text-base font-medium">{garden.fertilizer_level}%</span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
                   <Calendar className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">Soil Quality</span>
                 </div>
@@ -168,32 +146,6 @@ export function GardenDetail({ garden: initialGarden, onBack }: GardenDetailProp
               </div>
             </div>
           </div>
-
-          {(garden.has_sprinkler || garden.has_greenhouse || garden.has_composter) && (
-            <div className="bg-card rounded-xl shadow-sm border border-border p-4 sm:p-6">
-              <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Upgrades</h3>
-              <div className="space-y-2">
-                {garden.has_sprinkler && (
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span className="text-sm text-muted-foreground">Auto Sprinkler System</span>
-                  </div>
-                )}
-                {garden.has_greenhouse && (
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-sm text-muted-foreground">Greenhouse Protection</span>
-                  </div>
-                )}
-                {garden.has_composter && (
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-brown-500 rounded-full"></div>
-                    <span className="text-sm text-muted-foreground">Compost System</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

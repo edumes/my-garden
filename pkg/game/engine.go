@@ -102,7 +102,7 @@ func (g *GameEngine) processGameTick() {
 
 func (g *GameEngine) processPlantGrowth(plant *models.Plant, weather *models.Weather) {
 	// Skip if plant is already harvested or withered
-	if plant.Stage == models.PlantStageHarvestable || plant.Stage == models.PlantStageWithered {
+	if plant.Stage == models.PlantStageHarvestable {
 		return
 	}
 
@@ -110,38 +110,14 @@ func (g *GameEngine) processPlantGrowth(plant *models.Plant, weather *models.Wea
 	baseGrowthRate := 1.0 / float64(plant.PlantType.GrowthTime) // Growth per minute
 	weatherMultiplier := weather.GrowthMultiplier
 
-	// Apply water and fertilizer bonuses
-	waterBonus := 1.0
-	if plant.WaterLevel > 70 {
-		waterBonus = 1.2
-	} else if plant.WaterLevel < 30 {
-		waterBonus = 0.8
-	}
-
 	// Calculate total growth for this tick
 	tickDuration := g.config.Game.TickInterval.Minutes()
-	growthIncrement := baseGrowthRate * weatherMultiplier * waterBonus * tickDuration
+	growthIncrement := baseGrowthRate * weatherMultiplier * tickDuration
 
 	plant.GrowthProgress += growthIncrement
 
 	// Update plant stage based on growth progress
 	g.updatePlantStage(plant)
-
-	// Reduce water level due to evaporation
-	evaporationRate := weather.WaterEvaporationRate * tickDuration / 60.0 // per minute
-	plant.WaterLevel = max(0, plant.WaterLevel-int(evaporationRate*10))
-
-	// Update plant health based on water level
-	if plant.WaterLevel < 20 {
-		plant.Health = max(0, plant.Health-5)
-	} else if plant.WaterLevel > 80 {
-		plant.Health = min(100, plant.Health+2)
-	}
-
-	// Check if plant has withered
-	if plant.Health <= 0 {
-		plant.Stage = models.PlantStageWithered
-	}
 
 	// Save plant changes
 	if err := g.db.DB.Save(plant).Error; err != nil {

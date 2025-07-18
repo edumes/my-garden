@@ -109,14 +109,6 @@ export function PlantSeedModal({ onClose, onSubmit, plantTypes, position, open }
                     <Star className="w-3 h-3" />
                     <span>{plantType.experience_value} XP</span>
                   </div>
-                  <div className="flex items-center space-x-1">
-                    <Droplet className="w-3 h-3" />
-                    <span>{plantType.water_needs}% water</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <Zap className="w-3 h-3" />
-                    <span>{plantType.fertilizer_needs}% fertilizer</span>
-                  </div>
                 </div>
 
                 <div className="mt-2 pt-2 border-t border-border">

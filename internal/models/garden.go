@@ -13,22 +13,9 @@ type Garden struct {
 	Name        string    `json:"name" gorm:"not null"`
 	Description string    `json:"description"`
 
-	// Garden properties
-	Size            int `json:"size" gorm:"default:9"`             // 3x3 grid
-	SoilQuality     int `json:"soil_quality" gorm:"default:50"`    // 0-100
-	WaterLevel      int `json:"water_level" gorm:"default:50"`     // 0-100
-	FertilizerLevel int `json:"fertilizer_level" gorm:"default:0"` // 0-100
-
-	// Garden upgrades
-	HasSprinkler  bool `json:"has_sprinkler" gorm:"default:false"`
-	HasGreenhouse bool `json:"has_greenhouse" gorm:"default:false"`
-	HasComposter  bool `json:"has_composter" gorm:"default:false"`
-
 	// Timestamps
-	CreatedAt        time.Time  `json:"created_at"`
-	UpdatedAt        time.Time  `json:"updated_at"`
-	LastWateredAt    *time.Time `json:"last_watered_at"`
-	LastFertilizedAt *time.Time `json:"last_fertilized_at"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 
 	// Relationships
 	User   User    `json:"user" gorm:"foreignKey:UserID"`
@@ -53,17 +40,13 @@ type Plant struct {
 
 	// Plant state
 	Stage          PlantStage `json:"stage" gorm:"default:'seed'"`
-	Health         int        `json:"health" gorm:"default:100"`        // 0-100
-	WaterLevel     int        `json:"water_level" gorm:"default:50"`    // 0-100
 	GrowthProgress float64    `json:"growth_progress" gorm:"default:0"` // 0-100
 
 	// Timestamps
-	PlantedAt        time.Time  `json:"planted_at"`
-	LastWateredAt    *time.Time `json:"last_watered_at"`
-	LastFertilizedAt *time.Time `json:"last_fertilized_at"`
-	HarvestedAt      *time.Time `json:"harvested_at"`
-	CreatedAt        time.Time  `json:"created_at"`
-	UpdatedAt        time.Time  `json:"updated_at"`
+	PlantedAt   time.Time  `json:"planted_at"`
+	HarvestedAt *time.Time `json:"harvested_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
 
 	// Relationships
 	Garden    Garden    `json:"garden" gorm:"foreignKey:GardenID"`
@@ -86,7 +69,6 @@ const (
 	PlantStageGrowing     PlantStage = "growing"
 	PlantStageMature      PlantStage = "mature"
 	PlantStageHarvestable PlantStage = "harvestable"
-	PlantStageWithered    PlantStage = "withered"
 )
 
 // PlantType represents available plant types
@@ -97,30 +79,7 @@ type PlantType struct {
 	Icon        string    `json:"icon"`
 
 	// Growth properties
-	GrowthTime      int `json:"growth_time" gorm:"not null"`       // in minutes
-	WaterNeeds      int `json:"water_needs" gorm:"default:50"`     // 0-100
-	FertilizerNeeds int `json:"fertilizer_needs" gorm:"default:0"` // 0-100
-
-	// Harvest properties
-	Yield           int `json:"yield" gorm:"default:1"`            // items per harvest
-	HarvestValue    int `json:"harvest_value" gorm:"default:10"`   // coins per item
-	ExperienceValue int `json:"experience_value" gorm:"default:5"` // XP per harvest
-
-	// Requirements
-	MinLevel int    `json:"min_level" gorm:"default:1"`
-	Season   string `json:"season"`  // spring, summer, autumn, winter, all
-	Weather  string `json:"weather"` // sunny, cloudy, rainy, all
-
-	// Rarity
-	Rarity string `json:"rarity" gorm:"default:'common'"` // common, uncommon, rare, epic, legendary
-
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
-func (pt *PlantType) BeforeCreate(tx *gorm.DB) error {
-	if pt.ID == uuid.Nil {
-		pt.ID = uuid.New()
-	}
-	return nil
+	GrowthTime   int `json:"growth_time" gorm:"not null"` // in minutes
+	Yield        int `json:"yield" gorm:"default:1"`      // items per harvest
+	HarvestValue int
 }

@@ -129,8 +129,6 @@ func main() {
 
 			// Plant routes
 			gardens.POST("/:id/plants", gardenHandler.PlantSeed)
-			gardens.PUT("/:id/plants/:plantId", gardenHandler.WaterPlant)
-			gardens.POST("/:id/plants/:plantId/fertilize", gardenHandler.FertilizePlant)
 			gardens.POST("/:id/plants/:plantId/harvest", gardenHandler.HarvestPlant)
 			gardens.DELETE("/:id/plants/:plantId", gardenHandler.RemovePlant)
 		}

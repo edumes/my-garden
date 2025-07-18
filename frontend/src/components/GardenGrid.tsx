@@ -3,7 +3,7 @@ import { PlantCell } from './PlantCell';
 
 interface GardenGridProps {
   plants: Plant[];
-  onPlantAction: (plantId: string, action: 'water' | 'fertilize' | 'harvest' | 'remove') => void;
+  onPlantAction: (plantId: string, action: 'harvest' | 'remove') => void;
   onPlantSeed: (position: number) => void;
 }
 

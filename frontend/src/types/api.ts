@@ -83,12 +83,8 @@ export interface Plant {
   plant_type_id: string;
   position: number;
   stage: PlantStage;
-  health: number;
-  water_level: number;
   growth_progress: number;
   planted_at: string;
-  last_watered_at?: string;
-  last_fertilized_at?: string;
   harvested_at?: string;
   plant_type: PlantType;
 }
@@ -102,8 +98,6 @@ export interface PlantType {
   season: string;
   weather: string;
   growth_time: number;
-  water_needs: number;
-  fertilizer_needs: number;
   min_level: number;
   yield: number;
   harvest_value: number;

@@ -1,3 +1,16 @@
+import {
+  BuySeedRequest,
+  BuySeedResponse,
+  CreateAccessLinkRequest,
+  GardenAccessLink,
+  GardenShare,
+  JoinGardenRequest,
+  PlantType,
+  SeedInventory,
+  SharedGardenResponse,
+  UpdateSharePermissionsRequest
+} from "@/types/api";
+
 const API_BASE_URL = 'http://localhost:8080/api/v1';
 
 class ApiService {
@@ -20,7 +33,12 @@ class ApiService {
     });
 
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.statusText}`);
+      try {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `API request failed: ${response.statusText}`);
+      } catch {
+        throw new Error(`API request failed: ${response.statusText}`);
+      }
     }
 
     return response.json();
@@ -66,11 +84,11 @@ class ApiService {
 
   // Gardens
   async getGardens() {
-    return this.request<{ gardens: any[] }>('/gardens');
+    return this.request<SharedGardenResponse>('/gardens');
   }
 
   async getGarden(id: string) {
-    return this.request<{ garden: any }>(`/gardens/${id}`);
+    return this.request<{ garden: any; permission?: string }>(`/gardens/${id}`);
   }
 
   async createGarden(data: { name: string; description?: string }) {
@@ -100,7 +118,14 @@ class ApiService {
   }
 
   async harvestPlant(gardenId: string, plantId: string) {
-    return this.request<{ harvest: any }>(`/gardens/${gardenId}/plants/${plantId}/harvest`, {
+    return this.request<{
+      plant: any;
+      harvest: {
+        coins_earned: number;
+        level_up: boolean;
+        new_level: number;
+      }
+    }>(`/gardens/${gardenId}/plants/${plantId}/harvest`, {
       method: 'POST',
     });
   }
@@ -111,7 +136,23 @@ class ApiService {
 
   // Plant Types
   async getPlantTypes() {
-    return this.request<{ plant_types: import('../types/api').PlantType[] }>('/plants');
+    return this.request<{ plant_types: PlantType[] }>('/plants');
+  }
+
+  // Store
+  async getStoreInventory() {
+    return this.request<{ inventory: PlantType[] }>('/store/inventory');
+  }
+
+  async buySeed(request: BuySeedRequest) {
+    return this.request<BuySeedResponse>('/store/buy', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  async getUserSeedInventory() {
+    return this.request<{ seed_inventory: SeedInventory[] }>('/store/inventory/user');
   }
 
   // User Profile
@@ -137,6 +178,48 @@ class ApiService {
 
   async getWeatherHistory() {
     return this.request<{ history: any[] }>('/weather/history');
+  }
+
+  // Garden Sharing
+  async createAccessLink(request: CreateAccessLinkRequest) {
+    return this.request<{ access_link: GardenAccessLink; share_url: string }>('/garden-shares/access-links', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  async joinGarden(request: JoinGardenRequest) {
+    return this.request<{ message: string; garden: any; share: GardenShare }>('/garden-shares/join', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  async getSharedGardens() {
+    return this.request<{ shared_gardens: GardenShare[] }>('/garden-shares/shared-with-me');
+  }
+
+  async getGardenShares(gardenId: string) {
+    return this.request<{ garden_shares: GardenShare[] }>(`/garden-shares/garden/${gardenId}`);
+  }
+
+  async updateSharePermissions(gardenId: string, request: UpdateSharePermissionsRequest) {
+    return this.request<{ garden_share: GardenShare }>(`/garden-shares/garden/${gardenId}/permissions`, {
+      method: 'PUT',
+      body: JSON.stringify(request),
+    });
+  }
+
+  async removeGardenShare(gardenId: string, userId: string) {
+    return this.request(`/garden-shares/garden/${gardenId}/user/${userId}`, { method: 'DELETE' });
+  }
+
+  async getAccessLinks(gardenId: string) {
+    return this.request<{ access_links: GardenAccessLink[] }>(`/garden-shares/garden/${gardenId}/access-links`);
+  }
+
+  async deactivateAccessLink(gardenId: string, linkId: string) {
+    return this.request(`/garden-shares/garden/${gardenId}/access-links/${linkId}/deactivate`, { method: 'POST' });
   }
 }
 

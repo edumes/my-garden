@@ -1,32 +1,34 @@
-import { useState } from 'react';
-import { Garden } from '../types/api';
-import { GardenDetail } from './GardenDetail';
+import { useNavigate } from 'react-router-dom';
 import { GardenList } from './GardenList';
 import { UserProfile } from './UserProfile';
 import { WeatherWidget } from './WeatherWidget';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
+import { Tabs, TabsContent, TabsContents, TabsList, TabsTrigger } from './animate-ui/components/tabs';
 import { Card } from './ui/card';
-import { useNavigate } from 'react-router-dom';
 
 export function Dashboard() {
   const navigate = useNavigate();
-  // Remove selectedGarden state and GardenDetail rendering
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
         <div className="lg:col-span-3 order-2 lg:order-1">
           <Tabs defaultValue="gardens" className="w-full">
-            <TabsList className="mb-6">
-              <TabsTrigger value="gardens">My Gardens</TabsTrigger>
-              <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsList className="mb-6 bg-muted/50 backdrop-blur-sm border border-border/50">
+              <TabsTrigger value="gardens" className="text-sm font-medium">
+                🌱 My Gardens
+              </TabsTrigger>
+              <TabsTrigger value="profile" className="text-sm font-medium">
+                👤 Profile
+              </TabsTrigger>
             </TabsList>
-            <TabsContent value="gardens">
-              <GardenList onSelectGarden={(garden) => navigate(`/garden/${garden.id}`)} />
-            </TabsContent>
-            <TabsContent value="profile">
-              <UserProfile />
-            </TabsContent>
+            <TabsContents className="mt-6">
+              <TabsContent value="gardens">
+                <GardenList onSelectGarden={(garden) => navigate(`/garden/${garden.id}`)} />
+              </TabsContent>
+              <TabsContent value="profile">
+                <UserProfile />
+              </TabsContent>
+            </TabsContents>
           </Tabs>
         </div>
 

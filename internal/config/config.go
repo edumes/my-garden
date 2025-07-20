@@ -119,9 +119,12 @@ func getEnvAsInt(key string, defaultValue int) int {
 
 func getEnvAsDuration(key string, defaultValue time.Duration) time.Duration {
 	if value := os.Getenv(key); value != "" {
-		if duration, err := time.ParseDuration(value); err == nil {
-			return duration
+		duration, err := time.ParseDuration(value)
+		if err != nil {
+			fmt.Printf("Failed to parse duration for %s: %s (error: %v)\n", key, value, err)
+			return defaultValue
 		}
+		return duration
 	}
 	return defaultValue
 }

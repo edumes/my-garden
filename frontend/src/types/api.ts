@@ -8,7 +8,10 @@ export interface User {
   experience: number;
   coins: number;
   avatar?: string;
+  timezone?: string;
+  language?: string;
   created_at: string;
+  updated_at: string;
   last_login_at?: string;
   achievements?: UserAchievement[];
 }
@@ -50,18 +53,12 @@ export interface RegisterRequest {
 
 export interface Garden {
   id: string;
+  user_id: string;
   name: string;
   description?: string;
-  size: number;
-  water_level: number;
-  soil_quality: number;
-  fertilizer_level: number;
-  has_sprinkler: boolean;
-  has_greenhouse: boolean;
-  has_composter: boolean;
-  last_watered_at?: string;
-  last_fertilized_at?: string;
   created_at: string;
+  updated_at: string;
+  user: User;
   plants?: Plant[];
 }
 
@@ -86,6 +83,9 @@ export interface Plant {
   growth_progress: number;
   planted_at: string;
   harvested_at?: string;
+  created_at: string;
+  updated_at: string;
+  garden: Garden;
   plant_type: PlantType;
 }
 
@@ -94,14 +94,31 @@ export interface PlantType {
   name: string;
   description: string;
   icon: string;
-  rarity: string;
-  season: string;
-  weather: string;
   growth_time: number;
-  min_level: number;
   yield: number;
   harvest_value: number;
-  experience_value: number;
+  seed_price: number;
+}
+
+export interface SeedInventory {
+  id: string;
+  user_id: string;
+  plant_type_id: string;
+  quantity: number;
+  purchased_at: string;
+  plant_type: PlantType;
+}
+
+export interface BuySeedRequest {
+  plant_type_id: string;
+  quantity: number;
+}
+
+export interface BuySeedResponse {
+  plant_type: PlantType;
+  quantity: number;
+  total_cost: number;
+  user_coins: number;
 }
 
 export interface PlantRequest {
@@ -127,4 +144,65 @@ export interface Weather {
 
 export interface WeatherForecast {
   forecasts: Weather[];
+}
+
+export type GardenPermission = 'view' | 'plant' | 'harvest' | 'manage';
+
+export interface GardenShare {
+  id: string;
+  garden_id: string;
+  user_id: string;
+  permissions: GardenPermission[];
+  shared_by: string;
+  shared_at: string;
+  expires_at?: string;
+  garden: Garden;
+  user: User;
+  shared_by_user: User;
+}
+
+export interface GardenAccessLink {
+  id: string;
+  garden_id: string;
+  token: string;
+  permissions: GardenPermission[];
+  max_uses?: number;
+  used_count: number;
+  created_by: string;
+  created_at: string;
+  expires_at?: string;
+  is_active: boolean;
+  garden: Garden;
+  created_by_user: User;
+}
+
+export interface CreateAccessLinkRequest {
+  garden_id: string;
+  permissions: GardenPermission[];
+  max_uses?: number;
+  expires_at?: string;
+}
+
+export interface JoinGardenRequest {
+  token: string;
+}
+
+export interface UpdateSharePermissionsRequest {
+  user_id: string;
+  permissions: GardenPermission[];
+}
+
+export interface GardenWithPermission {
+  garden: Garden;
+  permission: GardenPermission;
+}
+
+export interface SharedGardenResponse {
+  owned_gardens: Garden[];
+  shared_gardens: {
+    garden: Garden;
+    permission: GardenPermission[];
+    shared_by: User;
+    shared_at: string;
+  }[];
 }

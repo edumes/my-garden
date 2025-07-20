@@ -1,10 +1,11 @@
 import { Eye, EyeOff, Leaf, Lock, User } from 'lucide-react';
 import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Link, useNavigate } from 'react-router-dom';
 
 interface LoginProps {
   onToggleMode?: () => void;
@@ -18,28 +19,27 @@ export function Login({ onToggleMode }: LoginProps) {
     password: '',
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
 
     try {
       await login(formData.username, formData.password);
+      toast.success('Successfully signed in!');
       navigate('/');
     } catch (err) {
-      setError('Invalid username or password');
+      toast.error('Invalid username or password');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-3 sm:p-4 transition-colors duration-200">
+    <div className="min-h-screen bg-gradient-to-br dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-3 sm:p-4 transition-colors duration-200">
       <div className="max-w-md w-full">
-        <div className="bg-card rounded-2xl shadow-xl p-6 sm:p-8 transition-colors duration-200">
+        <div className="bg-card rounded-2xl p-6 sm:p-8 transition-colors duration-200">
           <div className="text-center mb-3 sm:mb-4">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full mb-4">
               <Leaf className="w-8 h-8 text-green-600" />
@@ -89,12 +89,6 @@ export function Login({ onToggleMode }: LoginProps) {
                 </button>
               </div>
             </div>
-
-            {error && (
-              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-2 sm:p-3">
-                <p className="text-destructive text-sm">{error}</p>
-              </div>
-            )}
 
             <Button
               type="submit"

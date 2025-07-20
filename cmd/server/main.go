@@ -75,7 +75,9 @@ func main() {
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(db, jwtManager)
 	gardenHandler := handlers.NewGardenHandler(db)
+	gardenShareHandler := handlers.NewGardenShareHandler(db)
 	weatherHandler := handlers.NewWeatherHandler(db, gameEngine)
+	storeHandler := handlers.NewStoreHandler(db)
 
 	// Initialize router
 	router := gin.Default()
@@ -133,8 +135,31 @@ func main() {
 			gardens.DELETE("/:id/plants/:plantId", gardenHandler.RemovePlant)
 		}
 
+		// Garden sharing routes (protected)
+		gardenShares := api.Group("/garden-shares")
+		gardenShares.Use(middleware.AuthMiddleware(jwtManager))
+		{
+			gardenShares.POST("/access-links", gardenShareHandler.CreateAccessLink)
+			gardenShares.POST("/join", gardenShareHandler.JoinGarden)
+			gardenShares.GET("/shared-with-me", gardenShareHandler.GetSharedGardens)
+			gardenShares.GET("/garden/:garden_id", gardenShareHandler.GetGardenShares)
+			gardenShares.PUT("/garden/:garden_id/permissions", gardenShareHandler.UpdateSharePermissions)
+			gardenShares.DELETE("/garden/:garden_id/user/:user_id", gardenShareHandler.RemoveGardenShare)
+			gardenShares.GET("/garden/:garden_id/access-links", gardenShareHandler.GetAccessLinks)
+			gardenShares.POST("/garden/:garden_id/access-links/:link_id/deactivate", gardenShareHandler.DeactivateAccessLink)
+		}
+
 		// Public routes
 		api.GET("/plants", gardenHandler.ListPlantTypes)
+
+		// Store routes (protected)
+		store := api.Group("/store")
+		store.Use(middleware.AuthMiddleware(jwtManager))
+		{
+			store.GET("/inventory", storeHandler.GetStoreInventory)
+			store.POST("/buy", storeHandler.BuySeed)
+			store.GET("/inventory/user", storeHandler.GetUserSeedInventory)
+		}
 
 		api.GET("/weather/current", weatherHandler.GetCurrentWeather)
 		api.GET("/weather/forecast", weatherHandler.GetWeatherForecast)

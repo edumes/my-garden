@@ -9,6 +9,7 @@ A robust RESTful API for a virtual garden management game built with Go, featuri
 - 🌱 **Plant Management**: Plant, water, harvest, and manage various plant types
 - 🌤️ **Weather System**: Dynamic weather affecting plant growth and garden conditions
 - 👤 **User Authentication**: JWT-based authentication with role-based access
+- 🤝 **Garden Sharing**: Share gardens with other users via access links with customizable permissions
 - 🎮 **Game Mechanics**: Experience points, levels, achievements, and garden progression
 - 🔄 **Real-time Updates**: WebSocket support for live garden updates
 - 📊 **Analytics**: Garden statistics and performance tracking
@@ -80,11 +81,21 @@ The API will be available at `http://localhost:8080`
 - `GET /api/v1/users/achievements` - Get user achievements
 
 ### Gardens
-- `GET /api/v1/gardens` - Get user gardens
+- `GET /api/v1/gardens` - Get user gardens (owned and shared)
 - `POST /api/v1/gardens` - Create new garden
 - `GET /api/v1/gardens/{id}` - Get garden details
 - `PUT /api/v1/gardens/{id}` - Update garden
 - `DELETE /api/v1/gardens/{id}` - Delete garden
+
+### Garden Sharing
+- `POST /api/v1/garden-shares/access-links` - Create garden access link
+- `POST /api/v1/garden-shares/join` - Join garden via access link
+- `GET /api/v1/garden-shares/shared-with-me` - Get gardens shared with user
+- `GET /api/v1/garden-shares/garden/{garden_id}` - Get garden shares
+- `PUT /api/v1/garden-shares/garden/{garden_id}/permissions` - Update share permissions
+- `DELETE /api/v1/garden-shares/garden/{garden_id}/user/{user_id}` - Remove garden share
+- `GET /api/v1/garden-shares/garden/{garden_id}/access-links` - Get access links for garden
+- `POST /api/v1/garden-shares/garden/{garden_id}/access-links/{link_id}/deactivate` - Deactivate access link
 
 ### Plants
 - `GET /api/v1/plants` - Get available plant types
@@ -126,6 +137,13 @@ The API will be available at `http://localhost:8080`
 - Multiple garden plots per user
 - Soil quality affects plant growth
 - Garden tools and upgrades available
+
+### Garden Sharing System
+- **Access Links**: Create shareable links with customizable permissions
+- **Permission Levels**: View, Plant, Harvest, and Manage permissions
+- **Link Management**: Set expiration dates and usage limits
+- **Shared Gardens**: Access and collaborate on gardens shared by other users
+- **Permission Control**: Garden owners can manage user access and permissions
 
 ## Development
 

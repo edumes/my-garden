@@ -1,5 +1,3 @@
-import { Clock, Droplet, Star, Zap } from 'lucide-react';
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -10,23 +8,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-
-interface PlantType {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  rarity: string;
-  season: string;
-  weather: string;
-  growth_time: number;
-  water_needs: number;
-  fertilizer_needs: number;
-  min_level: number;
-  yield: number;
-  harvest_value: number;
-  experience_value: number;
-}
+import { Clock, Coins, Package, ShoppingCart, Star } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { formatGrowthTime } from '../lib/utils';
+import { apiService } from '../services/api';
+import { PlantType, SeedInventory } from '../types/api';
 
 interface PlantSeedModalProps {
   onClose: () => void;
@@ -34,18 +20,47 @@ interface PlantSeedModalProps {
   plantTypes: PlantType[];
   position: number;
   open: boolean;
+  onOpenStore?: () => void;
 }
 
-const rarityColors = {
-  common: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-600',
-  uncommon: 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-300 dark:border-green-600',
-  rare: 'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 border-blue-300 dark:border-blue-600',
-  epic: 'bg-purple-100 dark:bg-purple-900/20 text-purple-800 dark:text-purple-200 border-purple-300 dark:border-purple-600',
-  legendary: 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 border-yellow-300 dark:border-yellow-600',
-};
-
-export function PlantSeedModal({ onClose, onSubmit, plantTypes, position, open }: PlantSeedModalProps) {
+export function PlantSeedModal({ onClose, onSubmit, plantTypes, position, open, onOpenStore }: PlantSeedModalProps) {
   const [selectedPlantType, setSelectedPlantType] = useState<string | null>(null);
+  const [userSeedInventory, setUserSeedInventory] = useState<SeedInventory[]>([]);
+  const [loadingInventory, setLoadingInventory] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      loadUserSeedInventory();
+    }
+  }, [open]);
+
+  const loadUserSeedInventory = async () => {
+    setLoadingInventory(true);
+    try {
+      const response = await apiService.getUserSeedInventory();
+      setUserSeedInventory(response.seed_inventory);
+    } catch (error) {
+      console.error('Failed to load user seed inventory:', error);
+    } finally {
+      setLoadingInventory(false);
+    }
+  };
+
+  const getAvailableSeeds = () => {
+    const availablePlantTypes: (PlantType & { availableQuantity: number })[] = [];
+    
+    plantTypes.forEach(plantType => {
+      const seedItem = userSeedInventory.find(item => item.plant_type_id === plantType.id);
+      if (seedItem && seedItem.quantity > 0) {
+        availablePlantTypes.push({
+          ...plantType,
+          availableQuantity: seedItem.quantity
+        });
+      }
+    });
+    
+    return availablePlantTypes;
+  };
 
   const handleSubmit = () => {
     if (selectedPlantType) {
@@ -61,76 +76,126 @@ export function PlantSeedModal({ onClose, onSubmit, plantTypes, position, open }
     }
   };
 
+  const availableSeeds = getAvailableSeeds();
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] sm:max-h-128 flex flex-col">
         <DialogHeader>
           <DialogTitle>Plant Seed - Position {position + 1}</DialogTitle>
           <DialogDescription>
-            Choose a plant type to plant in this position. Each plant has different growth requirements and rewards.
+            Choose a plant type to plant in this position. You can only plant seeds you have purchased.
+            {onOpenStore && (
+              <div className="mt-2 p-2 bg-blue-900/20 rounded-lg">
+                <div className="flex items-center space-x-2 text-sm text-blue-700 dark:text-blue-300">
+                  <ShoppingCart className="w-4 h-4" />
+                  <span>Need more seeds? Visit the store to buy them!</span>
+                </div>
+              </div>
+            )}
           </DialogDescription>
         </DialogHeader>
         
         <div className="overflow-y-auto max-h-[60vh] sm:max-h-80 flex-1 py-4">
-          <div className="grid grid-cols-1 gap-3 sm:gap-4">
-            {plantTypes.map((plantType) => (
-              <div
-                key={plantType.id}
-                onClick={() => setSelectedPlantType(plantType.id)}
-                className={`p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition-all hover:shadow-md ${
-                  selectedPlantType === plantType.id
-                    ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
-                    : 'border-border hover:border-muted-foreground'
-                }`}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xl sm:text-2xl">{plantType.icon}</span>
-                    <div>
-                      <h4 className="text-sm sm:text-base font-medium text-foreground">{plantType.name}</h4>
-                      <p className="text-sm text-muted-foreground">{plantType.description}</p>
+          {loadingInventory ? (
+            <div className="text-center py-8">
+              <Package className="w-8 h-8 mx-auto mb-4 animate-pulse" />
+              <p className="text-muted-foreground">Loading your seeds...</p>
+            </div>
+          ) : availableSeeds.length === 0 ? (
+            <div className="text-center py-8">
+              <Package className="w-8 h-8 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground mb-4">You don't have any seeds!</p>
+              {onOpenStore && (
+                <Button onClick={() => {
+                  onOpenStore();
+                  onClose();
+                }} className="flex items-center space-x-2 mx-auto">
+                  <ShoppingCart className="w-4 h-4" />
+                  <span>Buy Seeds</span>
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:gap-4">
+              {availableSeeds.map((plantType) => (
+                <div
+                  key={plantType.id}
+                  onClick={() => setSelectedPlantType(plantType.id)}
+                  className={`p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                    selectedPlantType === plantType.id
+                      ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                      : 'border-border hover:border-muted-foreground'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xl sm:text-2xl">{plantType.icon}</span>
+                      <div>
+                        <h4 className="text-sm sm:text-base font-medium text-foreground">{plantType.name}</h4>
+                        <p className="text-sm text-muted-foreground">{plantType.description}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-1 bg-green-100 dark:bg-green-900/20 px-2 py-1 rounded-full">
+                      <Package className="w-3 h-3 text-green-600" />
+                      <span className="text-xs font-medium text-green-700 dark:text-green-300">
+                        {plantType.availableQuantity}
+                      </span>
                     </div>
                   </div>
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full border ${
-                      rarityColors[plantType.rarity as keyof typeof rarityColors]
-                    }`}
-                  >
-                    {plantType.rarity}
-                  </span>
-                </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                  <div className="flex items-center space-x-1">
-                    <Clock className="w-3 h-3" />
-                    <span>{plantType.growth_time} days</span>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                    <div className="flex items-center space-x-1">
+                      <Clock className="w-3 h-3" />
+                      <span>{formatGrowthTime(plantType.growth_time)}</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <Star className="w-3 h-3" />
+                      <span>Yield: {plantType.yield}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-1">
-                    <Star className="w-3 h-3" />
-                    <span>{plantType.experience_value} XP</span>
-                  </div>
-                </div>
 
-                <div className="mt-2 pt-2 border-t border-border">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Yield: {plantType.yield}</span>
-                    <span className="text-green-600 dark:text-green-400 font-medium">
-                      ${plantType.harvest_value} each
-                    </span>
+                  <div className="mt-2 pt-2 border-t border-border">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-muted-foreground">Harvest Value</span>
+                      <span className="text-green-600 dark:text-green-400 font-medium">
+                        {plantType.harvest_value} coins
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Seed Price</span>
+                      <span className="text-yellow-600 dark:text-yellow-400 font-medium flex items-center space-x-1">
+                        <Coins className="w-3 h-3" />
+                        <span>{plantType.seed_price} coins</span>
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <DialogFooter>
+          {onOpenStore && (
+            <Button
+              onClick={() => {
+                onOpenStore();
+                onClose();
+              }}
+              variant="outline"
+              className="flex items-center space-x-2"
+            >
+              <ShoppingCart className="w-4 h-4" />
+              <span>Store</span>
+            </Button>
+          )}
           <DialogClose asChild>
             <Button variant="outline">Cancel</Button>
           </DialogClose>
           <Button
             onClick={handleSubmit}
-            disabled={!selectedPlantType}
+            disabled={!selectedPlantType || availableSeeds.length === 0}
             className="bg-green-600 hover:bg-green-700"
           >
             Plant Seed

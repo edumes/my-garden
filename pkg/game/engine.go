@@ -107,7 +107,7 @@ func (g *GameEngine) processPlantGrowth(plant *models.Plant, weather *models.Wea
 	}
 
 	// Calculate growth progress
-	baseGrowthRate := 1.0 / float64(plant.PlantType.GrowthTime) // Growth per minute
+	baseGrowthRate := 5000.0 / float64(plant.PlantType.GrowthTime) // Growth per minute
 	weatherMultiplier := weather.GrowthMultiplier
 
 	// Calculate total growth for this tick

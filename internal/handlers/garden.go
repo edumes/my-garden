@@ -15,6 +15,40 @@ type GardenHandler struct {
 	db *database.Database
 }
 
+// checkGardenAccess checks if a user has access to a garden and returns the access level
+func (h *GardenHandler) checkGardenAccess(userID, gardenID uuid.UUID) (models.GardenPermission, error) {
+	// First check if user owns the garden
+	var garden models.Garden
+	if err := h.db.DB.Where("id = ? AND user_id = ?", gardenID, userID).First(&garden).Error; err == nil {
+		return models.GardenPermissionManage, nil // Owner has full permissions
+	}
+
+	// Check if user has shared access
+	var share models.GardenShare
+	if err := h.db.DB.Where("garden_id = ? AND user_id = ?", gardenID, userID).First(&share).Error; err != nil {
+		return "", err
+	}
+
+	// Return the highest permission level
+	highestPerm := models.GardenPermissionView
+	for _, perm := range share.Permissions {
+		switch perm {
+		case models.GardenPermissionManage:
+			return models.GardenPermissionManage, nil
+		case models.GardenPermissionHarvest:
+			if highestPerm != models.GardenPermissionManage {
+				highestPerm = models.GardenPermissionHarvest
+			}
+		case models.GardenPermissionPlant:
+			if highestPerm != models.GardenPermissionManage && highestPerm != models.GardenPermissionHarvest {
+				highestPerm = models.GardenPermissionPlant
+			}
+		}
+	}
+
+	return highestPerm, nil
+}
+
 func NewGardenHandler(db *database.Database) *GardenHandler {
 	return &GardenHandler{db: db}
 }
@@ -52,13 +86,38 @@ func (h *GardenHandler) GetGardens(c *gin.Context) {
 		return
 	}
 
-	var gardens []models.Garden
-	if err := h.db.DB.Where("user_id = ?", userID).Preload("Plants.PlantType").Find(&gardens).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch gardens"})
+	// Get owned gardens
+	var ownedGardens []models.Garden
+	if err := h.db.DB.Where("user_id = ?", userID).Preload("Plants.PlantType").Find(&ownedGardens).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch owned gardens"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"gardens": gardens})
+	// Get shared gardens
+	var sharedGardens []models.GardenShare
+	if err := h.db.DB.Where("user_id = ?", userID).
+		Preload("Garden.Plants.PlantType").
+		Preload("Garden.User").
+		Find(&sharedGardens).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch shared gardens"})
+		return
+	}
+
+	// Transform shared gardens to include permission info
+	var sharedGardenResponses []gin.H
+	for _, share := range sharedGardens {
+		sharedGardenResponses = append(sharedGardenResponses, gin.H{
+			"garden":     share.Garden,
+			"permission": share.Permissions,
+			"shared_by":  share.SharedByUser,
+			"shared_at":  share.SharedAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"owned_gardens":  ownedGardens,
+		"shared_gardens": sharedGardenResponses,
+	})
 }
 
 // CreateGarden godoc
@@ -128,8 +187,19 @@ func (h *GardenHandler) GetGarden(c *gin.Context) {
 		return
 	}
 
+	// Check garden access
+	permission, err := h.checkGardenAccess(userID.(uuid.UUID), gardenID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Garden not found or access denied"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check garden access"})
+		return
+	}
+
 	var garden models.Garden
-	if err := h.db.DB.Where("id = ? AND user_id = ?", gardenID, userID).Preload("Plants.PlantType").First(&garden).Error; err != nil {
+	if err := h.db.DB.Where("id = ?", gardenID).Preload("Plants.PlantType").First(&garden).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Garden not found"})
 			return
@@ -138,7 +208,13 @@ func (h *GardenHandler) GetGarden(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"garden": garden})
+	// Add permission info to response
+	response := gin.H{
+		"garden":     garden,
+		"permission": permission,
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 // UpdateGarden godoc
@@ -283,9 +359,25 @@ func (h *GardenHandler) PlantSeed(c *gin.Context) {
 		return
 	}
 
-	// Check if garden exists and belongs to user
+	// Check garden access and permissions
+	permission, err := h.checkGardenAccess(userID.(uuid.UUID), gardenID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Garden not found or access denied"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check garden access"})
+		return
+	}
+
+	// Check if user has permission to plant
+	if permission != models.GardenPermissionManage && permission != models.GardenPermissionPlant {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to plant in this garden"})
+		return
+	}
+
 	var garden models.Garden
-	if err := h.db.DB.Where("id = ? AND user_id = ?", gardenID, userID).First(&garden).Error; err != nil {
+	if err := h.db.DB.Where("id = ?", gardenID).First(&garden).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Garden not found"})
 			return
@@ -312,6 +404,27 @@ func (h *GardenHandler) PlantSeed(c *gin.Context) {
 		return
 	}
 
+	// Check if user has purchased seeds for this plant type
+	var seedInventory models.SeedInventory
+	if err := h.db.DB.Where("user_id = ? AND plant_type_id = ? AND quantity > 0", userID, req.PlantTypeID).First(&seedInventory).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":           "You don't have any seeds for this plant type. Please purchase seeds from the store first.",
+				"plant_type_name": plantType.Name,
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check seed inventory"})
+		return
+	}
+
+	// Start transaction
+	tx := h.db.DB.Begin()
+	if tx.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+		return
+	}
+
 	// Create plant
 	plant := models.Plant{
 		GardenID:    gardenID,
@@ -320,8 +433,31 @@ func (h *GardenHandler) PlantSeed(c *gin.Context) {
 		PlantedAt:   time.Now(),
 	}
 
-	if err := h.db.DB.Create(&plant).Error; err != nil {
+	if err := tx.Create(&plant).Error; err != nil {
+		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to plant seed"})
+		return
+	}
+
+	// Deduct one seed from inventory
+	if err := tx.Model(&seedInventory).Update("quantity", seedInventory.Quantity-1).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seed inventory"})
+		return
+	}
+
+	// Delete seed inventory record if quantity becomes 0
+	if seedInventory.Quantity-1 <= 0 {
+		if err := tx.Delete(&seedInventory).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clean up empty seed inventory"})
+			return
+		}
+	}
+
+	// Commit transaction
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
 		return
 	}
 
@@ -401,6 +537,13 @@ func (h *GardenHandler) HarvestPlant(c *gin.Context) {
 	// Check for level up
 	oldLevel := user.Level
 	user.Level = calculateLevel(user.Experience)
+
+	// Reset plant to seed state
+	now := time.Now()
+	plant.GrowthProgress = 0
+	plant.Stage = models.PlantStageSeed
+	plant.PlantedAt = now
+	plant.HarvestedAt = &now
 
 	// Save changes in a transaction
 	tx := h.db.DB.Begin()

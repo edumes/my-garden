@@ -1,4 +1,4 @@
-import { Coins, Leaf, LogOut, Settings, Trophy, User } from 'lucide-react';
+import { Coins, Leaf, LogOut, Settings, ShoppingCart, Trophy, User } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
@@ -13,7 +13,11 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 
-export function Header() {
+interface HeaderProps {
+  onOpenStore?: () => void;
+}
+
+export function Header({ onOpenStore }: HeaderProps) {
   const { user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -49,6 +53,17 @@ export function Header() {
                     <span className="font-medium text-blue-800 dark:text-blue-200">Level {user.level}</span>
                   </Badge>
                 </div>
+
+                {onOpenStore && (
+                  <Button
+                    onClick={onOpenStore}
+                    variant="outline"
+                    className="flex items-center space-x-2"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    <span>Store</span>
+                  </Button>
+                )}
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -108,6 +123,16 @@ export function Header() {
                 </div>
               </div>
               <div className="flex flex-col space-y-2">
+                {onOpenStore && (
+                  <Button
+                    onClick={onOpenStore}
+                    variant="secondary"
+                    className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-muted-foreground hover:bg-accent rounded-lg text-left"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    <span>Store</span>
+                  </Button>
+                )}
                 <Button
                   variant="secondary"
                   className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-muted-foreground hover:bg-accent rounded-lg text-left">

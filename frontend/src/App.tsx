@@ -1,15 +1,16 @@
 import { Loader } from 'lucide-react';
-import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
-import { AuthScreen } from './components/AuthScreen';
+import { useEffect, useState } from 'react';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
+import { Dashboard } from './components/Dashboard';
+import { GardenDetail } from './components/GardenDetail';
+import { Header } from './components/Header';
+import JoinGardenPage from './components/JoinGardenPage';
 import { Login } from './components/Login';
 import { Register } from './components/Register';
-import { Dashboard } from './components/Dashboard';
-import { Header } from './components/Header';
+import { Store } from './components/Store';
+import { Toaster } from './components/ui/sonner';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { UserProfile } from './components/UserProfile';
-import { GardenDetail } from './components/GardenDetail';
-import { useEffect, useState } from 'react';
 import { apiService } from './services/api';
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
@@ -33,8 +34,10 @@ function PrivateRoute({ children }: { children: JSX.Element }) {
 function GardenDetailRoute() {
   const { id } = useParams();
   const [garden, setGarden] = useState<any>(null);
+  const [permission, setPermission] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showStore, setShowStore] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -42,6 +45,7 @@ function GardenDetailRoute() {
     apiService.getGarden(id)
       .then((res) => {
         setGarden(res.garden);
+        setPermission(res.permission);
         setError('');
       })
       .catch(() => {
@@ -61,15 +65,28 @@ function GardenDetailRoute() {
   if (error || !garden) {
     return <div className="min-h-screen flex items-center justify-center text-2xl text-muted-foreground">Garden not found</div>;
   }
-  return <GardenDetail garden={garden} onBack={() => window.history.back()} />;
+  return (
+    <>
+      <GardenDetail
+        garden={garden}
+        permission={permission}
+        isShared={!!permission && permission !== 'manage'}
+        onBack={() => window.history.back()}
+        onOpenStore={() => setShowStore(true)}
+      />
+      {showStore && <Store onClose={() => setShowStore(false)} />}
+    </>
+  );
 }
 
 function AppContent() {
   const location = useLocation();
   const hideHeader = location.pathname === '/login' || location.pathname === '/register';
+  const [showStore, setShowStore] = useState(false);
+
   return (
     <>
-      {!hideHeader && <Header />}
+      {!hideHeader && <Header onOpenStore={() => setShowStore(true)} />}
       <Routes>
         <Route
           path="/"
@@ -82,6 +99,14 @@ function AppContent() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route
+          path="/join-garden/:token"
+          element={
+            <PrivateRoute>
+              <JoinGardenPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/garden/:id"
           element={
             <PrivateRoute>
@@ -91,6 +116,8 @@ function AppContent() {
         />
         <Route path="*" element={<div className="min-h-screen flex items-center justify-center text-2xl text-muted-foreground">404 Not Found</div>} />
       </Routes>
+
+      {showStore && <Store onClose={() => setShowStore(false)} />}
     </>
   );
 }
@@ -101,6 +128,7 @@ function App() {
       <AuthProvider>
         <BrowserRouter>
           <AppContent />
+          <Toaster richColors position='bottom-center' closeButton duration={1800} />
         </BrowserRouter>
       </AuthProvider>
     </ThemeProvider>

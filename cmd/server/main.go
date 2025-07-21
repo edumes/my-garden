@@ -20,12 +20,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/my-garden/api/docs"
+	"github.com/my-garden/api/internal/audit"
+	auth "github.com/my-garden/api/internal/auth"
 	"github.com/my-garden/api/internal/config"
 	"github.com/my-garden/api/internal/database"
-	"github.com/my-garden/api/internal/handlers"
+	"github.com/my-garden/api/internal/garden"
 	"github.com/my-garden/api/internal/middleware"
-	"github.com/my-garden/api/internal/services"
-	"github.com/my-garden/api/pkg/auth"
+	"github.com/my-garden/api/internal/store"
+	"github.com/my-garden/api/internal/weather"
+	pkgAuth "github.com/my-garden/api/pkg/auth"
 	"github.com/my-garden/api/pkg/game"
 	"github.com/redis/go-redis/v9"
 	swaggerFiles "github.com/swaggo/files"
@@ -49,7 +52,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
-	defer db.Close()
+
+	// Run migrations
+	gormDB := db.GetDB()
+	if err := garden.Migrate(gormDB); err != nil {
+		log.Fatalf("Failed to migrate garden models: %v", err)
+	}
+	if err := audit.RegisterModels(gormDB); err != nil {
+		log.Fatalf("Failed to migrate audit models: %v", err)
+	}
 
 	// Initialize Redis
 	rdb := redis.NewClient(&redis.Options{
@@ -66,7 +77,7 @@ func main() {
 	}
 
 	// Initialize JWT manager
-	jwtManager := auth.NewJWTManager(cfg)
+	jwtManager := pkgAuth.NewJWTManager(cfg)
 
 	// Initialize game engine
 	gameEngine := game.NewGameEngine(db, rdb, cfg)
@@ -74,21 +85,33 @@ func main() {
 	defer gameEngine.Stop()
 
 	// Initialize services
-	auditService := services.NewAuditService(db)
+	auditService := audit.NewAuditService(db)
 
-	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(db, jwtManager, auditService)
-	gardenHandler := handlers.NewGardenHandler(db, auditService)
-	gardenShareHandler := handlers.NewGardenShareHandler(db)
-	weatherHandler := handlers.NewWeatherHandler(db, gameEngine)
-	storeHandler := handlers.NewStoreHandler(db, auditService)
-	auditHandler := handlers.NewAuditHandler(db, auditService)
+	// Initialize auth components
+	authRepo := auth.NewRepository(db.GetDB())
+	authService := auth.NewService(authRepo, jwtManager)
+	authHandler := auth.NewAuthHandler(authService, auditService)
+
+	// Initialize store components
+	storeRepo := store.NewRepository(db)
+	storeService := store.NewService(storeRepo, auditService)
+	storeHandler := store.NewStoreHandler(storeService, auditService)
+
+	// Initialize weather components
+	weatherRepo := weather.NewRepository(db)
+	weatherService := weather.NewService(weatherRepo, rdb)
+	weatherHandler := weather.NewWeatherHandler(weatherService)
+
+	// Initialize other handlers
+	gardenHandler := garden.NewGardenHandler(db, auditService)
+	gardenShareHandler := garden.NewGardenShareHandler(db)
+	auditHandler := audit.NewAuditHandler(db, auditService)
 
 	// Initialize router
 	router := gin.Default()
 
 	// Initialize middleware
-	auditMiddleware := middleware.NewAuditMiddleware(auditService)
+	auditMiddleware := audit.NewAuditMiddleware(auditService)
 
 	// Add middleware
 	router.Use(middleware.CORSMiddleware(cfg))
@@ -108,21 +131,21 @@ func main() {
 	// Swagger documentation
 	router.GET("/api/v1/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// API routes
+	// Setup routes
 	api := router.Group("/api/v1")
 	{
-		// Authentication routes
-		auth := api.Group("/auth")
+		// Auth routes (public)
+		authRoutes := api.Group("/auth")
 		{
-			auth.POST("/register", authHandler.Register)
-			auth.POST("/login", authHandler.Login)
-			auth.POST("/refresh", authHandler.RefreshToken)
-			auth.POST("/logout", authHandler.Logout)
+			authRoutes.POST("/register", authHandler.Register)
+			authRoutes.POST("/login", authHandler.Login)
+			authRoutes.POST("/refresh", authHandler.RefreshToken)
+			authRoutes.POST("/logout", auth.AuthMiddleware(jwtManager), authHandler.Logout)
 		}
 
 		// User routes (protected)
 		users := api.Group("/users")
-		users.Use(middleware.AuthMiddleware(jwtManager))
+		users.Use(auth.AuthMiddleware(jwtManager))
 		{
 			users.GET("/profile", authHandler.GetProfile)
 			users.PUT("/profile", authHandler.UpdateProfile)
@@ -130,7 +153,7 @@ func main() {
 
 		// Garden routes (protected)
 		gardens := api.Group("/gardens")
-		gardens.Use(middleware.AuthMiddleware(jwtManager))
+		gardens.Use(auth.AuthMiddleware(jwtManager))
 		{
 			gardens.GET("", gardenHandler.GetGardens)
 			gardens.POST("", gardenHandler.CreateGarden)
@@ -146,7 +169,7 @@ func main() {
 
 		// Garden sharing routes (protected)
 		gardenShares := api.Group("/garden-shares")
-		gardenShares.Use(middleware.AuthMiddleware(jwtManager))
+		gardenShares.Use(auth.AuthMiddleware(jwtManager))
 		{
 			gardenShares.POST("/access-links", gardenShareHandler.CreateAccessLink)
 			gardenShares.POST("/join", gardenShareHandler.JoinGarden)
@@ -163,7 +186,7 @@ func main() {
 
 		// Store routes (protected)
 		store := api.Group("/store")
-		store.Use(middleware.AuthMiddleware(jwtManager))
+		store.Use(auth.AuthMiddleware(jwtManager))
 		{
 			store.GET("/inventory", storeHandler.GetStoreInventory)
 			store.POST("/buy", storeHandler.BuySeed)
@@ -187,7 +210,7 @@ func main() {
 
 	// Audit routes (protected)
 	audit := api.Group("/audit")
-	audit.Use(middleware.AuthMiddleware(jwtManager))
+	audit.Use(auth.AuthMiddleware(jwtManager))
 	{
 		audit.GET("/logs", auditHandler.GetAuditLogs)
 		audit.GET("/users/:user_id/activity", auditHandler.GetUserActivity)
@@ -197,7 +220,7 @@ func main() {
 
 	// WebSocket routes (protected)
 	ws := router.Group("/api/v1/ws")
-	ws.Use(middleware.AuthMiddleware(jwtManager))
+	ws.Use(auth.AuthMiddleware(jwtManager))
 	{
 		ws.GET("/garden/:gardenId", func(c *gin.Context) {
 			// TODO: Implement WebSocket handler for real-time garden updates

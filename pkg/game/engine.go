@@ -8,7 +8,8 @@ import (
 
 	"github.com/my-garden/api/internal/config"
 	"github.com/my-garden/api/internal/database"
-	"github.com/my-garden/api/internal/models"
+	"github.com/my-garden/api/internal/garden"
+	"github.com/my-garden/api/internal/weather"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -20,10 +21,14 @@ type GameEngine struct {
 	cancel        context.CancelFunc
 	tickTicker    *time.Ticker
 	weatherTicker *time.Ticker
+	weatherRepo   *weather.Repository
+	weatherSvc    *weather.Service
 }
 
 func NewGameEngine(db *database.Database, redis *redis.Client, cfg *config.Config) *GameEngine {
 	ctx, cancel := context.WithCancel(context.Background())
+	weatherRepo := weather.NewRepository(db)
+	weatherSvc := weather.NewService(weatherRepo, redis)
 
 	return &GameEngine{
 		db:            db,
@@ -33,6 +38,8 @@ func NewGameEngine(db *database.Database, redis *redis.Client, cfg *config.Confi
 		cancel:        cancel,
 		tickTicker:    time.NewTicker(cfg.Game.TickInterval),
 		weatherTicker: time.NewTicker(cfg.Game.WeatherUpdateInterval),
+		weatherRepo:   weatherRepo,
+		weatherSvc:    weatherSvc,
 	}
 }
 
@@ -82,27 +89,27 @@ func (g *GameEngine) processGameTick() {
 	log.Println("Processing game tick...")
 
 	// Get current weather
-	var currentWeather models.Weather
-	if err := g.db.DB.Order("created_at DESC").First(&currentWeather).Error; err != nil {
+	currentWeather, err := g.weatherSvc.GetCurrentWeather()
+	if err != nil {
 		log.Printf("Failed to get current weather: %v", err)
 		return
 	}
 
 	// Process all plants
-	var plants []models.Plant
+	var plants []garden.Plant
 	if err := g.db.DB.Preload("PlantType").Preload("Garden").Find(&plants).Error; err != nil {
 		log.Printf("Failed to fetch plants: %v", err)
 		return
 	}
 
 	for _, plant := range plants {
-		g.processPlantGrowth(&plant, &currentWeather)
+		g.processPlantGrowth(&plant, currentWeather)
 	}
 }
 
-func (g *GameEngine) processPlantGrowth(plant *models.Plant, weather *models.Weather) {
+func (g *GameEngine) processPlantGrowth(plant *garden.Plant, weather *weather.Weather) {
 	// Skip if plant is already harvested or withered
-	if plant.Stage == models.PlantStageHarvestable {
+	if plant.Stage == garden.PlantStageHarvestable {
 		return
 	}
 
@@ -125,20 +132,20 @@ func (g *GameEngine) processPlantGrowth(plant *models.Plant, weather *models.Wea
 	}
 }
 
-func (g *GameEngine) updatePlantStage(plant *models.Plant) {
+func (g *GameEngine) updatePlantStage(plant *garden.Plant) {
 	progress := plant.GrowthProgress
 
 	switch {
 	case progress < 20:
-		plant.Stage = models.PlantStageSeed
+		plant.Stage = garden.PlantStageSeed
 	case progress < 40:
-		plant.Stage = models.PlantStageSprout
+		plant.Stage = garden.PlantStageSprout
 	case progress < 70:
-		plant.Stage = models.PlantStageGrowing
+		plant.Stage = garden.PlantStageGrowing
 	case progress < 100:
-		plant.Stage = models.PlantStageMature
+		plant.Stage = garden.PlantStageMature
 	default:
-		plant.Stage = models.PlantStageHarvestable
+		plant.Stage = garden.PlantStageHarvestable
 	}
 }
 
@@ -149,21 +156,23 @@ func (g *GameEngine) updateWeather() {
 	weather := g.generateWeather()
 
 	// Save to database
-	if err := g.db.DB.Create(&weather).Error; err != nil {
+	if err := g.weatherRepo.CreateWeather(&weather); err != nil {
 		log.Printf("Failed to save weather: %v", err)
 		return
 	}
 
 	// Cache current weather in Redis
-	g.cacheCurrentWeather(weather)
+	if err := g.weatherSvc.CacheCurrentWeather(g.ctx, &weather, g.config.Game.WeatherUpdateInterval); err != nil {
+		log.Printf("Failed to cache weather: %v", err)
+	}
 
 	log.Printf("Weather updated: %s, Temperature: %.1f°C, Growth Multiplier: %.2f",
 		weather.Condition, weather.Temperature, weather.GrowthMultiplier)
 }
 
-func (g *GameEngine) generateWeather() models.Weather {
+func (g *GameEngine) generateWeather() weather.Weather {
 	// Get current season
-	season := models.GetSeason(time.Now())
+	season := weather.GetSeason(time.Now())
 
 	// Define weather probabilities based on season
 	weatherConditions := g.getWeatherConditionsForSeason(season)
@@ -181,9 +190,9 @@ func (g *GameEngine) generateWeather() models.Weather {
 	windSpeed := rand.Float64() * 20 // 0-20 km/h
 
 	// Get weather effects
-	growthMultiplier, waterEvaporationRate := models.GetWeatherEffects(selectedCondition)
+	growthMultiplier, waterEvaporationRate := weather.GetWeatherEffects(selectedCondition)
 
-	weather := models.Weather{
+	weather := weather.Weather{
 		Condition:            selectedCondition,
 		Temperature:          temperature,
 		Humidity:             humidity,
@@ -197,89 +206,76 @@ func (g *GameEngine) generateWeather() models.Weather {
 	return weather
 }
 
-func (g *GameEngine) getWeatherConditionsForSeason(season models.Season) []models.WeatherCondition {
+func (g *GameEngine) getWeatherConditionsForSeason(season weather.Season) []weather.WeatherCondition {
 	switch season {
-	case models.SeasonSpring:
-		return []models.WeatherCondition{
-			models.WeatherSunny, models.WeatherCloudy, models.WeatherRainy,
-			models.WeatherFoggy, models.WeatherWindy,
+	case weather.SeasonSpring:
+		return []weather.WeatherCondition{
+			weather.WeatherSunny, weather.WeatherCloudy, weather.WeatherRainy,
+			weather.WeatherFoggy, weather.WeatherWindy,
 		}
-	case models.SeasonSummer:
-		return []models.WeatherCondition{
-			models.WeatherSunny, models.WeatherCloudy, models.WeatherStormy,
-			models.WeatherWindy,
+	case weather.SeasonSummer:
+		return []weather.WeatherCondition{
+			weather.WeatherSunny, weather.WeatherCloudy, weather.WeatherStormy,
+			weather.WeatherWindy,
 		}
-	case models.SeasonAutumn:
-		return []models.WeatherCondition{
-			models.WeatherCloudy, models.WeatherRainy, models.WeatherFoggy,
-			models.WeatherWindy, models.WeatherSunny,
+	case weather.SeasonAutumn:
+		return []weather.WeatherCondition{
+			weather.WeatherCloudy, weather.WeatherRainy, weather.WeatherFoggy,
+			weather.WeatherWindy, weather.WeatherSunny,
 		}
-	case models.SeasonWinter:
-		return []models.WeatherCondition{
-			models.WeatherCloudy, models.WeatherSnowy, models.WeatherFoggy,
-			models.WeatherWindy,
+	case weather.SeasonWinter:
+		return []weather.WeatherCondition{
+			weather.WeatherCloudy, weather.WeatherSnowy, weather.WeatherFoggy,
+			weather.WeatherWindy,
 		}
 	default:
-		return []models.WeatherCondition{
-			models.WeatherSunny, models.WeatherCloudy, models.WeatherRainy,
+		return []weather.WeatherCondition{
+			weather.WeatherSunny, weather.WeatherCloudy, weather.WeatherRainy,
 		}
 	}
 }
 
-func (g *GameEngine) generateTemperature(season models.Season, condition models.WeatherCondition) float64 {
+func (g *GameEngine) generateTemperature(season weather.Season, condition weather.WeatherCondition) float64 {
 	baseTemp := g.getBaseTemperatureForSeason(season)
 
 	// Adjust temperature based on weather condition
 	switch condition {
-	case models.WeatherSunny:
+	case weather.WeatherSunny:
 		baseTemp += rand.Float64()*5 + 2 // +2 to +7°C
-	case models.WeatherCloudy:
+	case weather.WeatherCloudy:
 		baseTemp += rand.Float64()*3 - 1 // -1 to +2°C
-	case models.WeatherRainy:
+	case weather.WeatherRainy:
 		baseTemp += rand.Float64()*2 - 2 // -2 to 0°C
-	case models.WeatherStormy:
+	case weather.WeatherStormy:
 		baseTemp += rand.Float64()*3 - 3 // -3 to 0°C
-	case models.WeatherFoggy:
+	case weather.WeatherFoggy:
 		baseTemp += rand.Float64()*2 - 1 // -1 to +1°C
-	case models.WeatherWindy:
+	case weather.WeatherWindy:
 		baseTemp += rand.Float64()*2 - 1 // -1 to +1°C
-	case models.WeatherSnowy:
+	case weather.WeatherSnowy:
 		baseTemp += rand.Float64()*3 - 5 // -5 to -2°C
 	}
 
 	return baseTemp
 }
 
-func (g *GameEngine) getBaseTemperatureForSeason(season models.Season) float64 {
+func (g *GameEngine) getBaseTemperatureForSeason(season weather.Season) float64 {
 	switch season {
-	case models.SeasonSpring:
+	case weather.SeasonSpring:
 		return 15.0
-	case models.SeasonSummer:
+	case weather.SeasonSummer:
 		return 25.0
-	case models.SeasonAutumn:
+	case weather.SeasonAutumn:
 		return 15.0
-	case models.SeasonWinter:
+	case weather.SeasonWinter:
 		return 5.0
 	default:
 		return 15.0
 	}
 }
 
-func (g *GameEngine) cacheCurrentWeather(weather models.Weather) {
-	// Cache weather in Redis for quick access
-	key := "weather:current"
-	// Note: In a real implementation, you'd serialize the weather struct to JSON
-	// For now, we'll just store a simple string
-	g.redis.Set(g.ctx, key, weather.Condition, g.config.Game.WeatherUpdateInterval)
-}
-
-func (g *GameEngine) GetCurrentWeather() (*models.Weather, error) {
-	var weather models.Weather
-	err := g.db.DB.Order("created_at DESC").First(&weather).Error
-	if err != nil {
-		return nil, err
-	}
-	return &weather, nil
+func (g *GameEngine) GetCurrentWeather() (*weather.Weather, error) {
+	return g.weatherSvc.GetCurrentWeather()
 }
 
 // Helper functions

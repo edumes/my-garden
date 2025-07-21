@@ -221,6 +221,44 @@ class ApiService {
   async deactivateAccessLink(gardenId: string, linkId: string) {
     return this.request(`/garden-shares/garden/${gardenId}/access-links/${linkId}/deactivate`, { method: 'POST' });
   }
+
+  // Audit
+  async getAuditLogs(params?: {
+    user_id?: string;
+    action?: string;
+    resource?: string;
+    resource_id?: string;
+    status?: string;
+    start_date?: string;
+    end_date?: string;
+    limit?: number;
+    offset?: number;
+  }) {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+    return this.request(`/audit/logs?${queryParams.toString()}`);
+  }
+
+  async getUserActivity(userId: string, limit?: number) {
+    const queryParams = limit ? `?limit=${limit}` : '';
+    return this.request(`/audit/users/${userId}/activity${queryParams}`);
+  }
+
+  async getGardenActivity(gardenId: string, limit?: number) {
+    const queryParams = limit ? `?limit=${limit}` : '';
+    return this.request(`/audit/gardens/${gardenId}/activity${queryParams}`);
+  }
+
+  async getAuditStats(days?: number) {
+    const queryParams = days ? `?days=${days}` : '';
+    return this.request(`/audit/stats${queryParams}`);
+  }
 }
 
 export const apiService = new ApiService();

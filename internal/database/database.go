@@ -66,6 +66,7 @@ func (d *Database) Migrate() error {
 		&models.WeatherForecast{},
 		&models.GardenShare{},
 		&models.GardenAccessLink{},
+		&models.AuditLog{},
 	)
 }
 

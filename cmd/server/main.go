@@ -24,6 +24,7 @@ import (
 	"github.com/my-garden/api/internal/database"
 	"github.com/my-garden/api/internal/handlers"
 	"github.com/my-garden/api/internal/middleware"
+	"github.com/my-garden/api/internal/services"
 	"github.com/my-garden/api/pkg/auth"
 	"github.com/my-garden/api/pkg/game"
 	"github.com/redis/go-redis/v9"
@@ -72,20 +73,28 @@ func main() {
 	gameEngine.Start()
 	defer gameEngine.Stop()
 
+	// Initialize services
+	auditService := services.NewAuditService(db)
+
 	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(db, jwtManager)
-	gardenHandler := handlers.NewGardenHandler(db)
+	authHandler := handlers.NewAuthHandler(db, jwtManager, auditService)
+	gardenHandler := handlers.NewGardenHandler(db, auditService)
 	gardenShareHandler := handlers.NewGardenShareHandler(db)
 	weatherHandler := handlers.NewWeatherHandler(db, gameEngine)
-	storeHandler := handlers.NewStoreHandler(db)
+	storeHandler := handlers.NewStoreHandler(db, auditService)
+	auditHandler := handlers.NewAuditHandler(db, auditService)
 
 	// Initialize router
 	router := gin.Default()
+
+	// Initialize middleware
+	auditMiddleware := middleware.NewAuditMiddleware(auditService)
 
 	// Add middleware
 	router.Use(middleware.CORSMiddleware(cfg))
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
+	router.Use(auditMiddleware.AuditLog())
 
 	// Health check endpoint
 	router.GET("/health", func(c *gin.Context) {
@@ -174,6 +183,16 @@ func main() {
 			// TODO: Implement leaderboard endpoint
 			c.JSON(http.StatusOK, gin.H{"message": "Leaderboard endpoint - coming soon"})
 		})
+	}
+
+	// Audit routes (protected)
+	audit := api.Group("/audit")
+	audit.Use(middleware.AuthMiddleware(jwtManager))
+	{
+		audit.GET("/logs", auditHandler.GetAuditLogs)
+		audit.GET("/users/:user_id/activity", auditHandler.GetUserActivity)
+		audit.GET("/gardens/:garden_id/activity", auditHandler.GetGardenActivity)
+		audit.GET("/stats", auditHandler.GetAuditStats)
 	}
 
 	// WebSocket routes (protected)

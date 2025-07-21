@@ -1,6 +1,7 @@
 import { Loader } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
+import { TooltipProvider } from './components/animate-ui/components/tooltip';
 import { Dashboard } from './components/Dashboard';
 import { GardenDetail } from './components/GardenDetail';
 import { Header } from './components/Header';
@@ -8,6 +9,7 @@ import JoinGardenPage from './components/JoinGardenPage';
 import { Login } from './components/Login';
 import { Register } from './components/Register';
 import { Store } from './components/Store';
+import { AuditLogs } from './components/AuditLogs';
 import { Toaster } from './components/ui/sonner';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -74,7 +76,7 @@ function GardenDetailRoute() {
         onBack={() => window.history.back()}
         onOpenStore={() => setShowStore(true)}
       />
-      {showStore && <Store onClose={() => setShowStore(false)} />}
+      <Store open={showStore} onClose={() => setShowStore(false)} />
     </>
   );
 }
@@ -114,10 +116,18 @@ function AppContent() {
             </PrivateRoute>
           }
         />
+        {/* <Route
+          path="/audit"
+          element={
+            <PrivateRoute>
+              <AuditLogs />
+            </PrivateRoute>
+          }
+        /> */}
         <Route path="*" element={<div className="min-h-screen flex items-center justify-center text-2xl text-muted-foreground">404 Not Found</div>} />
       </Routes>
 
-      {showStore && <Store onClose={() => setShowStore(false)} />}
+      <Store open={showStore} onClose={() => setShowStore(false)} />
     </>
   );
 }
@@ -125,12 +135,14 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <BrowserRouter>
-          <AppContent />
-          <Toaster richColors position='bottom-center' closeButton duration={1800} />
-        </BrowserRouter>
-      </AuthProvider>
+      <TooltipProvider openDelay={1} closeDelay={1}>
+        <AuthProvider>
+          <BrowserRouter>
+            <AppContent />
+            <Toaster richColors position='bottom-center' closeButton duration={1800} />
+          </BrowserRouter>
+        </AuthProvider>
+      </TooltipProvider>
     </ThemeProvider>
   );
 }

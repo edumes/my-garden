@@ -8,11 +8,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/my-garden/api/internal/database"
 	"github.com/my-garden/api/internal/models"
+	"github.com/my-garden/api/internal/services"
 	"gorm.io/gorm"
 )
 
 type GardenHandler struct {
-	db *database.Database
+	db           *database.Database
+	auditService *services.AuditService
 }
 
 // checkGardenAccess checks if a user has access to a garden and returns the access level
@@ -49,8 +51,8 @@ func (h *GardenHandler) checkGardenAccess(userID, gardenID uuid.UUID) (models.Ga
 	return highestPerm, nil
 }
 
-func NewGardenHandler(db *database.Database) *GardenHandler {
-	return &GardenHandler{db: db}
+func NewGardenHandler(db *database.Database, auditService *services.AuditService) *GardenHandler {
+	return &GardenHandler{db: db, auditService: auditService}
 }
 
 type CreateGardenRequest struct {
@@ -153,9 +155,15 @@ func (h *GardenHandler) CreateGarden(c *gin.Context) {
 	}
 
 	if err := h.db.DB.Create(&garden).Error; err != nil {
+		h.auditService.LogFailure(c, models.AuditActionGardenCreate, models.AuditResourceGarden, &garden.ID, gin.H{"error": "Failed to create garden"})
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create garden"})
 		return
 	}
+
+	h.auditService.LogSuccess(c, models.AuditActionGardenCreate, models.AuditResourceGarden, &garden.ID, gin.H{
+		"garden_name": garden.Name,
+		"garden_id":   garden.ID,
+	})
 
 	c.JSON(http.StatusCreated, gin.H{"garden": garden})
 }
@@ -457,12 +465,20 @@ func (h *GardenHandler) PlantSeed(c *gin.Context) {
 
 	// Commit transaction
 	if err := tx.Commit().Error; err != nil {
+		h.auditService.LogFailure(c, models.AuditActionPlantSeed, models.AuditResourcePlant, &plant.ID, gin.H{"error": "Failed to commit transaction"})
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
 		return
 	}
 
 	// Load plant type for response
 	h.db.DB.Preload("PlantType").First(&plant, plant.ID)
+
+	h.auditService.LogSuccess(c, models.AuditActionPlantSeed, models.AuditResourcePlant, &plant.ID, gin.H{
+		"garden_id":     gardenID,
+		"plant_type_id": req.PlantTypeID,
+		"position":      *req.Position,
+		"plant_id":      plant.ID,
+	})
 
 	c.JSON(http.StatusCreated, gin.H{"plant": plant})
 }
@@ -569,6 +585,14 @@ func (h *GardenHandler) HarvestPlant(c *gin.Context) {
 			"new_level":    user.Level,
 		},
 	}
+
+	h.auditService.LogSuccess(c, models.AuditActionPlantHarvest, models.AuditResourcePlant, &plant.ID, gin.H{
+		"garden_id":    gardenID,
+		"plant_id":     plantID,
+		"coins_earned": coinsEarned,
+		"level_up":     user.Level > oldLevel,
+		"new_level":    user.Level,
+	})
 
 	c.JSON(http.StatusOK, response)
 }

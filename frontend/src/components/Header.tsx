@@ -1,4 +1,4 @@
-import { Coins, Leaf, LogOut, Settings, ShoppingCart, Trophy, User } from 'lucide-react';
+import { Coins, Leaf, LogOut, Settings, ShoppingCart, Trophy, User, Activity } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
@@ -82,6 +82,10 @@ export function Header({ onOpenStore }: HeaderProps) {
                       <Settings className="w-4 h-4 mr-2" />
                       <span>Settings</span>
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => window.location.href = '/audit'}>
+                      <Activity className="w-4 h-4 mr-2" />
+                      <span>Audit Logs</span>
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
                       <LogOut className="w-4 h-4 mr-2" />
                       <span>Logout</span>
@@ -138,6 +142,13 @@ export function Header({ onOpenStore }: HeaderProps) {
                   className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-muted-foreground hover:bg-accent rounded-lg text-left">
                   <Settings className="w-4 h-4" />
                   <span>Settings</span>
+                </Button>
+                <Button
+                  onClick={() => window.location.href = '/audit'}
+                  variant="secondary"
+                  className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-muted-foreground hover:bg-accent rounded-lg text-left">
+                  <Activity className="w-4 h-4" />
+                  <span>Audit Logs</span>
                 </Button>
                 <Button
                   onClick={logout}

@@ -8,15 +8,17 @@ import (
 	"github.com/google/uuid"
 	"github.com/my-garden/api/internal/database"
 	"github.com/my-garden/api/internal/models"
+	"github.com/my-garden/api/internal/services"
 	"gorm.io/gorm"
 )
 
 type StoreHandler struct {
-	db *database.Database
+	db           *database.Database
+	auditService *services.AuditService
 }
 
-func NewStoreHandler(db *database.Database) *StoreHandler {
-	return &StoreHandler{db: db}
+func NewStoreHandler(db *database.Database, auditService *services.AuditService) *StoreHandler {
+	return &StoreHandler{db: db, auditService: auditService}
 }
 
 type BuySeedRequest struct {
@@ -144,6 +146,7 @@ func (h *StoreHandler) BuySeed(c *gin.Context) {
 
 	// Commit transaction
 	if err := tx.Commit().Error; err != nil {
+		h.auditService.LogFailure(c, models.AuditActionSeedPurchase, models.AuditResourceStore, nil, gin.H{"error": "Failed to commit transaction"})
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
 		return
 	}
@@ -158,6 +161,13 @@ func (h *StoreHandler) BuySeed(c *gin.Context) {
 		TotalCost: totalCost,
 		UserCoins: updatedUser.Coins,
 	}
+
+	h.auditService.LogSuccess(c, models.AuditActionSeedPurchase, models.AuditResourceStore, &req.PlantTypeID, gin.H{
+		"plant_type_id": req.PlantTypeID,
+		"quantity":      req.Quantity,
+		"total_cost":    totalCost,
+		"user_coins":    updatedUser.Coins,
+	})
 
 	c.JSON(http.StatusOK, response)
 }

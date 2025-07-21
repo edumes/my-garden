@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { GardenList } from './GardenList';
 import { UserProfile } from './UserProfile';
 import { WeatherWidget } from './WeatherWidget';
+import { AuditNotifications } from './AuditNotifications';
 import { Tabs, TabsContent, TabsContents, TabsList, TabsTrigger } from './animate-ui/components/tabs';
 import { Card } from './ui/card';
 
@@ -15,7 +16,7 @@ export function Dashboard() {
           <Tabs defaultValue="gardens" className="w-full">
             <TabsList className="mb-6 bg-muted/50 backdrop-blur-sm border border-border/50">
               <TabsTrigger value="gardens" className="text-sm font-medium">
-                🌱 My Gardens
+                🌱 Gardens
               </TabsTrigger>
               <TabsTrigger value="profile" className="text-sm font-medium">
                 👤 Profile
@@ -34,6 +35,10 @@ export function Dashboard() {
 
         <div className="space-y-4 sm:space-y-6 order-1 lg:order-2">
           <WeatherWidget />
+
+          <div className="flex justify-center">
+            <AuditNotifications />
+          </div>
 
           <Card className="rounded-xl shadow-sm border border-border p-6">
             <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Quick Tips</h3>

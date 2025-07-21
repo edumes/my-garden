@@ -15,6 +15,7 @@ A robust RESTful API for a virtual garden management game built with Go, featuri
 - 📊 **Analytics**: Garden statistics and performance tracking
 - 🗄️ **Data Persistence**: PostgreSQL database with Redis caching
 - 🚀 **Scalable Architecture**: Clean architecture with dependency injection
+- 🔍 **Audit System**: Comprehensive logging and monitoring of all garden actions and system events
 
 ## Tech Stack
 
@@ -111,6 +112,12 @@ The API will be available at `http://localhost:8080`
 ### Game
 - `GET /api/v1/game/status` - Get game status
 - `POST /api/v1/game/actions` - Perform game actions
+
+### Audit System
+- `GET /api/v1/audit/logs` - Get audit logs with filtering
+- `GET /api/v1/audit/users/{user_id}/activity` - Get user activity
+- `GET /api/v1/audit/gardens/{garden_id}/activity` - Get garden activity
+- `GET /api/v1/audit/stats` - Get audit statistics
 - `GET /api/v1/game/leaderboard` - Get leaderboard
 
 ### WebSocket
@@ -146,6 +153,49 @@ The API will be available at `http://localhost:8080`
 - **Permission Control**: Garden owners can manage user access and permissions
 
 ## Development
+
+### Development with Live Reload (Air)
+
+For the best development experience, use Air for automatic rebuilding and restarting when you make changes:
+
+1. **Install Air** (if not already installed):
+   ```bash
+   go install github.com/cosmtrek/air@latest
+   ```
+
+2. **Start development server with live reload**:
+   
+   **On Unix/Linux/macOS:**
+   ```bash
+   make dev
+   # or directly: air
+   ```
+
+Air will automatically:
+- Watch for changes in your Go files
+- Rebuild the application when changes are detected
+- Restart the server automatically
+- Show build errors in real-time
+
+### Alternative Development Commands
+
+**On Unix/Linux/macOS:**
+```bash
+# Install dependencies
+make deps
+
+# Build the application
+make build
+
+# Run the application (without live reload)
+make run
+
+# Run tests
+make test
+
+# Clean build artifacts
+make clean
+```
 
 ### Running Tests
 ```bash

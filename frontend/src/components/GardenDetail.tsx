@@ -170,14 +170,11 @@ export function GardenDetail({ garden: initialGarden, permission, isShared, onBa
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
         <div className="lg:col-span-3 order-2 lg:order-1">
-          <div className="bg-card rounded-xl shadow-sm border border-border p-4 sm:p-6">
-            <h2 className="text-base sm:text-lg font-semibold text-foreground mb-4">Garden Grid</h2>
-            <GardenGrid
-              plants={garden.plants || []}
-              onPlantAction={(plantId, action) => handlePlantAction(plantId, action)}
-              onPlantSeed={handlePlantSeed}
-            />
-          </div>
+          <GardenGrid
+            plants={garden.plants || []}
+            onPlantAction={(plantId, action) => handlePlantAction(plantId, action)}
+            onPlantSeed={handlePlantSeed}
+          />
         </div>
 
         <div className="space-y-4 sm:space-y-6 order-1 lg:order-2">

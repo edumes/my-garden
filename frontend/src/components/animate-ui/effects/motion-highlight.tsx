@@ -1,7 +1,7 @@
 'use client';
 
-import { AnimatePresence, Transition, motion } from 'motion/react';
 import * as React from 'react';
+import { AnimatePresence, Transition, motion } from 'motion/react';
 
 import { cn } from '@/lib/utils';
 
@@ -68,11 +68,11 @@ type ParentModeMotionHighlightProps = {
 
 type ControlledParentModeMotionHighlightProps<T extends string> =
   BaseMotionHighlightProps<T> &
-  ParentModeMotionHighlightProps & {
-    mode: 'parent';
-    controlledItems: true;
-    children: React.ReactNode;
-  };
+    ParentModeMotionHighlightProps & {
+      mode: 'parent';
+      controlledItems: true;
+      children: React.ReactNode;
+    };
 
 type ControlledChildrenModeMotionHighlightProps<T extends string> =
   BaseMotionHighlightProps<T> & {
@@ -83,12 +83,12 @@ type ControlledChildrenModeMotionHighlightProps<T extends string> =
 
 type UncontrolledParentModeMotionHighlightProps<T extends string> =
   BaseMotionHighlightProps<T> &
-  ParentModeMotionHighlightProps & {
-    mode: 'parent';
-    controlledItems?: false;
-    itemsClassName?: string;
-    children: React.ReactElement | React.ReactElement[];
-  };
+    ParentModeMotionHighlightProps & {
+      mode: 'parent';
+      controlledItems?: false;
+      itemsClassName?: string;
+      children: React.ReactElement | React.ReactElement[];
+    };
 
 type UncontrolledChildrenModeMotionHighlightProps<T extends string> =
   BaseMotionHighlightProps<T> & {
@@ -98,15 +98,13 @@ type UncontrolledChildrenModeMotionHighlightProps<T extends string> =
     children: React.ReactElement | React.ReactElement[];
   };
 
-type MotionHighlightProps<T extends string> = Omit<React.ComponentProps<'div'>, 'ref'> &
+type MotionHighlightProps<T extends string> = React.ComponentProps<'div'> &
   (
     | ControlledParentModeMotionHighlightProps<T>
     | ControlledChildrenModeMotionHighlightProps<T>
     | UncontrolledParentModeMotionHighlightProps<T>
     | UncontrolledChildrenModeMotionHighlightProps<T>
-  ) & {
-    ref?: React.Ref<HTMLDivElement>;
-  };
+  );
 
 function MotionHighlight<T extends string>({
   ref,
@@ -128,7 +126,7 @@ function MotionHighlight<T extends string>({
   } = props;
 
   const localRef = React.useRef<HTMLDivElement>(null);
-  React.useImperativeHandle(ref, () => localRef.current as HTMLDivElement);
+  React.useImperativeHandle(ref as any, () => localRef.current as HTMLDivElement);
 
   const [activeValue, setActiveValue] = React.useState<T | null>(
     value ?? defaultValue ?? null,
@@ -298,15 +296,15 @@ function MotionHighlight<T extends string>({
         ? controlledItems
           ? render(children)
           : render(
-            React.Children.map(children, (child, index) => (
-              <MotionHighlightItem
-                key={index}
-                className={props?.itemsClassName}
-              >
-                {child}
-              </MotionHighlightItem>
-            )),
-          )
+              React.Children.map(children, (child, index) => (
+                <MotionHighlightItem
+                  key={index}
+                  className={props?.itemsClassName}
+                >
+                  {child}
+                </MotionHighlightItem>
+              )),
+            )
         : children}
     </MotionHighlightContext.Provider>
   );
@@ -337,7 +335,7 @@ type ExtendedChildProps = React.ComponentProps<'div'> & {
   'data-slot'?: string;
 };
 
-type MotionHighlightItemProps = Omit<React.ComponentProps<'div'>, 'ref'> & {
+type MotionHighlightItemProps = React.ComponentProps<'div'> & {
   children: React.ReactElement;
   id?: string;
   value?: string;
@@ -348,7 +346,6 @@ type MotionHighlightItemProps = Omit<React.ComponentProps<'div'>, 'ref'> & {
   exitDelay?: number;
   asChild?: boolean;
   forceUpdateBounds?: boolean;
-  ref?: React.Ref<HTMLDivElement>;
 };
 
 function MotionHighlightItem({
@@ -391,7 +388,7 @@ function MotionHighlightItem({
   const itemTransition = transition ?? contextTransition;
 
   const localRef = React.useRef<HTMLDivElement>(null);
-  React.useImperativeHandle(ref, () => localRef.current as HTMLDivElement);
+  React.useImperativeHandle(ref as any, () => localRef.current as HTMLDivElement);
 
   React.useEffect(() => {
     if (mode !== 'parent') return;
@@ -454,21 +451,21 @@ function MotionHighlightItem({
 
   const commonHandlers = hover
     ? {
-      onMouseEnter: (e: React.MouseEvent<HTMLDivElement>) => {
-        setActiveValue(childValue);
-        element.props.onMouseEnter?.(e);
-      },
-      onMouseLeave: (e: React.MouseEvent<HTMLDivElement>) => {
-        setActiveValue(null);
-        element.props.onMouseLeave?.(e);
-      },
-    }
+        onMouseEnter: (e: React.MouseEvent<HTMLDivElement>) => {
+          setActiveValue(childValue);
+          element.props.onMouseEnter?.(e);
+        },
+        onMouseLeave: (e: React.MouseEvent<HTMLDivElement>) => {
+          setActiveValue(null);
+          element.props.onMouseLeave?.(e);
+        },
+      }
     : {
-      onClick: (e: React.MouseEvent<HTMLDivElement>) => {
-        setActiveValue(childValue);
-        element.props.onClick?.(e);
-      },
-    };
+        onClick: (e: React.MouseEvent<HTMLDivElement>) => {
+          setActiveValue(childValue);
+          element.props.onClick?.(e);
+        },
+      };
 
   if (asChild) {
     if (mode === 'children') {
@@ -589,6 +586,7 @@ function MotionHighlightItem({
 export {
   MotionHighlight,
   MotionHighlightItem,
-  useMotionHighlight, type MotionHighlightItemProps, type MotionHighlightProps
+  useMotionHighlight,
+  type MotionHighlightProps,
+  type MotionHighlightItemProps,
 };
-

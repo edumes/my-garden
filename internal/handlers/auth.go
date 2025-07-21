@@ -7,20 +7,23 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/my-garden/api/internal/database"
 	"github.com/my-garden/api/internal/models"
+	"github.com/my-garden/api/internal/services"
 	"github.com/my-garden/api/pkg/auth"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
 type AuthHandler struct {
-	db         *database.Database
-	jwtManager *auth.JWTManager
+	db           *database.Database
+	jwtManager   *auth.JWTManager
+	auditService *services.AuditService
 }
 
-func NewAuthHandler(db *database.Database, jwtManager *auth.JWTManager) *AuthHandler {
+func NewAuthHandler(db *database.Database, jwtManager *auth.JWTManager, auditService *services.AuditService) *AuthHandler {
 	return &AuthHandler{
-		db:         db,
-		jwtManager: jwtManager,
+		db:           db,
+		jwtManager:   jwtManager,
+		auditService: auditService,
 	}
 }
 
@@ -92,6 +95,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	if err := h.db.DB.Create(&user).Error; err != nil {
+		h.auditService.LogFailure(c, models.AuditActionUserRegister, models.AuditResourceUser, &user.ID, gin.H{"error": "Failed to create user"})
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
@@ -110,6 +114,12 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 	// Clear password hash from response
 	user.PasswordHash = ""
+
+	h.auditService.LogSuccess(c, models.AuditActionUserRegister, models.AuditResourceUser, &user.ID, gin.H{
+		"username": user.Username,
+		"email":    user.Email,
+		"user_id":  user.ID,
+	})
 
 	c.JSON(http.StatusCreated, AuthResponse{
 		Token:     token,
@@ -150,6 +160,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	// Check password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		h.auditService.LogFailure(c, models.AuditActionUserLogin, models.AuditResourceUser, &user.ID, gin.H{"error": "Invalid password"})
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
@@ -168,6 +179,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	// Clear password hash from response
 	user.PasswordHash = ""
+
+	h.auditService.LogSuccess(c, models.AuditActionUserLogin, models.AuditResourceUser, &user.ID, gin.H{
+		"username": user.Username,
+		"user_id":  user.ID,
+	})
 
 	c.JSON(http.StatusOK, AuthResponse{
 		Token:     token,

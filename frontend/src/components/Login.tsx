@@ -37,7 +37,7 @@ export function Login({ onToggleMode }: LoginProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-3 sm:p-4 transition-colors duration-200">
+    <div className="min-h-screen bg-gradient-to-br flex items-center justify-center p-3 sm:p-4 transition-colors duration-200">
       <div className="max-w-md w-full">
         <div className="bg-card rounded-2xl p-6 sm:p-8 transition-colors duration-200">
           <div className="text-center mb-3 sm:mb-4">

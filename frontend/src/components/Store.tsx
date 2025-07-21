@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatGrowthTime } from '@/lib/utils';
@@ -11,9 +12,10 @@ import { toast } from 'sonner';
 
 interface StoreProps {
   onClose: () => void;
+  open: boolean;
 }
 
-export function Store({ onClose }: StoreProps) {
+export function Store({ onClose, open }: StoreProps) {
   const [inventory, setInventory] = useState<PlantType[]>([]);
   const [loading, setLoading] = useState(true);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -21,8 +23,10 @@ export function Store({ onClose }: StoreProps) {
   const { user, refreshUser } = useAuth();
 
   useEffect(() => {
-    loadInventory();
-  }, []);
+    if (open) {
+      loadInventory();
+    }
+  }, [open]);
 
   const loadInventory = async () => {
     try {
@@ -103,31 +107,30 @@ export function Store({ onClose }: StoreProps) {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-        <div className="text-center">
-          <Package className="w-8 h-8 mx-auto mb-4 animate-pulse" />
-          <p className="text-muted-foreground">Loading store...</p>
-        </div>
-      </div>
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <div className="text-center">
+            <Package className="w-8 h-8 mx-auto mb-4 animate-pulse" />
+            <p className="text-muted-foreground">Loading store...</p>
+          </div>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-background border rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b">
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+        <DialogHeader className="flex items-center justify-between p-6 border-b">
           <div className="flex items-center space-x-2">
             <ShoppingCart className="w-6 h-6 text-primary" />
-            <h2 className="text-2xl font-bold">Garden Store</h2>
+            <DialogTitle className="text-2xl font-bold">Garden Store</DialogTitle>
           </div>
           <div className="flex items-center space-x-2">
             <Coins className="w-5 h-5 text-yellow-500" />
             <span className="font-semibold">{user?.coins || 0} coins</span>
           </div>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            ✕
-          </Button>
-        </div>
+        </DialogHeader>
 
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -218,7 +221,7 @@ export function Store({ onClose }: StoreProps) {
             ))}
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 } 

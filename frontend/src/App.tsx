@@ -13,6 +13,7 @@ import { AuditLogs } from './components/AuditLogs';
 import { Toaster } from './components/ui/sonner';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { WebSocketProvider } from './contexts/WebSocketContext';
 import { apiService } from './services/api';
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
@@ -116,14 +117,14 @@ function AppContent() {
             </PrivateRoute>
           }
         />
-        {/* <Route
+        <Route
           path="/audit"
           element={
             <PrivateRoute>
               <AuditLogs />
             </PrivateRoute>
           }
-        /> */}
+        />
         <Route path="*" element={<div className="min-h-screen flex items-center justify-center text-2xl text-muted-foreground">404 Not Found</div>} />
       </Routes>
 
@@ -134,16 +135,18 @@ function AppContent() {
 
 function App() {
   return (
-    <ThemeProvider>
-      <TooltipProvider openDelay={1} closeDelay={1}>
-        <AuthProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <WebSocketProvider>
           <BrowserRouter>
-            <AppContent />
-            <Toaster richColors position='bottom-center' closeButton duration={1800} />
+            <TooltipProvider openDelay={1} closeDelay={1}>
+              <AppContent />
+              <Toaster richColors position='bottom-center' closeButton duration={1800} />
+            </TooltipProvider>
           </BrowserRouter>
-        </AuthProvider>
-      </TooltipProvider>
-    </ThemeProvider>
+        </WebSocketProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
 

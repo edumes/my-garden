@@ -16,21 +16,21 @@ import { PlantType, SeedInventory } from '../types/api';
 
 interface PlantSeedModalProps {
   onClose: () => void;
-  onSubmit: (plantTypeId: string) => void;
-  plantTypes: PlantType[];
-  position: number;
+  onPlant: (plantType: PlantType) => void;
   open: boolean;
   onOpenStore?: () => void;
 }
 
-export function PlantSeedModal({ onClose, onSubmit, plantTypes, position, open, onOpenStore }: PlantSeedModalProps) {
-  const [selectedPlantType, setSelectedPlantType] = useState<string | null>(null);
+export function PlantSeedModal({ onClose, onPlant, open, onOpenStore }: PlantSeedModalProps) {
+  const [selectedPlantType, setSelectedPlantType] = useState<PlantType | null>(null);
+  const [plantTypes, setPlantTypes] = useState<PlantType[]>([]);
   const [userSeedInventory, setUserSeedInventory] = useState<SeedInventory[]>([]);
   const [loadingInventory, setLoadingInventory] = useState(false);
 
   useEffect(() => {
     if (open) {
       loadUserSeedInventory();
+      loadPlantTypes();
     }
   }, [open]);
 
@@ -43,6 +43,15 @@ export function PlantSeedModal({ onClose, onSubmit, plantTypes, position, open, 
       console.error('Failed to load user seed inventory:', error);
     } finally {
       setLoadingInventory(false);
+    }
+  };
+
+  const loadPlantTypes = async () => {
+    try {
+      const response = await apiService.getPlantTypes();
+      setPlantTypes(response.plant_types);
+    } catch (error) {
+      console.error('Failed to load plant types:', error);
     }
   };
 
@@ -64,7 +73,7 @@ export function PlantSeedModal({ onClose, onSubmit, plantTypes, position, open, 
 
   const handleSubmit = () => {
     if (selectedPlantType) {
-      onSubmit(selectedPlantType);
+      onPlant(selectedPlantType);
       setSelectedPlantType(null);
     }
   };
@@ -82,7 +91,7 @@ export function PlantSeedModal({ onClose, onSubmit, plantTypes, position, open, 
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] sm:max-h-128 flex flex-col">
         <DialogHeader>
-          <DialogTitle>Plant Seed - Position {position + 1}</DialogTitle>
+          <DialogTitle>Plant Seed</DialogTitle>
           <DialogDescription>
             Choose a plant type to plant in this position. You can only plant seeds you have purchased.
             {onOpenStore && (
@@ -96,7 +105,7 @@ export function PlantSeedModal({ onClose, onSubmit, plantTypes, position, open, 
           </DialogDescription>
         </DialogHeader>
         
-        <div className="overflow-y-auto max-h-[60vh] sm:max-h-80 flex-1 py-4">
+        <div className="flex-1 overflow-y-auto">
           {loadingInventory ? (
             <div className="text-center py-8">
               <Package className="w-8 h-8 mx-auto mb-4 animate-pulse" />
@@ -116,14 +125,14 @@ export function PlantSeedModal({ onClose, onSubmit, plantTypes, position, open, 
                 </Button>
               )}
             </div>
-          ) : (
+          ) :
             <div className="grid grid-cols-1 gap-3 sm:gap-4">
               {availableSeeds.map((plantType) => (
                 <div
                   key={plantType.id}
-                  onClick={() => setSelectedPlantType(plantType.id)}
+                  onClick={() => setSelectedPlantType(plantType)}
                   className={`p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition-all hover:shadow-md ${
-                    selectedPlantType === plantType.id
+                    selectedPlantType?.id === plantType.id
                       ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
                       : 'border-border hover:border-muted-foreground'
                   }`}
@@ -173,7 +182,7 @@ export function PlantSeedModal({ onClose, onSubmit, plantTypes, position, open, 
                 </div>
               ))}
             </div>
-          )}
+          }
         </div>
 
         <DialogFooter>

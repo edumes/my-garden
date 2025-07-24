@@ -10,6 +10,7 @@ import (
 	"github.com/my-garden/api/internal/database"
 	"github.com/my-garden/api/internal/garden"
 	"github.com/my-garden/api/internal/weather"
+	"github.com/my-garden/api/internal/websocket"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -28,7 +29,13 @@ type GameEngine struct {
 func NewGameEngine(db *database.Database, redis *redis.Client, cfg *config.Config) *GameEngine {
 	ctx, cancel := context.WithCancel(context.Background())
 	weatherRepo := weather.NewRepository(db)
-	weatherSvc := weather.NewService(weatherRepo, redis)
+
+	// Initialize websocket hub and handler
+	wsHub := websocket.NewHub()
+	go wsHub.Run()
+	wsHandler := websocket.NewHandler(wsHub)
+
+	weatherSvc := weather.NewService(weatherRepo, redis, wsHandler)
 
 	return &GameEngine{
 		db:            db,

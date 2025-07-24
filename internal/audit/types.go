@@ -17,53 +17,52 @@ type AuditLog struct {
 	CreatedAt  time.Time  `json:"created_at"`
 }
 
+// AuditAction represents the type of action being audited
 type AuditAction string
 
 const (
-	// Authentication actions
-	AuditActionUserRegister  AuditAction = "user_register"
-	AuditActionUserLogin     AuditAction = "user_login"
-	AuditActionUserLogout    AuditAction = "user_logout"
-	AuditActionTokenRefresh  AuditAction = "token_refresh"
-	AuditActionProfileUpdate AuditAction = "profile_update"
-
-	// Garden actions
-	AuditActionGardenCreate AuditAction = "garden_create"
-	AuditActionGardenUpdate AuditAction = "garden_update"
-	AuditActionGardenDelete AuditAction = "garden_delete"
-	AuditActionGardenView   AuditAction = "garden_view"
-
-	// Plant actions
-	AuditActionPlantSeed      AuditAction = "plant_seed"
-	AuditActionPlantHarvest   AuditAction = "plant_harvest"
-	AuditActionPlantRemove    AuditAction = "plant_remove"
-	AuditActionPlantWater     AuditAction = "plant_water"
-	AuditActionPlantFertilize AuditAction = "plant_fertilize"
-
-	// Garden sharing actions
+	// User actions
+	AuditActionUserRegister         AuditAction = "user_register"
+	AuditActionUserLogin            AuditAction = "user_login"
+	AuditActionUserLogout           AuditAction = "user_logout"
+	AuditActionTokenRefresh         AuditAction = "token_refresh"
+	AuditActionProfileUpdate        AuditAction = "profile_update"
+	AuditActionPlantWater           AuditAction = "plant_water"
+	AuditActionPlantFertilize       AuditAction = "plant_fertilize"
 	AuditActionGardenShare          AuditAction = "garden_share"
-	AuditActionGardenJoin           AuditAction = "garden_join"
-	AuditActionSharePermission      AuditAction = "share_permission_update"
-	AuditActionShareRemove          AuditAction = "share_remove"
-	AuditActionAccessLinkCreate     AuditAction = "access_link_create"
+	AuditActionInventoryView        AuditAction = "inventory_view"
+	AuditActionError                AuditAction = "error"
+	AuditActionSecurity             AuditAction = "security"
 	AuditActionAccessLinkDeactivate AuditAction = "access_link_deactivate"
 
-	// Store actions
-	AuditActionSeedPurchase  AuditAction = "seed_purchase"
-	AuditActionInventoryView AuditAction = "inventory_view"
-
-	// System actions
-	AuditActionError    AuditAction = "error"
-	AuditActionSecurity AuditAction = "security"
+	// Garden actions
+	AuditActionCreateGarden     AuditAction = "create_garden"
+	AuditActionUpdateGarden     AuditAction = "update_garden"
+	AuditActionDeleteGarden     AuditAction = "delete_garden"
+	AuditActionPlantSeed        AuditAction = "plant_seed"
+	AuditActionPlantHarvest     AuditAction = "plant_harvest"
+	AuditActionPlantRemove      AuditAction = "plant_remove"
+	AuditActionShareGarden      AuditAction = "share_garden"
+	AuditActionUnshareGarden    AuditAction = "unshare_garden"
+	AuditActionSeedPurchase     AuditAction = "seed_purchase"
+	AuditActionGardenCreate     AuditAction = "garden_create"
+	AuditActionGardenUpdate     AuditAction = "garden_update"
+	AuditActionGardenView       AuditAction = "garden_view"
+	AuditActionGardenDelete     AuditAction = "garden_delete"
+	AuditActionGardenJoin       AuditAction = "garden_join"
+	AuditActionAccessLinkCreate AuditAction = "access_link_create"
+	AuditActionSharePermission  AuditAction = "share_permission"
+	AuditActionShareRemove      AuditAction = "share_remove"
 )
 
+// AuditResource represents the type of resource being audited
 type AuditResource string
 
 const (
 	AuditResourceUser   AuditResource = "user"
 	AuditResourceGarden AuditResource = "garden"
 	AuditResourcePlant  AuditResource = "plant"
-	AuditResourceShare  AuditResource = "garden_share"
+	AuditResourceShare  AuditResource = "share"
 	AuditResourceStore  AuditResource = "store"
 	AuditResourceSystem AuditResource = "system"
 )

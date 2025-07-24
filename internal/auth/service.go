@@ -25,6 +25,8 @@ type Service interface {
 	RefreshToken(tokenString string) (string, time.Time, error)
 	GetProfile(userID uuid.UUID) (*User, error)
 	UpdateProfile(userID uuid.UUID, firstName, lastName, avatar, timezone, language string) (*User, error)
+	AddExperience(userID uuid.UUID, xp int) (*User, error)
+	GetLevelProgress(experience int) float64
 }
 
 type service struct {
@@ -159,4 +161,96 @@ func (s *service) UpdateProfile(userID uuid.UUID, firstName, lastName, avatar, t
 	}
 
 	return user, nil
+}
+
+// XP thresholds for each level
+var levelThresholds = []int{
+	0,     // Level 1
+	100,   // Level 2
+	300,   // Level 3
+	600,   // Level 4
+	1000,  // Level 5
+	1500,  // Level 6
+	2100,  // Level 7
+	2800,  // Level 8
+	3600,  // Level 9
+	4500,  // Level 10
+	5500,  // Level 11
+	6600,  // Level 12
+	7800,  // Level 13
+	9100,  // Level 14
+	10500, // Level 15
+}
+
+// XP rewards for different actions
+const (
+	XPPlantSeed    = 10
+	XPHarvestPlant = 25
+	XPCreateGarden = 50
+	XPShareGarden  = 15
+	XPJoinGarden   = 20
+	XPDailyLogin   = 5
+	XPFirstHarvest = 100 // Bonus for first harvest of each plant type
+	XPGardenMaster = 200 // Bonus for harvesting all plant types
+)
+
+// AddExperience adds XP to a user and handles level ups
+func (s *service) AddExperience(userID uuid.UUID, xp int) (*User, error) {
+	user, err := s.repo.FindUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	oldLevel := user.Level
+	user.Experience += xp
+
+	// Calculate new level
+	newLevel := 1
+	for i, threshold := range levelThresholds {
+		if user.Experience >= threshold {
+			newLevel = i + 1
+		} else {
+			break
+		}
+	}
+
+	user.Level = newLevel
+
+	// Add coins bonus for level up
+	if newLevel > oldLevel {
+		coinsBonus := (newLevel - oldLevel) * 100
+		user.Coins += coinsBonus
+	}
+
+	if err := s.repo.UpdateUser(user); err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+// GetLevelProgress returns the current level progress as a percentage
+func (s *service) GetLevelProgress(experience int) float64 {
+	currentLevel := 1
+	for i, threshold := range levelThresholds {
+		if experience >= threshold {
+			currentLevel = i + 1
+		} else {
+			break
+		}
+	}
+
+	if currentLevel >= len(levelThresholds) {
+		return 100.0
+	}
+
+	currentThreshold := levelThresholds[currentLevel-1]
+	nextThreshold := levelThresholds[currentLevel]
+
+	progress := float64(experience-currentThreshold) / float64(nextThreshold-currentThreshold) * 100
+	if progress > 100 {
+		progress = 100
+	}
+
+	return progress
 }

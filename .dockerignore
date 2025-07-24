@@ -1,0 +1,42 @@
+# Version control
+.git
+.gitignore
+
+# Dependencies
+**/node_modules
+**/vendor
+
+# Build outputs
+**/dist
+**/build
+**/tmp
+
+# Development files
+**/.env
+**/.env.local
+**/.env.*
+!**/.env.example
+**/*.log
+
+# IDE and editor files
+.idea
+.vscode
+*.swp
+*.swo
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Test files
+**/*_test.go
+**/coverage.out
+
+# Misc
+.DS_Store 

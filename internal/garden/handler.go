@@ -7,14 +7,18 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/my-garden/api/internal/audit"
+	"github.com/my-garden/api/internal/auth"
 	"github.com/my-garden/api/internal/database"
 	"github.com/my-garden/api/internal/types"
+	"github.com/my-garden/api/internal/websocket"
 	"gorm.io/gorm"
 )
 
 type GardenHandler struct {
 	db           *database.Database
 	auditService *audit.AuditService
+	authService  auth.Service
+	wsHandler    *websocket.Handler
 }
 
 // checkGardenAccess checks if a user has access to a garden and returns the access level
@@ -51,8 +55,13 @@ func (h *GardenHandler) checkGardenAccess(userID, gardenID uuid.UUID) (GardenPer
 	return highestPerm, nil
 }
 
-func NewGardenHandler(db *database.Database, auditService *audit.AuditService) *GardenHandler {
-	return &GardenHandler{db: db, auditService: auditService}
+func NewGardenHandler(db *database.Database, auditService *audit.AuditService, authService auth.Service, wsHandler *websocket.Handler) *GardenHandler {
+	return &GardenHandler{
+		db:           db,
+		auditService: auditService,
+		authService:  authService,
+		wsHandler:    wsHandler,
+	}
 }
 
 type CreateGardenRequest struct {
@@ -155,14 +164,21 @@ func (h *GardenHandler) CreateGarden(c *gin.Context) {
 	}
 
 	if err := h.db.DB.Create(&garden).Error; err != nil {
-		h.auditService.LogFailure(c, audit.AuditActionGardenCreate, audit.AuditResourceGarden, &garden.ID, gin.H{"error": "Failed to create garden"})
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create garden"})
 		return
 	}
 
-	h.auditService.LogSuccess(c, audit.AuditActionGardenCreate, audit.AuditResourceGarden, &garden.ID, gin.H{
-		"garden_name": garden.Name,
-		"garden_id":   garden.ID,
+	// Award XP for creating a garden
+	if _, err := h.authService.AddExperience(userID.(uuid.UUID), auth.XPCreateGarden); err != nil {
+		// Log error but don't fail the request
+		h.auditService.LogFailure(c, audit.AuditActionCreateGarden, audit.AuditResourceGarden, &garden.ID, gin.H{
+			"error": "Failed to award XP",
+		})
+	}
+
+	h.auditService.LogSuccess(c, audit.AuditActionCreateGarden, audit.AuditResourceGarden, &garden.ID, gin.H{
+		"garden_id": garden.ID,
+		"name":      garden.Name,
 	})
 
 	c.JSON(http.StatusCreated, gin.H{"garden": garden})
@@ -463,6 +479,14 @@ func (h *GardenHandler) PlantSeed(c *gin.Context) {
 		}
 	}
 
+	// Award XP for planting
+	if _, err := h.authService.AddExperience(userID.(uuid.UUID), auth.XPPlantSeed); err != nil {
+		// Log error but don't fail the request
+		h.auditService.LogFailure(c, audit.AuditActionPlantSeed, audit.AuditResourcePlant, &plant.ID, gin.H{
+			"error": "Failed to award XP",
+		})
+	}
+
 	// Commit transaction
 	if err := tx.Commit().Error; err != nil {
 		h.auditService.LogFailure(c, audit.AuditActionPlantSeed, audit.AuditResourcePlant, &plant.ID, gin.H{"error": "Failed to commit transaction"})
@@ -478,6 +502,12 @@ func (h *GardenHandler) PlantSeed(c *gin.Context) {
 		"plant_type_id": req.PlantTypeID,
 		"position":      *req.Position,
 		"plant_id":      plant.ID,
+	})
+
+	h.wsHandler.BroadcastEvent(websocket.EventPlant, gardenID, userID.(uuid.UUID), gin.H{
+		"plant":      plant,
+		"position":   *req.Position,
+		"plant_type": plantType,
 	})
 
 	c.JSON(http.StatusCreated, gin.H{"plant": plant})
@@ -544,15 +574,61 @@ func (h *GardenHandler) HarvestPlant(c *gin.Context) {
 		return
 	}
 
+	// Start transaction
+	tx := h.db.DB.Begin()
+
 	// Calculate harvest rewards
 	coinsEarned := plant.PlantType.HarvestValue * plant.PlantType.Yield
 
 	// Update user stats
 	user.Coins += coinsEarned
 
-	// Check for level up
-	oldLevel := user.Level
-	user.Level = calculateLevel(user.Experience)
+	// Award XP for harvesting
+	xpEarned := auth.XPHarvestPlant
+
+	// Check if this is the first harvest of this plant type
+	var harvestCount int64
+	if err := h.db.DB.Model(&Plant{}).
+		Where("plant_type_id = ? AND user_id = ? AND harvested_at IS NOT NULL", plant.PlantTypeID, userID).
+		Count(&harvestCount).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check harvest history"})
+		return
+	}
+
+	if harvestCount == 0 {
+		xpEarned += auth.XPFirstHarvest
+	}
+
+	// Check for Garden Master achievement (harvesting all plant types)
+	var uniquePlantTypes int64
+	var totalPlantTypes int64
+	if err := h.db.DB.Model(&PlantType{}).Count(&totalPlantTypes).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count plant types"})
+		return
+	}
+
+	if err := h.db.DB.Model(&Plant{}).
+		Where("user_id = ? AND harvested_at IS NOT NULL", userID).
+		Distinct("plant_type_id").
+		Count(&uniquePlantTypes).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count unique harvests"})
+		return
+	}
+
+	if uniquePlantTypes+1 >= totalPlantTypes {
+		xpEarned += auth.XPGardenMaster
+	}
+
+	// Award XP
+	updatedUser, err := h.authService.AddExperience(userID.(uuid.UUID), xpEarned)
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user experience"})
+		return
+	}
 
 	// Reset plant to seed state
 	now := time.Now()
@@ -561,28 +637,24 @@ func (h *GardenHandler) HarvestPlant(c *gin.Context) {
 	plant.PlantedAt = now
 	plant.HarvestedAt = &now
 
-	// Save changes in a transaction
-	tx := h.db.DB.Begin()
-	if err := tx.Save(&user).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
-		return
-	}
-
 	if err := tx.Save(&plant).Error; err != nil {
 		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update plant"})
 		return
 	}
 
-	tx.Commit()
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
+		return
+	}
 
 	response := gin.H{
 		"plant": plant,
 		"harvest": gin.H{
-			"coins_earned": coinsEarned,
-			"level_up":     user.Level > oldLevel,
-			"new_level":    user.Level,
+			"coins_earned":   coinsEarned,
+			"xp_earned":      xpEarned,
+			"level":          updatedUser.Level,
+			"level_progress": h.authService.GetLevelProgress(updatedUser.Experience),
 		},
 	}
 
@@ -590,8 +662,14 @@ func (h *GardenHandler) HarvestPlant(c *gin.Context) {
 		"garden_id":    gardenID,
 		"plant_id":     plantID,
 		"coins_earned": coinsEarned,
-		"level_up":     user.Level > oldLevel,
-		"new_level":    user.Level,
+		"xp_earned":    xpEarned,
+		"level":        updatedUser.Level,
+	})
+
+	h.wsHandler.BroadcastEvent(websocket.EventHarvest, gardenID, userID.(uuid.UUID), gin.H{
+		"plant":        plant,
+		"coins_earned": coinsEarned,
+		"xp_earned":    xpEarned,
 	})
 
 	c.JSON(http.StatusOK, response)

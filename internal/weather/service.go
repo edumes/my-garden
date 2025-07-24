@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/my-garden/api/internal/websocket"
 	"github.com/my-garden/api/pkg/utils"
 	"github.com/redis/go-redis/v9"
 )
@@ -12,12 +13,14 @@ import (
 type Service struct {
 	repo        *Repository
 	redisClient *redis.Client
+	wsHandler   *websocket.Handler
 }
 
-func NewService(repo *Repository, redisClient *redis.Client) *Service {
+func NewService(repo *Repository, redisClient *redis.Client, wsHandler *websocket.Handler) *Service {
 	return &Service{
 		repo:        repo,
 		redisClient: redisClient,
+		wsHandler:   wsHandler,
 	}
 }
 
@@ -92,4 +95,14 @@ func (s *Service) CacheCurrentWeather(ctx context.Context, weather *Weather, dur
 	// Note: In a real implementation, you'd serialize the weather struct to JSON
 	// For now, we'll just store the condition
 	return s.redisClient.Set(ctx, key, weather.Condition, duration).Err()
+}
+
+func (s *Service) UpdateWeather(weather *Weather) error {
+	if err := s.repo.UpdateWeather(weather); err != nil {
+		return err
+	}
+
+	// Broadcast weather update to all connected clients
+	s.wsHandler.BroadcastEvent(websocket.EventWeather, uuid.Nil, uuid.Nil, weather)
+	return nil
 }

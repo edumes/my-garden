@@ -4,16 +4,17 @@ export interface User {
   email: string;
   first_name?: string;
   last_name?: string;
+  avatar?: string;
   level: number;
   experience: number;
+  level_progress: number;
   coins: number;
-  avatar?: string;
-  timezone?: string;
-  language?: string;
+  timezone: string;
+  language: string;
+  last_login_at?: string;
   created_at: string;
   updated_at: string;
-  last_login_at?: string;
-  achievements?: UserAchievement[];
+  achievements?: Achievement[];
 }
 
 export interface UserAchievement {
@@ -206,3 +207,93 @@ export interface SharedGardenResponse {
     shared_at: string;
   }[];
 }
+
+export interface XPResponse {
+  xp_earned?: number;
+  level?: number;
+  level_up?: boolean;
+  coins_earned?: number;
+}
+
+export interface GardenResponse extends XPResponse {
+  garden: Garden;
+}
+
+export interface PlantResponse extends XPResponse {
+  plant: Plant;
+}
+
+export interface HarvestResponse extends XPResponse {
+  plant: Plant;
+  harvest: {
+    coins_earned: number;
+    xp_earned: number;
+    level: number;
+    level_up: boolean;
+  };
+}
+
+// WebSocket Events
+export type WebSocketEventType = 'plant' | 'harvest' | 'weather' | 'water' | 'progress' | 'presence' | 'action_lock' | 'chat';
+
+export interface WebSocketEvent {
+  type: WebSocketEventType;
+  garden_id: string;
+  user_id: string;
+  username?: string; // Added for chat messages
+  data: WebSocketEventData;
+  timestamp: number;
+}
+
+export interface WebSocketPresenceEventData {
+  users: {
+    id: string;
+    username: string;
+    position?: number; // The plot they're currently interacting with
+    action?: 'planting' | 'harvesting' | 'viewing';
+  }[];
+}
+
+export interface WebSocketActionLockEventData {
+  position: number;
+  user_id: string;
+  username: string;
+  action: 'planting' | 'harvesting';
+  locked: boolean; // true = lock acquired, false = lock released
+}
+
+export interface WebSocketPlantEventData {
+  plant: Plant;
+  position: number;
+  plant_type: PlantType;
+}
+
+export interface WebSocketHarvestEventData {
+  plant: Plant;
+  coins_earned: number;
+  xp_earned: number;
+}
+
+export interface WebSocketWeatherEventData extends Weather {}
+
+export interface WebSocketProgressEventData {
+  plant_id: string;
+  progress: number;
+  stage: PlantStage;
+}
+
+export interface WebSocketChatEventData {
+  message: string;
+  username: string;
+  user_id: string;
+  timestamp: number;
+}
+
+export type WebSocketEventData =
+  | WebSocketPlantEventData
+  | WebSocketHarvestEventData
+  | WebSocketWeatherEventData
+  | WebSocketProgressEventData
+  | WebSocketPresenceEventData
+  | WebSocketActionLockEventData
+  | WebSocketChatEventData;

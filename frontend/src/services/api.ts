@@ -1,17 +1,22 @@
+import axios from 'axios';
+import { showXPNotification } from '../components/XPNotification';
 import {
   BuySeedRequest,
   BuySeedResponse,
   CreateAccessLinkRequest,
   GardenAccessLink,
+  GardenResponse,
   GardenShare,
+  HarvestResponse,
   JoinGardenRequest,
+  PlantResponse,
   PlantType,
   SeedInventory,
   SharedGardenResponse,
   UpdateSharePermissionsRequest
 } from "@/types/api";
 
-const API_BASE_URL = 'http://localhost:8080/api/v1';
+const API_BASE_URL = process.env.API_BASE_URL;
 
 class ApiService {
   private getAuthHeaders(): HeadersInit {
@@ -23,8 +28,8 @@ class ApiService {
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${API_BASE_URL}${endpoint}`;
-    const response = await fetch(url, {
+    const response = await axios<T>({
+      url: `${API_BASE_URL}${endpoint}`,
       ...options,
       headers: {
         ...this.getAuthHeaders(),
@@ -32,16 +37,11 @@ class ApiService {
       },
     });
 
-    if (!response.ok) {
-      try {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `API request failed: ${response.statusText}`);
-      } catch {
-        throw new Error(`API request failed: ${response.statusText}`);
-      }
+    if (response.status >= 400) {
+      throw new Error(`API request failed: ${response.statusText}`);
     }
 
-    return response.json();
+    return response.data;
   }
 
   // Authentication
@@ -92,10 +92,16 @@ class ApiService {
   }
 
   async createGarden(data: { name: string; description?: string }) {
-    return this.request<{ garden: any }>('/gardens', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    const response = await axios.post<GardenResponse>('/gardens', data);
+    const { garden, xp_earned } = response.data;
+
+    if (xp_earned) {
+      showXPNotification({
+        xpGained: xp_earned,
+      });
+    }
+
+    return response.data;
   }
 
   async updateGarden(id: string, data: { name?: string; description?: string }) {
@@ -111,23 +117,32 @@ class ApiService {
 
   // Plants
   async plantSeed(gardenId: string, data: { plant_type_id: string; position: number }) {
-    return this.request<{ plant: any }>(`/gardens/${gardenId}/plants`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    const response = await axios.post<PlantResponse>(`/gardens/${gardenId}/plants`, data);
+    const { plant, xp_earned } = response.data;
+
+    if (xp_earned) {
+      showXPNotification({
+        xpGained: xp_earned,
+      });
+    }
+
+    return response.data;
   }
 
   async harvestPlant(gardenId: string, plantId: string) {
-    return this.request<{
-      plant: any;
-      harvest: {
-        coins_earned: number;
-        level_up: boolean;
-        new_level: number;
-      }
-    }>(`/gardens/${gardenId}/plants/${plantId}/harvest`, {
-      method: 'POST',
-    });
+    const response = await axios.post<HarvestResponse>(`/gardens/${gardenId}/plants/${plantId}/harvest`);
+    const { harvest } = response.data;
+
+    if (harvest.xp_earned) {
+      showXPNotification({
+        xpGained: harvest.xp_earned,
+        newLevel: harvest.level,
+        oldLevel: harvest.level - (harvest.level_up ? 1 : 0),
+        coinsEarned: harvest.coins_earned,
+      });
+    }
+
+    return response.data;
   }
 
   async removePlant(gardenId: string, plantId: string) {

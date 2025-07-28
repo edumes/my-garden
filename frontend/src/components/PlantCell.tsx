@@ -67,7 +67,7 @@ export function PlantCell({ position, plant, onPlantAction, onPlantSeed }: Plant
     const id = setTimeout(() => {
       setShowActions(false);
     }, 200);
-    // setTimeoutId(id);
+    setTimeoutId(id);
   };
 
   const getTimeSincePlanted = () => {
@@ -208,6 +208,7 @@ export function PlantCell({ position, plant, onPlantAction, onPlantSeed }: Plant
           }`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        style={{ pointerEvents: showActions ? 'auto' : 'none' }}
       >
         <div className="flex space-x-1 sm:space-x-2">
           {canHarvest && (

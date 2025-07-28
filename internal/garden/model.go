@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/my-garden/api/internal/types"
+	"github.com/my-garden/api/internal/auth"
 	"gorm.io/gorm"
 )
 
@@ -19,8 +19,8 @@ type Garden struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 
 	// Relationships
-	Plants []Plant    `json:"plants" gorm:"foreignKey:GardenID"`
-	User   types.User `json:"user" gorm:"foreignKey:UserID"`
+	Plants []Plant   `json:"plants" gorm:"foreignKey:GardenID"`
+	User   auth.User `json:"user" gorm:"foreignKey:UserID"`
 }
 
 func (g *Garden) BeforeCreate(tx *gorm.DB) error {
@@ -95,6 +95,7 @@ type SeedInventory struct {
 	PlantTypeID uuid.UUID `json:"plant_type_id" gorm:"type:uuid;not null"`
 	Quantity    int       `json:"quantity" gorm:"not null"`
 	PurchasedAt time.Time `json:"purchased_at"`
+	PlantType   PlantType `json:"plant_type" gorm:"foreignKey:PlantTypeID;references:ID"`
 }
 
 func (si *SeedInventory) BeforeCreate(tx *gorm.DB) error {
@@ -241,9 +242,9 @@ type GardenShare struct {
 	ExpiresAt   *time.Time        `json:"expires_at"`
 
 	// Relationships
-	Garden       Garden     `json:"garden" gorm:"foreignKey:GardenID"`
-	User         types.User `json:"user" gorm:"foreignKey:UserID"`
-	SharedByUser types.User `json:"shared_by_user" gorm:"foreignKey:SharedBy"`
+	Garden       Garden    `json:"garden" gorm:"foreignKey:GardenID"`
+	User         auth.User `json:"user" gorm:"foreignKey:UserID"`
+	SharedByUser auth.User `json:"shared_by_user" gorm:"foreignKey:SharedBy"`
 }
 
 func (gs *GardenShare) BeforeCreate(tx *gorm.DB) error {
@@ -299,8 +300,8 @@ type GardenAccessLink struct {
 	IsActive    bool              `json:"is_active" gorm:"default:true"`
 
 	// Relationships
-	Garden        Garden     `json:"garden" gorm:"foreignKey:GardenID"`
-	CreatedByUser types.User `json:"created_by_user" gorm:"foreignKey:CreatedBy"`
+	Garden        Garden    `json:"garden" gorm:"foreignKey:GardenID"`
+	CreatedByUser auth.User `json:"created_by_user" gorm:"foreignKey:CreatedBy"`
 }
 
 func (gal *GardenAccessLink) BeforeCreate(tx *gorm.DB) error {
@@ -348,14 +349,4 @@ func (gal *GardenAccessLink) BeforeUpdate(tx *gorm.DB) error {
 // generateAccessToken creates a secure random token for access links
 func generateAccessToken() string {
 	return uuid.New().String()[:12]
-}
-
-// Migrate runs migrations for garden models
-func Migrate(db *gorm.DB) error {
-	return db.AutoMigrate(
-		&Garden{},
-		&Plant{},
-		&GardenShare{},
-		&GardenAccessLink{},
-	)
 }

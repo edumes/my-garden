@@ -7,8 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/my-garden/api/internal/audit"
+	"github.com/my-garden/api/internal/auth"
 	"github.com/my-garden/api/internal/database"
-	"github.com/my-garden/api/internal/types"
 	"gorm.io/gorm"
 )
 
@@ -538,7 +538,7 @@ func (h *GardenHandler) HarvestPlant(c *gin.Context) {
 	}
 
 	// Get user to update coins and experience
-	var user types.User
+	var user auth.User
 	if err := h.db.DB.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user"})
 		return

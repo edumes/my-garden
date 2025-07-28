@@ -1,6 +1,25 @@
 basePath: /api/v1
 definitions:
-  handlers.AuthResponse:
+  auth.Achievement:
+    properties:
+      category:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      icon:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      points:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  auth.AuthResponse:
     properties:
       expires_at:
         example: "2024-01-02T00:00:00Z"
@@ -9,68 +28,9 @@ definitions:
         example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         type: string
       user:
-        $ref: '#/definitions/models.User'
+        $ref: '#/definitions/auth.User'
     type: object
-  handlers.BuySeedRequest:
-    properties:
-      plant_type_id:
-        type: string
-      quantity:
-        maximum: 10
-        minimum: 1
-        type: integer
-    required:
-    - plant_type_id
-    - quantity
-    type: object
-  handlers.BuySeedResponse:
-    properties:
-      plant_type:
-        $ref: '#/definitions/models.PlantType'
-      quantity:
-        type: integer
-      total_cost:
-        type: integer
-      user_coins:
-        type: integer
-    type: object
-  handlers.CreateAccessLinkRequest:
-    properties:
-      expires_at:
-        type: string
-      garden_id:
-        type: string
-      max_uses:
-        type: integer
-      permissions:
-        items:
-          $ref: '#/definitions/models.GardenPermission'
-        type: array
-    required:
-    - garden_id
-    - permissions
-    type: object
-  handlers.CreateGardenRequest:
-    properties:
-      description:
-        example: A beautiful garden for growing vegetables
-        type: string
-      name:
-        example: My First Garden
-        maxLength: 100
-        minLength: 1
-        type: string
-    required:
-    - name
-    type: object
-  handlers.JoinGardenRequest:
-    properties:
-      token:
-        type: string
-    required:
-    - token
-    type: object
-  handlers.LoginRequest:
+  auth.LoginRequest:
     properties:
       password:
         example: securepassword123
@@ -82,21 +42,7 @@ definitions:
     - password
     - username
     type: object
-  handlers.PlantRequest:
-    properties:
-      plant_type_id:
-        example: 123e4567-e89b-12d3-a456-426614174000
-        type: string
-      position:
-        example: 0
-        maximum: 8
-        minimum: 0
-        type: integer
-    required:
-    - plant_type_id
-    - position
-    type: object
-  handlers.RegisterRequest:
+  auth.RegisterRequest:
     properties:
       email:
         example: gardener@example.com
@@ -121,71 +67,84 @@ definitions:
     - password
     - username
     type: object
-  handlers.UpdateGardenRequest:
+  auth.User:
     properties:
-      description:
-        example: Updated garden description
+      achievements:
+        items:
+          $ref: '#/definitions/auth.UserAchievement'
+        type: array
+      avatar:
         type: string
-      name:
-        example: Updated Garden Name
+      coins:
+        type: integer
+      created_at:
+        type: string
+      email:
+        type: string
+      experience:
+        type: integer
+      first_name:
+        type: string
+      id:
+        type: string
+      language:
+        type: string
+      last_login_at:
+        type: string
+      last_name:
+        type: string
+      level:
+        type: integer
+      timezone:
+        type: string
+      updated_at:
+        type: string
+      username:
         type: string
     type: object
-  handlers.UpdateSharePermissionsRequest:
+  auth.UserAchievement:
     properties:
+      achievement:
+        $ref: '#/definitions/auth.Achievement'
+      achievement_id:
+        type: string
+      id:
+        type: string
+      unlocked_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  garden.CreateAccessLinkRequest:
+    properties:
+      expires_at:
+        type: string
+      garden_id:
+        type: string
+      max_uses:
+        type: integer
       permissions:
         items:
-          $ref: '#/definitions/models.GardenPermission'
+          $ref: '#/definitions/garden.GardenPermission'
         type: array
-      user_id:
+    required:
+    - garden_id
+    - permissions
+    type: object
+  garden.CreateGardenRequest:
+    properties:
+      description:
+        example: A beautiful garden for growing vegetables
+        type: string
+      name:
+        example: My First Garden
+        maxLength: 100
+        minLength: 1
         type: string
     required:
-    - permissions
-    - user_id
+    - name
     type: object
-  models.Achievement:
-    properties:
-      category:
-        type: string
-      created_at:
-        type: string
-      description:
-        type: string
-      icon:
-        type: string
-      id:
-        type: string
-      name:
-        type: string
-      points:
-        type: integer
-      updated_at:
-        type: string
-    type: object
-  models.Garden:
-    properties:
-      created_at:
-        description: Timestamps
-        type: string
-      description:
-        type: string
-      id:
-        type: string
-      name:
-        type: string
-      plants:
-        items:
-          $ref: '#/definitions/models.Plant'
-        type: array
-      updated_at:
-        type: string
-      user:
-        allOf:
-        - $ref: '#/definitions/models.User'
-        description: Relationships
-      user_id:
-        type: string
-    type: object
-  models.GardenPermission:
+  garden.GardenPermission:
     enum:
     - view
     - plant
@@ -197,55 +156,28 @@ definitions:
     - GardenPermissionPlant
     - GardenPermissionHarvest
     - GardenPermissionManage
-  models.Plant:
+  garden.JoinGardenRequest:
     properties:
-      created_at:
+      token:
         type: string
-      garden:
-        allOf:
-        - $ref: '#/definitions/models.Garden'
-        description: Relationships
-      garden_id:
-        type: string
-      growth_progress:
-        description: 0-100
-        type: number
-      harvested_at:
-        type: string
-      id:
-        type: string
-      plant_type:
-        $ref: '#/definitions/models.PlantType'
+    required:
+    - token
+    type: object
+  garden.PlantRequest:
+    properties:
       plant_type_id:
-        type: string
-      planted_at:
-        description: Timestamps
+        example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       position:
-        description: Position in garden grid (0-8 for 3x3 grid)
+        example: 0
+        maximum: 8
+        minimum: 0
         type: integer
-      stage:
-        allOf:
-        - $ref: '#/definitions/models.PlantStage'
-        description: Plant state
-      updated_at:
-        type: string
+    required:
+    - plant_type_id
+    - position
     type: object
-  models.PlantStage:
-    enum:
-    - seed
-    - sprout
-    - growing
-    - mature
-    - harvestable
-    type: string
-    x-enum-varnames:
-    - PlantStageSeed
-    - PlantStageSprout
-    - PlantStageGrowing
-    - PlantStageMature
-    - PlantStageHarvestable
-  models.PlantType:
+  garden.PlantType:
     properties:
       description:
         type: string
@@ -267,65 +199,49 @@ definitions:
         description: items per harvest
         type: integer
     type: object
-  models.User:
+  garden.UpdateGardenRequest:
     properties:
-      achievements:
-        items:
-          $ref: '#/definitions/models.UserAchievement'
-        type: array
-      avatar:
+      description:
+        example: Updated garden description
         type: string
-      coins:
-        type: integer
-      created_at:
-        description: Timestamps
-        type: string
-      email:
-        type: string
-      experience:
-        type: integer
-      first_name:
-        type: string
-      gardens:
-        description: Relationships
-        items:
-          $ref: '#/definitions/models.Garden'
-        type: array
-      id:
-        type: string
-      language:
-        type: string
-      last_login_at:
-        type: string
-      last_name:
-        type: string
-      level:
-        description: Game progression
-        type: integer
-      timezone:
-        description: Game settings
-        type: string
-      updated_at:
-        type: string
-      username:
+      name:
+        example: Updated Garden Name
         type: string
     type: object
-  models.UserAchievement:
+  garden.UpdateSharePermissionsRequest:
     properties:
-      achievement:
-        $ref: '#/definitions/models.Achievement'
-      achievement_id:
-        type: string
-      id:
-        type: string
-      unlocked_at:
-        type: string
-      user:
-        allOf:
-        - $ref: '#/definitions/models.User'
-        description: Relationships
+      permissions:
+        items:
+          $ref: '#/definitions/garden.GardenPermission'
+        type: array
       user_id:
         type: string
+    required:
+    - permissions
+    - user_id
+    type: object
+  store.BuySeedRequest:
+    properties:
+      plant_type_id:
+        type: string
+      quantity:
+        maximum: 10
+        minimum: 1
+        type: integer
+    required:
+    - plant_type_id
+    - quantity
+    type: object
+  store.BuySeedResponse:
+    properties:
+      plant_type:
+        $ref: '#/definitions/garden.PlantType'
+      quantity:
+        type: integer
+      total_cost:
+        type: integer
+      user_coins:
+        type: integer
     type: object
 info:
   contact: {}
@@ -334,6 +250,205 @@ info:
   title: Virtual Garden Management System API
   version: "1.0"
 paths:
+  /audit/gardens/{garden_id}/activity:
+    get:
+      consumes:
+      - application/json
+      description: Get recent activity for a specific garden
+      parameters:
+      - description: Garden ID
+        in: path
+        name: garden_id
+        required: true
+        type: string
+      - default: 20
+        description: Limit results
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Garden activity logs
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - bearer: []
+      summary: Get garden activity
+      tags:
+      - audit
+  /audit/logs:
+    get:
+      consumes:
+      - application/json
+      description: Get audit logs with optional filtering
+      parameters:
+      - description: User ID filter
+        in: query
+        name: user_id
+        type: string
+      - description: Action filter
+        in: query
+        name: action
+        type: string
+      - description: Resource filter
+        in: query
+        name: resource
+        type: string
+      - description: Resource ID filter
+        in: query
+        name: resource_id
+        type: string
+      - description: Status filter
+        in: query
+        name: status
+        type: string
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
+      - default: 50
+        description: Limit results
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset results
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Audit logs with pagination
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - bearer: []
+      summary: Get audit logs
+      tags:
+      - audit
+  /audit/stats:
+    get:
+      consumes:
+      - application/json
+      description: Get audit statistics for the system
+      parameters:
+      - default: 30
+        description: Number of days to analyze
+        in: query
+        name: days
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Audit statistics
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - bearer: []
+      summary: Get audit statistics
+      tags:
+      - audit
+  /audit/users/{user_id}/activity:
+    get:
+      consumes:
+      - application/json
+      description: Get recent activity for a specific user
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - default: 20
+        description: Limit results
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User activity logs
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - bearer: []
+      summary: Get user activity
+      tags:
+      - audit
   /auth/login:
     post:
       consumes:
@@ -345,14 +460,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/handlers.LoginRequest'
+          $ref: '#/definitions/auth.LoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handlers.AuthResponse'
+            $ref: '#/definitions/auth.AuthResponse'
         "400":
           description: Bad Request
           schema:
@@ -423,14 +538,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/handlers.RegisterRequest'
+          $ref: '#/definitions/auth.RegisterRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/handlers.AuthResponse'
+            $ref: '#/definitions/auth.AuthResponse'
         "400":
           description: Bad Request
           schema:
@@ -460,7 +575,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/handlers.CreateAccessLinkRequest'
+          $ref: '#/definitions/garden.CreateAccessLinkRequest'
       produces:
       - application/json
       responses:
@@ -667,7 +782,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/handlers.UpdateSharePermissionsRequest'
+          $ref: '#/definitions/garden.UpdateSharePermissionsRequest'
       produces:
       - application/json
       responses:
@@ -771,7 +886,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/handlers.JoinGardenRequest'
+          $ref: '#/definitions/garden.JoinGardenRequest'
       produces:
       - application/json
       responses:
@@ -876,7 +991,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/handlers.CreateGardenRequest'
+          $ref: '#/definitions/garden.CreateGardenRequest'
       produces:
       - application/json
       responses:
@@ -1010,7 +1125,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/handlers.UpdateGardenRequest'
+          $ref: '#/definitions/garden.UpdateGardenRequest'
       produces:
       - application/json
       responses:
@@ -1061,7 +1176,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/handlers.PlantRequest'
+          $ref: '#/definitions/garden.PlantRequest'
       produces:
       - application/json
       responses:
@@ -1234,14 +1349,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/handlers.BuySeedRequest'
+          $ref: '#/definitions/store.BuySeedRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Purchase successful
           schema:
-            $ref: '#/definitions/handlers.BuySeedResponse'
+            $ref: '#/definitions/store.BuySeedResponse'
         "400":
           description: Bad Request
           schema:

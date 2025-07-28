@@ -15,6 +15,305 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/audit/gardens/{garden_id}/activity": {
+            "get": {
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "description": "Get recent activity for a specific garden",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "audit"
+                ],
+                "summary": "Get garden activity",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Garden ID",
+                        "name": "garden_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit results",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Garden activity logs",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/audit/logs": {
+            "get": {
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "description": "Get audit logs with optional filtering",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "audit"
+                ],
+                "summary": "Get audit logs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID filter",
+                        "name": "user_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Action filter",
+                        "name": "action",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Resource filter",
+                        "name": "resource",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Resource ID filter",
+                        "name": "resource_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status filter",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "end_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Limit results",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset results",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Audit logs with pagination",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/audit/stats": {
+            "get": {
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "description": "Get audit statistics for the system",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "audit"
+                ],
+                "summary": "Get audit statistics",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 30,
+                        "description": "Number of days to analyze",
+                        "name": "days",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Audit statistics",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/audit/users/{user_id}/activity": {
+            "get": {
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "description": "Get recent activity for a specific user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "audit"
+                ],
+                "summary": "Get user activity",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit results",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User activity logs",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Login with username and password to get JWT token",
@@ -35,7 +334,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.LoginRequest"
+                            "$ref": "#/definitions/auth.LoginRequest"
                         }
                     }
                 ],
@@ -43,7 +342,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handlers.AuthResponse"
+                            "$ref": "#/definitions/auth.AuthResponse"
                         }
                     },
                     "400": {
@@ -155,7 +454,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.RegisterRequest"
+                            "$ref": "#/definitions/auth.RegisterRequest"
                         }
                     }
                 ],
@@ -163,7 +462,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/handlers.AuthResponse"
+                            "$ref": "#/definitions/auth.AuthResponse"
                         }
                     },
                     "400": {
@@ -215,7 +514,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.CreateAccessLinkRequest"
+                            "$ref": "#/definitions/garden.CreateAccessLinkRequest"
                         }
                     }
                 ],
@@ -523,7 +822,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.UpdateSharePermissionsRequest"
+                            "$ref": "#/definitions/garden.UpdateSharePermissionsRequest"
                         }
                     }
                 ],
@@ -678,7 +977,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.JoinGardenRequest"
+                            "$ref": "#/definitions/garden.JoinGardenRequest"
                         }
                     }
                 ],
@@ -837,7 +1136,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.CreateGardenRequest"
+                            "$ref": "#/definitions/garden.CreateGardenRequest"
                         }
                     }
                 ],
@@ -971,7 +1270,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.UpdateGardenRequest"
+                            "$ref": "#/definitions/garden.UpdateGardenRequest"
                         }
                     }
                 ],
@@ -1112,7 +1411,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.PlantRequest"
+                            "$ref": "#/definitions/garden.PlantRequest"
                         }
                     }
                 ],
@@ -1363,7 +1662,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.BuySeedRequest"
+                            "$ref": "#/definitions/store.BuySeedRequest"
                         }
                     }
                 ],
@@ -1371,7 +1670,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Purchase successful",
                         "schema": {
-                            "$ref": "#/definitions/handlers.BuySeedResponse"
+                            "$ref": "#/definitions/store.BuySeedResponse"
                         }
                     },
                     "400": {
@@ -1686,7 +1985,36 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "handlers.AuthResponse": {
+        "auth.Achievement": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "points": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "auth.AuthResponse": {
             "type": "object",
             "properties": {
                 "expires_at": {
@@ -1698,98 +2026,11 @@ const docTemplate = `{
                     "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                 },
                 "user": {
-                    "$ref": "#/definitions/models.User"
+                    "$ref": "#/definitions/auth.User"
                 }
             }
         },
-        "handlers.BuySeedRequest": {
-            "type": "object",
-            "required": [
-                "plant_type_id",
-                "quantity"
-            ],
-            "properties": {
-                "plant_type_id": {
-                    "type": "string"
-                },
-                "quantity": {
-                    "type": "integer",
-                    "maximum": 10,
-                    "minimum": 1
-                }
-            }
-        },
-        "handlers.BuySeedResponse": {
-            "type": "object",
-            "properties": {
-                "plant_type": {
-                    "$ref": "#/definitions/models.PlantType"
-                },
-                "quantity": {
-                    "type": "integer"
-                },
-                "total_cost": {
-                    "type": "integer"
-                },
-                "user_coins": {
-                    "type": "integer"
-                }
-            }
-        },
-        "handlers.CreateAccessLinkRequest": {
-            "type": "object",
-            "required": [
-                "garden_id",
-                "permissions"
-            ],
-            "properties": {
-                "expires_at": {
-                    "type": "string"
-                },
-                "garden_id": {
-                    "type": "string"
-                },
-                "max_uses": {
-                    "type": "integer"
-                },
-                "permissions": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.GardenPermission"
-                    }
-                }
-            }
-        },
-        "handlers.CreateGardenRequest": {
-            "type": "object",
-            "required": [
-                "name"
-            ],
-            "properties": {
-                "description": {
-                    "type": "string",
-                    "example": "A beautiful garden for growing vegetables"
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 100,
-                    "minLength": 1,
-                    "example": "My First Garden"
-                }
-            }
-        },
-        "handlers.JoinGardenRequest": {
-            "type": "object",
-            "required": [
-                "token"
-            ],
-            "properties": {
-                "token": {
-                    "type": "string"
-                }
-            }
-        },
-        "handlers.LoginRequest": {
+        "auth.LoginRequest": {
             "type": "object",
             "required": [
                 "password",
@@ -1806,26 +2047,7 @@ const docTemplate = `{
                 }
             }
         },
-        "handlers.PlantRequest": {
-            "type": "object",
-            "required": [
-                "plant_type_id",
-                "position"
-            ],
-            "properties": {
-                "plant_type_id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
-                },
-                "position": {
-                    "type": "integer",
-                    "maximum": 8,
-                    "minimum": 0,
-                    "example": 0
-                }
-            }
-        },
-        "handlers.RegisterRequest": {
+        "auth.RegisterRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -1858,105 +2080,122 @@ const docTemplate = `{
                 }
             }
         },
-        "handlers.UpdateGardenRequest": {
+        "auth.User": {
             "type": "object",
             "properties": {
-                "description": {
-                    "type": "string",
-                    "example": "Updated garden description"
+                "achievements": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/auth.UserAchievement"
+                    }
                 },
-                "name": {
-                    "type": "string",
-                    "example": "Updated Garden Name"
+                "avatar": {
+                    "type": "string"
+                },
+                "coins": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "experience": {
+                    "type": "integer"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "language": {
+                    "type": "string"
+                },
+                "last_login_at": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "level": {
+                    "type": "integer"
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
                 }
             }
         },
-        "handlers.UpdateSharePermissionsRequest": {
+        "auth.UserAchievement": {
+            "type": "object",
+            "properties": {
+                "achievement": {
+                    "$ref": "#/definitions/auth.Achievement"
+                },
+                "achievement_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "unlocked_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "garden.CreateAccessLinkRequest": {
             "type": "object",
             "required": [
-                "permissions",
-                "user_id"
+                "garden_id",
+                "permissions"
             ],
             "properties": {
+                "expires_at": {
+                    "type": "string"
+                },
+                "garden_id": {
+                    "type": "string"
+                },
+                "max_uses": {
+                    "type": "integer"
+                },
                 "permissions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/models.GardenPermission"
+                        "$ref": "#/definitions/garden.GardenPermission"
                     }
-                },
-                "user_id": {
-                    "type": "string"
                 }
             }
         },
-        "models.Achievement": {
+        "garden.CreateGardenRequest": {
             "type": "object",
+            "required": [
+                "name"
+            ],
             "properties": {
-                "category": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
                 "description": {
-                    "type": "string"
-                },
-                "icon": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "A beautiful garden for growing vegetables"
                 },
                 "name": {
-                    "type": "string"
-                },
-                "points": {
-                    "type": "integer"
-                },
-                "updated_at": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "example": "My First Garden"
                 }
             }
         },
-        "models.Garden": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "description": "Timestamps",
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "plants": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.Plant"
-                    }
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "user": {
-                    "description": "Relationships",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.User"
-                        }
-                    ]
-                },
-                "user_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.GardenPermission": {
+        "garden.GardenPermission": {
             "type": "string",
             "enum": [
                 "view",
@@ -1971,78 +2210,37 @@ const docTemplate = `{
                 "GardenPermissionManage"
             ]
         },
-        "models.Plant": {
+        "garden.JoinGardenRequest": {
             "type": "object",
+            "required": [
+                "token"
+            ],
             "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "garden": {
-                    "description": "Relationships",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.Garden"
-                        }
-                    ]
-                },
-                "garden_id": {
-                    "type": "string"
-                },
-                "growth_progress": {
-                    "description": "0-100",
-                    "type": "number"
-                },
-                "harvested_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "plant_type": {
-                    "$ref": "#/definitions/models.PlantType"
-                },
-                "plant_type_id": {
-                    "type": "string"
-                },
-                "planted_at": {
-                    "description": "Timestamps",
-                    "type": "string"
-                },
-                "position": {
-                    "description": "Position in garden grid (0-8 for 3x3 grid)",
-                    "type": "integer"
-                },
-                "stage": {
-                    "description": "Plant state",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.PlantStage"
-                        }
-                    ]
-                },
-                "updated_at": {
+                "token": {
                     "type": "string"
                 }
             }
         },
-        "models.PlantStage": {
-            "type": "string",
-            "enum": [
-                "seed",
-                "sprout",
-                "growing",
-                "mature",
-                "harvestable"
+        "garden.PlantRequest": {
+            "type": "object",
+            "required": [
+                "plant_type_id",
+                "position"
             ],
-            "x-enum-varnames": [
-                "PlantStageSeed",
-                "PlantStageSprout",
-                "PlantStageGrowing",
-                "PlantStageMature",
-                "PlantStageHarvestable"
-            ]
+            "properties": {
+                "plant_type_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "position": {
+                    "type": "integer",
+                    "maximum": 8,
+                    "minimum": 0,
+                    "example": 0
+                }
+            }
         },
-        "models.PlantType": {
+        "garden.PlantType": {
             "type": "object",
             "properties": {
                 "description": {
@@ -2074,94 +2272,68 @@ const docTemplate = `{
                 }
             }
         },
-        "models.User": {
+        "garden.UpdateGardenRequest": {
             "type": "object",
             "properties": {
-                "achievements": {
+                "description": {
+                    "type": "string",
+                    "example": "Updated garden description"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Updated Garden Name"
+                }
+            }
+        },
+        "garden.UpdateSharePermissionsRequest": {
+            "type": "object",
+            "required": [
+                "permissions",
+                "user_id"
+            ],
+            "properties": {
+                "permissions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/models.UserAchievement"
+                        "$ref": "#/definitions/garden.GardenPermission"
                     }
                 },
-                "avatar": {
-                    "type": "string"
-                },
-                "coins": {
-                    "type": "integer"
-                },
-                "created_at": {
-                    "description": "Timestamps",
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "experience": {
-                    "type": "integer"
-                },
-                "first_name": {
-                    "type": "string"
-                },
-                "gardens": {
-                    "description": "Relationships",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.Garden"
-                    }
-                },
-                "id": {
-                    "type": "string"
-                },
-                "language": {
-                    "type": "string"
-                },
-                "last_login_at": {
-                    "type": "string"
-                },
-                "last_name": {
-                    "type": "string"
-                },
-                "level": {
-                    "description": "Game progression",
-                    "type": "integer"
-                },
-                "timezone": {
-                    "description": "Game settings",
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "username": {
+                "user_id": {
                     "type": "string"
                 }
             }
         },
-        "models.UserAchievement": {
+        "store.BuySeedRequest": {
+            "type": "object",
+            "required": [
+                "plant_type_id",
+                "quantity"
+            ],
+            "properties": {
+                "plant_type_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "maximum": 10,
+                    "minimum": 1
+                }
+            }
+        },
+        "store.BuySeedResponse": {
             "type": "object",
             "properties": {
-                "achievement": {
-                    "$ref": "#/definitions/models.Achievement"
+                "plant_type": {
+                    "$ref": "#/definitions/garden.PlantType"
                 },
-                "achievement_id": {
-                    "type": "string"
+                "quantity": {
+                    "type": "integer"
                 },
-                "id": {
-                    "type": "string"
+                "total_cost": {
+                    "type": "integer"
                 },
-                "unlocked_at": {
-                    "type": "string"
-                },
-                "user": {
-                    "description": "Relationships",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.User"
-                        }
-                    ]
-                },
-                "user_id": {
-                    "type": "string"
+                "user_coins": {
+                    "type": "integer"
                 }
             }
         }

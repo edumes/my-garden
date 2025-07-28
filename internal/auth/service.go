@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/my-garden/api/internal/types"
 	"github.com/my-garden/api/pkg/auth"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -59,12 +58,10 @@ func (s *service) Register(req RegisterRequest) (*AuthResponse, error) {
 	// Create user
 	now := time.Now()
 	user := &User{
-		User: types.User{
-			Username:  req.Username,
-			Email:     req.Email,
-			FirstName: req.FirstName,
-			LastName:  req.LastName,
-		},
+		Username:     req.Username,
+		Email:        req.Email,
+		FirstName:    req.FirstName,
+		LastName:     req.LastName,
 		PasswordHash: string(hashedPassword),
 		LastLoginAt:  &now,
 	}

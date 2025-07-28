@@ -11,7 +11,3 @@ func (a *AuditLog) BeforeCreate(tx *gorm.DB) error {
 	}
 	return nil
 }
-
-func RegisterModels(db *gorm.DB) error {
-	return db.AutoMigrate(&AuditLog{})
-}

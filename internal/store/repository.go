@@ -1,6 +1,8 @@
 package store
 
 import (
+	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/my-garden/api/internal/auth"
 	"github.com/my-garden/api/internal/database"
@@ -55,6 +57,7 @@ func (r *Repository) GetUserSeedInventory(userID uuid.UUID) ([]garden.SeedInvent
 		Find(&seedInventory).Error; err != nil {
 		return nil, err
 	}
+	fmt.Println(seedInventory)
 	return seedInventory, nil
 }
 

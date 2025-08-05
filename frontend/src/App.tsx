@@ -10,6 +10,9 @@ import { Login } from './components/Login';
 import { Register } from './components/Register';
 import { Store } from './components/Store';
 import { AuditLogs } from './components/AuditLogs';
+import { Marketplace } from './components/Marketplace';
+import { Settings } from './components/Settings';
+import { Sidebar } from './components/admin-panel/sidebar';
 import { Toaster } from './components/ui/sonner';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -89,43 +92,70 @@ function AppContent() {
   return (
     <>
       {!hideHeader && <Header onOpenStore={() => setShowStore(true)} />}
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          }
-        />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route
-          path="/join-garden/:token"
-          element={
-            <PrivateRoute>
-              <JoinGardenPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/garden/:id"
-          element={
-            <PrivateRoute>
-              <GardenDetailRoute />
-            </PrivateRoute>
-          }
-        />
-        {/* <Route
-          path="/audit"
-          element={
-            <PrivateRoute>
-              <AuditLogs />
-            </PrivateRoute>
-          }
-        /> */}
-        <Route path="*" element={<div className="min-h-screen flex items-center justify-center text-2xl text-muted-foreground">404 Not Found</div>} />
-      </Routes>
+      {!hideHeader && <Sidebar />}
+      <div className={!hideHeader ? "lg:ml-72 transition-all duration-300 pt-16 lg:pt-0" : ""}>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/garden"
+            element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route
+            path="/join-garden/:token"
+            element={
+              <PrivateRoute>
+                <JoinGardenPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/garden/:id"
+            element={
+              <PrivateRoute>
+                <GardenDetailRoute />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/marketplace"
+            element={
+              <PrivateRoute>
+                <Marketplace />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/audit"
+            element={
+              <PrivateRoute>
+                <AuditLogs />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <PrivateRoute>
+                <Settings />
+              </PrivateRoute>
+            }
+          />
+          <Route path="*" element={<div className="min-h-screen flex items-center justify-center text-2xl text-muted-foreground">404 Not Found</div>} />
+        </Routes>
+      </div>
 
       <Store open={showStore} onClose={() => setShowStore(false)} />
     </>

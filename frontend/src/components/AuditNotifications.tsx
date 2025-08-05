@@ -1,10 +1,11 @@
 'use client';
 
-import { ArrowUpRight, RotateCcw, Activity, User, TreePine, Leaf, ShoppingCart, User2 } from 'lucide-react';
+import { Activity, ArrowUpRight, Leaf, ShoppingCart, TreePine, User, User2 } from 'lucide-react';
 import { motion, type Transition } from 'motion/react';
 import { useEffect, useState } from 'react';
-import { apiService } from '../services/api';
+import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
+import { apiService } from '../services/api';
 
 interface AuditLog {
   id: string;
@@ -144,6 +145,7 @@ const formatTimeAgo = (dateString: string) => {
 function AuditNotifications() {
   const [notifications, setNotifications] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const loadRecentAuditLogs = async () => {
     setLoading(true);
@@ -152,7 +154,7 @@ function AuditNotifications() {
         limit: 5,
         status: 'success'
       }) as any;
-      
+
       const recentLogs = response.logs.map((log: AuditLog) => ({
         ...log,
         title: getActionTitle(log.action),
@@ -160,7 +162,7 @@ function AuditNotifications() {
         time: formatTimeAgo(log.created_at),
         icon: getActionIcon(log.action),
       }));
-      
+
       setNotifications(recentLogs);
     } catch (error) {
       console.error('Failed to load audit notifications:', error);
@@ -172,7 +174,7 @@ function AuditNotifications() {
 
   useEffect(() => {
     loadRecentAuditLogs();
-    
+
     const interval = setInterval(loadRecentAuditLogs, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -240,7 +242,7 @@ function AuditNotifications() {
             className="text-sm font-medium text-neutral-600 dark:text-neutral-300 flex items-center gap-1 cursor-pointer select-none row-start-1 col-start-1"
             variants={viewAllTextVariants}
             transition={textSwitchTransition}
-            onClick={() => window.location.href = '/audit'}
+            onClick={() => navigate('/audit')}
           >
             View all <ArrowUpRight className="size-4" />
           </motion.span>
@@ -250,4 +252,4 @@ function AuditNotifications() {
   );
 }
 
-export { AuditNotifications }; 
+export { AuditNotifications };

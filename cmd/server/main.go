@@ -25,6 +25,7 @@ import (
 	"github.com/my-garden/api/internal/config"
 	"github.com/my-garden/api/internal/database"
 	"github.com/my-garden/api/internal/garden"
+	"github.com/my-garden/api/internal/marketplace"
 	"github.com/my-garden/api/internal/middleware"
 	"github.com/my-garden/api/internal/migrations"
 	"github.com/my-garden/api/internal/store"
@@ -105,6 +106,11 @@ func main() {
 	weatherService := weather.NewService(weatherRepo, rdb)
 	weatherHandler := weather.NewWeatherHandler(weatherService)
 
+	// Initialize marketplace components
+	marketplaceRepo := marketplace.NewRepository(db.GetDB())
+	marketplaceService := marketplace.NewService(marketplaceRepo, auditService)
+	marketplaceHandler := marketplace.NewHandler(marketplaceService, auditService)
+
 	// Initialize other handlers
 	gardenHandler := garden.NewGardenHandler(db, auditService)
 	gardenShareHandler := garden.NewGardenShareHandler(db)
@@ -140,6 +146,7 @@ func main() {
 	garden.RegisterRoutes(api, gardenHandler, gardenShareHandler, jwtManager)
 	store.RegisterRoutes(api, storeHandler, auditService, jwtManager)
 	weather.RegisterRoutes(api, weatherHandler)
+	marketplace.RegisterRoutes(api, marketplaceHandler, auditService, jwtManager)
 	audit.RegisterRoutes(api, auditHandler, jwtManager, auth.AuthMiddleware(jwtManager))
 
 	// Game and WebSocket endpoints (if not domain-specific, keep here)

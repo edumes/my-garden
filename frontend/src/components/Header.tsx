@@ -1,5 +1,6 @@
-import { Coins, Leaf, LogOut, Settings, ShoppingCart, Trophy, User, Activity } from 'lucide-react';
+import { Activity, Coins, Leaf, LogOut, Settings, ShoppingCart, TrendingUp, Trophy, User } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
 import { Badge } from './ui/badge';
@@ -19,6 +20,7 @@ interface HeaderProps {
 
 export function Header({ onOpenStore }: HeaderProps) {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
@@ -78,11 +80,11 @@ export function Header({ onOpenStore }: HeaderProps) {
                   <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuLabel>My Account</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/settings')}>
                       <Settings className="w-4 h-4 mr-2" />
                       <span>Settings</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => window.location.href = '/audit'}>
+                    <DropdownMenuItem onClick={() => navigate('/audit')}>
                       <Activity className="w-4 h-4 mr-2" />
                       <span>Audit Logs</span>
                     </DropdownMenuItem>
@@ -144,7 +146,7 @@ export function Header({ onOpenStore }: HeaderProps) {
                   <span>Settings</span>
                 </Button>
                 <Button
-                  onClick={() => window.location.href = '/audit'}
+                  onClick={() => navigate('/audit')}
                   variant="secondary"
                   className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-muted-foreground hover:bg-accent rounded-lg text-left">
                   <Activity className="w-4 h-4" />

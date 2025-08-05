@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { apiService } from '@/services/api';
 import { CheckCircle, Loader, XCircle } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router';
 
 const JoinGardenPage: React.FC = () => {
   const { token } = useParams<{ token: string }>();

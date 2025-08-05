@@ -7,6 +7,7 @@ import (
 	"github.com/my-garden/api/internal/audit"
 	"github.com/my-garden/api/internal/auth"
 	"github.com/my-garden/api/internal/garden"
+	"github.com/my-garden/api/internal/marketplace"
 	"github.com/my-garden/api/internal/weather"
 	"gorm.io/gorm"
 )
@@ -30,6 +31,12 @@ func AutoMigrate(db *gorm.DB) error {
 		&garden.SeedInventory{},
 		&weather.Weather{},
 		&weather.WeatherForecast{},
+		&marketplace.DeliveryRequest{},
+		&marketplace.PlantListing{},
+		&marketplace.Transaction{},
+		&marketplace.Block{},
+		&marketplace.Wallet{},
+		&marketplace.ConsensusNode{},
 	); err != nil {
 		return err
 	}

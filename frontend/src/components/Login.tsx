@@ -1,6 +1,6 @@
 import { Eye, EyeOff, Leaf, Lock, User } from 'lucide-react';
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';

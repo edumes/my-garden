@@ -1,6 +1,6 @@
 import { Eye, EyeOff, Leaf, Lock, Mail, User } from 'lucide-react';
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
@@ -13,6 +13,7 @@ interface RegisterProps {
 
 export function Register({ onToggleMode }: RegisterProps) {
   const { register } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -30,6 +31,7 @@ export function Register({ onToggleMode }: RegisterProps) {
     try {
       await register(formData);
       toast.success('Account created successfully!');
+      navigate('/login');
     } catch (err) {
       toast.error('Registration failed. Please try again.');
     } finally {

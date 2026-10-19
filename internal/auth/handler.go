@@ -123,29 +123,18 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 // RefreshToken godoc
 // @Summary Refresh JWT token
-// @Description Refresh the current JWT token to get a new one with extended expiry
+// @Description Exchange a valid, unrevoked token for a new one with a fresh expiry
 // @Tags authentication
 // @Accept json
 // @Produce json
 // @Security bearer
 // @Success 200 {object} map[string]interface{} "New token and expiry"
-// @Failure 401 {object} map[string]interface{} "Unauthorized - Invalid token"
+// @Failure 401 {object} map[string]interface{} "Unauthorized - Invalid, expired, or revoked token"
 // @Router /auth/refresh [post]
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
-		return
-	}
-
-	tokenString := authHeader
-	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
-		tokenString = authHeader[7:]
-	}
-
-	newToken, expiresAt, err := h.service.RefreshToken(tokenString)
+	newToken, expiresAt, err := h.service.RefreshToken(c.MustGet("user_id").(uuid.UUID))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to refresh token"})
 		return
 	}
 
@@ -157,14 +146,19 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 
 // Logout godoc
 // @Summary Logout user
-// @Description Logout user (client-side token removal)
+// @Description Revoke every token issued to the user, signing them out on every device
 // @Tags authentication
 // @Accept json
 // @Produce json
 // @Security bearer
 // @Success 200 {object} map[string]interface{} "Logout success message"
+// @Failure 401 {object} map[string]interface{} "Unauthorized - Invalid, expired, or revoked token"
 // @Router /auth/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
+	if err := h.service.Logout(c.MustGet("user_id").(uuid.UUID)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to logout"})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 

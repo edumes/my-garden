@@ -377,7 +377,7 @@ const docTemplate = `{
                         "bearer": []
                     }
                 ],
-                "description": "Logout user (client-side token removal)",
+                "description": "Revoke every token issued to the user, signing them out on every device",
                 "consumes": [
                     "application/json"
                 ],
@@ -395,6 +395,13 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized - Invalid, expired, or revoked token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
                     }
                 }
             }
@@ -406,7 +413,7 @@ const docTemplate = `{
                         "bearer": []
                     }
                 ],
-                "description": "Refresh the current JWT token to get a new one with extended expiry",
+                "description": "Exchange a valid, unrevoked token for a new one with a fresh expiry",
                 "consumes": [
                     "application/json"
                 ],
@@ -426,7 +433,7 @@ const docTemplate = `{
                         }
                     },
                     "401": {
-                        "description": "Unauthorized - Invalid token",
+                        "description": "Unauthorized - Invalid, expired, or revoked token",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true

@@ -33,6 +33,7 @@ Deliver a complete and rewarding garden loop before expanding secondary systems.
 
 - Prevent multiple application instances from processing the same plant tick twice.
 - Make ticks idempotent and safe after restarts.
+- Replace the tick's whole-row `Save` of each plant with a conditional update of growth and stage. Today a plant removed, harvested, or sold between the tick's read and write comes back with stale values, and a deleted plant is recreated.
 - Fix weather serialization in Redis or remove caching if it provides no demonstrated value.
 - Add readiness information for database, Redis, and the game engine.
 

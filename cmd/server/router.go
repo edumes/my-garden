@@ -32,6 +32,7 @@ func newRouter(db *database.Database, rdb *redis.Client, cfg *config.Config) *gi
 	authRepo := auth.NewRepository(db.GetDB())
 	authService := auth.NewService(authRepo, jwtManager)
 	authHandler := auth.NewAuthHandler(authService, auditService)
+	requireAuth := auth.AuthMiddleware(jwtManager, authRepo)
 
 	// Initialize store components
 	storeRepo := store.NewRepository(db)
@@ -53,6 +54,11 @@ func newRouter(db *database.Database, rdb *redis.Client, cfg *config.Config) *gi
 
 	// Initialize router
 	router := gin.New()
+	// ClientIP, which rate limiting keys on, reads X-Forwarded-For only from
+	// these proxies. config.Load has validated the list.
+	if err := router.SetTrustedProxies(cfg.API.TrustedProxies); err != nil {
+		panic(err)
+	}
 
 	// Initialize middleware
 	auditMiddleware := audit.NewAuditMiddleware(auditService)
@@ -61,6 +67,7 @@ func newRouter(db *database.Database, rdb *redis.Client, cfg *config.Config) *gi
 	router.Use(middleware.CORSMiddleware(cfg))
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
+	router.Use(middleware.RateLimitMutations(cfg.API.RateLimitRequests, cfg.API.RateLimitWindow))
 	router.Use(auditMiddleware.AuditLog())
 
 	// Health check endpoint
@@ -77,12 +84,12 @@ func newRouter(db *database.Database, rdb *redis.Client, cfg *config.Config) *gi
 
 	// Setup API v1 routes
 	api := router.Group("/api/v1")
-	auth.RegisterRoutes(api, authHandler, jwtManager)
-	garden.RegisterRoutes(api, gardenHandler, gardenShareHandler, jwtManager)
-	store.RegisterRoutes(api, storeHandler, auditService, jwtManager)
+	auth.RegisterRoutes(api, authHandler, requireAuth)
+	garden.RegisterRoutes(api, gardenHandler, gardenShareHandler, requireAuth)
+	store.RegisterRoutes(api, storeHandler, requireAuth)
 	weather.RegisterRoutes(api, weatherHandler)
-	marketplace.RegisterRoutes(api, marketplaceHandler, jwtManager)
-	audit.RegisterRoutes(api, auditHandler, jwtManager, auth.AuthMiddleware(jwtManager))
+	marketplace.RegisterRoutes(api, marketplaceHandler, requireAuth)
+	audit.RegisterRoutes(api, auditHandler, requireAuth)
 
 	// Game and WebSocket endpoints (if not domain-specific, keep here)
 	api.GET("/game/status", func(c *gin.Context) {
@@ -93,7 +100,7 @@ func newRouter(db *database.Database, rdb *redis.Client, cfg *config.Config) *gi
 	})
 
 	ws := router.Group("/api/v1/ws")
-	ws.Use(auth.AuthMiddleware(jwtManager))
+	ws.Use(requireAuth)
 	{
 		ws.GET("/garden/:gardenId", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"message": "WebSocket endpoint - coming soon"})

@@ -2,13 +2,11 @@ package garden
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/my-garden/api/internal/auth"
-	pkgAuth "github.com/my-garden/api/pkg/auth"
 )
 
-func RegisterRoutes(rg *gin.RouterGroup, handler *GardenHandler, shareHandler *GardenShareHandler, jwtManager *pkgAuth.JWTManager) {
+func RegisterRoutes(rg *gin.RouterGroup, handler *GardenHandler, shareHandler *GardenShareHandler, requireAuth gin.HandlerFunc) {
 	gardens := rg.Group("/gardens")
-	gardens.Use(auth.AuthMiddleware(jwtManager))
+	gardens.Use(requireAuth)
 	{
 		gardens.GET("", handler.GetGardens)
 		gardens.POST("", handler.CreateGarden)
@@ -21,7 +19,7 @@ func RegisterRoutes(rg *gin.RouterGroup, handler *GardenHandler, shareHandler *G
 	}
 
 	gardenShares := rg.Group("/garden-shares")
-	gardenShares.Use(auth.AuthMiddleware(jwtManager))
+	gardenShares.Use(requireAuth)
 	{
 		gardenShares.POST("/access-links", shareHandler.CreateAccessLink)
 		gardenShares.POST("/join", shareHandler.JoinGarden)

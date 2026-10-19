@@ -21,6 +21,7 @@ type User struct {
 	Timezone     string            `json:"timezone" gorm:"default:'UTC'"`
 	Language     string            `json:"language" gorm:"default:'en'"`
 	LastLoginAt  *time.Time        `json:"last_login_at"`
+	TokenVersion int               `json:"-" gorm:"not null;default:0"`
 	CreatedAt    time.Time         `json:"created_at"`
 	UpdatedAt    time.Time         `json:"updated_at"`
 	Achievements []UserAchievement `gorm:"foreignKey:UserID"`

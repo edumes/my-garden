@@ -108,9 +108,14 @@ class ApiService {
     return response;
   }
 
+  // Revokes every session of the user on the server. The local token is
+  // dropped even when that fails, for example because it was already revoked.
   async logout() {
-    await this.request('/auth/logout', { method: 'POST' });
-    localStorage.removeItem('auth_token');
+    try {
+      await this.request('/auth/logout', { method: 'POST' });
+    } finally {
+      localStorage.removeItem('auth_token');
+    }
   }
 
   // Gardens

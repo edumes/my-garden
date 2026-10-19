@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"errors"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -9,10 +8,15 @@ import (
 	"github.com/my-garden/api/internal/config"
 )
 
+const issuer = "my-garden-api"
+
 type Claims struct {
 	UserID   uuid.UUID `json:"user_id"`
 	Username string    `json:"username"`
 	Email    string    `json:"email"`
+	// TokenVersion must match the user's current token version. Logging out
+	// increments it, which revokes every token issued before.
+	TokenVersion int `json:"token_version"`
 	jwt.RegisteredClaims
 }
 
@@ -28,49 +32,40 @@ func NewJWTManager(cfg *config.Config) *JWTManager {
 	}
 }
 
-func (j *JWTManager) GenerateToken(userID uuid.UUID, username, email string) (string, error) {
+// GenerateToken signs a token for the user and returns when it expires.
+func (j *JWTManager) GenerateToken(userID uuid.UUID, username, email string, tokenVersion int) (string, time.Time, error) {
+	now := time.Now()
+	expiresAt := now.Add(j.expiry)
 	claims := &Claims{
-		UserID:   userID,
-		Username: username,
-		Email:    email,
+		UserID:       userID,
+		Username:     username,
+		Email:        email,
+		TokenVersion: tokenVersion,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(j.expiry)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			NotBefore: jwt.NewNumericDate(time.Now()),
-			Issuer:    "my-garden-api",
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+			Issuer:    issuer,
 			Subject:   userID.String(),
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(j.secretKey))
+	signed, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(j.secretKey))
+	return signed, expiresAt, err
 }
 
+// ValidateToken accepts only unexpired HS256 tokens this API issued. It does
+// not check revocation; that needs the user's current token version.
 func (j *JWTManager) ValidateToken(tokenString string) (*Claims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("unexpected signing method")
-		}
-		return []byte(j.secretKey), nil
-	})
-
+	claims := &Claims{}
+	_, err := jwt.ParseWithClaims(tokenString, claims,
+		func(*jwt.Token) (any, error) { return []byte(j.secretKey), nil },
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+		jwt.WithIssuer(issuer),
+		jwt.WithExpirationRequired(),
+	)
 	if err != nil {
 		return nil, err
 	}
-
-	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
-		return claims, nil
-	}
-
-	return nil, errors.New("invalid token")
-}
-
-func (j *JWTManager) RefreshToken(tokenString string) (string, error) {
-	claims, err := j.ValidateToken(tokenString)
-	if err != nil {
-		return "", err
-	}
-
-	// Generate new token with extended expiry
-	return j.GenerateToken(claims.UserID, claims.Username, claims.Email)
+	return claims, nil
 }

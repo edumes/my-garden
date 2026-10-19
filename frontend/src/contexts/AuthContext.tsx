@@ -60,8 +60,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const logout = async () => {
-    await apiService.logout();
-    setUser(null);
+    try {
+      await apiService.logout();
+    } catch (error) {
+      console.error('Failed to revoke the session on the server:', error);
+    } finally {
+      setUser(null);
+    }
   };
 
   const refreshUser = async () => {

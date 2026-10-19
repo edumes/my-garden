@@ -22,6 +22,7 @@ Prepare the complete product for real users with controlled releases, recovery, 
 
 - Separate liveness from dependency-aware readiness.
 - Configure connection pools, timeouts, request limits, and graceful shutdown.
+- Share rate-limit counters across instances; today each instance keeps its own in memory.
 - Prevent multiple game-engine workers from applying the same scheduled work.
 - Run production with secure database transport and managed secrets.
 

@@ -2,13 +2,11 @@ package marketplace
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/my-garden/api/internal/auth"
-	pkgAuth "github.com/my-garden/api/pkg/auth"
 )
 
-func RegisterRoutes(router *gin.RouterGroup, handler *Handler, jwtManager *pkgAuth.JWTManager) {
+func RegisterRoutes(router *gin.RouterGroup, handler *Handler, requireAuth gin.HandlerFunc) {
 	marketplace := router.Group("/marketplace")
-	marketplace.Use(auth.AuthMiddleware(jwtManager))
+	marketplace.Use(requireAuth)
 	{
 		marketplace.GET("/stats", handler.GetMarketplaceStats)
 

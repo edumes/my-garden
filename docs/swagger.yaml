@@ -727,12 +727,18 @@ paths:
     post:
       consumes:
       - application/json
-      description: Logout user (client-side token removal)
+      description: Revoke every token issued to the user, signing them out on every
+        device
       produces:
       - application/json
       responses:
         "200":
           description: Logout success message
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized - Invalid, expired, or revoked token
           schema:
             additionalProperties: true
             type: object
@@ -745,7 +751,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Refresh the current JWT token to get a new one with extended expiry
+      description: Exchange a valid, unrevoked token for a new one with a fresh expiry
       produces:
       - application/json
       responses:
@@ -755,7 +761,7 @@ paths:
             additionalProperties: true
             type: object
         "401":
-          description: Unauthorized - Invalid token
+          description: Unauthorized - Invalid, expired, or revoked token
           schema:
             additionalProperties: true
             type: object

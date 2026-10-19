@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -10,7 +12,10 @@ type Repository interface {
 	FindUserByEmail(email string) (*User, error)
 	FindUserByID(id uuid.UUID) (*User, error)
 	CreateUser(user *User) error
-	UpdateUser(user *User) error
+	UpdateProfile(user *User) error
+	RecordLogin(id uuid.UUID, at time.Time) error
+	TokenVersion(id uuid.UUID) (int, error)
+	RevokeTokens(id uuid.UUID) error
 }
 
 type repository struct {
@@ -49,6 +54,23 @@ func (r *repository) CreateUser(user *User) error {
 	return r.db.Create(user).Error
 }
 
-func (r *repository) UpdateUser(user *User) error {
-	return r.db.Save(user).Error
+// UpdateProfile writes only the editable profile fields, so it cannot undo
+// concurrent changes to coins or the token version.
+func (r *repository) UpdateProfile(user *User) error {
+	return r.db.Model(user).Select("first_name", "last_name", "avatar", "timezone", "language").Updates(user).Error
+}
+
+func (r *repository) RecordLogin(id uuid.UUID, at time.Time) error {
+	return r.db.Model(&User{}).Where("id = ?", id).Update("last_login_at", at).Error
+}
+
+func (r *repository) TokenVersion(id uuid.UUID) (int, error) {
+	var user User
+	err := r.db.Select("token_version").Take(&user, "id = ?", id).Error
+	return user.TokenVersion, err
+}
+
+// RevokeTokens invalidates every token issued to the user so far.
+func (r *repository) RevokeTokens(id uuid.UUID) error {
+	return r.db.Model(&User{}).Where("id = ?", id).Update("token_version", gorm.Expr("token_version + 1")).Error
 }

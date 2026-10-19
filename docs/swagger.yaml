@@ -42,6 +42,17 @@ definitions:
     - password
     - username
     type: object
+  auth.PublicUser:
+    properties:
+      avatar:
+        type: string
+      id:
+        type: string
+      level:
+        type: integer
+      username:
+        type: string
+    type: object
   auth.RegisterRequest:
     properties:
       email:
@@ -162,7 +173,7 @@ definitions:
       updated_at:
         type: string
       user:
-        $ref: '#/definitions/auth.User'
+        $ref: '#/definitions/auth.PublicUser'
       user_id:
         type: string
     type: object
@@ -1356,7 +1367,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: Successfully joined garden
+          description: Joined the garden, or already a member
           schema:
             additionalProperties: true
             type: object
@@ -1372,6 +1383,11 @@ paths:
             type: object
         "404":
           description: Access link not found or expired
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: The caller owns the garden
           schema:
             additionalProperties: true
             type: object

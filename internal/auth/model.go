@@ -26,6 +26,17 @@ type User struct {
 	Achievements []UserAchievement `gorm:"foreignKey:UserID"`
 }
 
+// PublicUser is the part of a profile other players may see. Use it for
+// relations that expose someone else's account, such as a garden's owner.
+type PublicUser struct {
+	ID       uuid.UUID `json:"id" gorm:"type:uuid;primary_key"`
+	Username string    `json:"username"`
+	Avatar   string    `json:"avatar"`
+	Level    int       `json:"level"`
+}
+
+func (PublicUser) TableName() string { return "users" }
+
 func (u *User) BeforeCreate(tx *gorm.DB) error {
 	if u.ID == uuid.Nil {
 		u.ID = uuid.New()

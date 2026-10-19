@@ -1,6 +1,7 @@
 package garden
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -19,8 +20,8 @@ type Garden struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 
 	// Relationships
-	Plants []Plant   `json:"plants" gorm:"foreignKey:GardenID"`
-	User   auth.User `json:"user" gorm:"foreignKey:UserID"`
+	Plants []Plant         `json:"plants" gorm:"foreignKey:GardenID"`
+	User   auth.PublicUser `json:"user" gorm:"foreignKey:UserID"`
 }
 
 func (g *Garden) BeforeCreate(tx *gorm.DB) error {
@@ -234,17 +235,17 @@ func (GardenPermissions) GormDataType() string {
 // GardenShare represents a user's access to a shared garden
 type GardenShare struct {
 	ID          uuid.UUID         `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
-	GardenID    uuid.UUID         `json:"garden_id" gorm:"type:uuid;not null"`
-	UserID      uuid.UUID         `json:"user_id" gorm:"type:uuid;not null"`
+	GardenID    uuid.UUID         `json:"garden_id" gorm:"type:uuid;not null;uniqueIndex:idx_garden_shares_garden_user"`
+	UserID      uuid.UUID         `json:"user_id" gorm:"type:uuid;not null;uniqueIndex:idx_garden_shares_garden_user"`
 	Permissions GardenPermissions `json:"permissions" gorm:"type:jsonb;not null;serializer:json"`
 	SharedBy    uuid.UUID         `json:"shared_by" gorm:"type:uuid;not null"`
 	SharedAt    time.Time         `json:"shared_at"`
 	ExpiresAt   *time.Time        `json:"expires_at"`
 
 	// Relationships
-	Garden       Garden    `json:"garden" gorm:"foreignKey:GardenID"`
-	User         auth.User `json:"user" gorm:"foreignKey:UserID"`
-	SharedByUser auth.User `json:"shared_by_user" gorm:"foreignKey:SharedBy"`
+	Garden       Garden          `json:"garden" gorm:"foreignKey:GardenID"`
+	User         auth.PublicUser `json:"user" gorm:"foreignKey:UserID"`
+	SharedByUser auth.PublicUser `json:"shared_by_user" gorm:"foreignKey:SharedBy"`
 }
 
 func (gs *GardenShare) BeforeCreate(tx *gorm.DB) error {
@@ -300,8 +301,8 @@ type GardenAccessLink struct {
 	IsActive    bool              `json:"is_active" gorm:"default:true"`
 
 	// Relationships
-	Garden        Garden    `json:"garden" gorm:"foreignKey:GardenID"`
-	CreatedByUser auth.User `json:"created_by_user" gorm:"foreignKey:CreatedBy"`
+	Garden        Garden          `json:"garden" gorm:"foreignKey:GardenID"`
+	CreatedByUser auth.PublicUser `json:"created_by_user" gorm:"foreignKey:CreatedBy"`
 }
 
 func (gal *GardenAccessLink) BeforeCreate(tx *gorm.DB) error {
@@ -346,7 +347,7 @@ func (gal *GardenAccessLink) BeforeUpdate(tx *gorm.DB) error {
 	return nil
 }
 
-// generateAccessToken creates a secure random token for access links
+// generateAccessToken returns an unguessable link token with 128 bits of entropy.
 func generateAccessToken() string {
-	return uuid.New().String()[:12]
+	return rand.Text()
 }

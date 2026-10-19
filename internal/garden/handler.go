@@ -66,6 +66,7 @@ func (h *GardenHandler) GetGardens(c *gin.Context) {
 	if err := h.db.DB.Scopes(unexpiredShares).Where("user_id = ?", userID).
 		Preload("Garden.Plants.PlantType").
 		Preload("Garden.User").
+		Preload("SharedByUser").
 		Find(&sharedGardens).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch shared gardens"})
 		return

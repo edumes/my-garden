@@ -1102,7 +1102,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successfully joined garden",
+                        "description": "Joined the garden, or already a member",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1124,6 +1124,13 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Access link not found or expired",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "The caller owns the garden",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2653,6 +2660,23 @@ const docTemplate = `{
                 }
             }
         },
+        "auth.PublicUser": {
+            "type": "object",
+            "properties": {
+                "avatar": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "level": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
         "auth.RegisterRequest": {
             "type": "object",
             "required": [
@@ -2827,7 +2851,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user": {
-                    "$ref": "#/definitions/auth.User"
+                    "$ref": "#/definitions/auth.PublicUser"
                 },
                 "user_id": {
                     "type": "string"

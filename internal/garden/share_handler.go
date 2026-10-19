@@ -1,6 +1,7 @@
 package garden
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/my-garden/api/internal/database"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type GardenShareHandler struct {
@@ -107,12 +109,13 @@ func (h *GardenShareHandler) CreateAccessLink(c *gin.Context) {
 // @Produce json
 // @Security bearer
 // @Param request body JoinGardenRequest true "Join garden data"
-// @Success 200 {object} map[string]interface{} "Successfully joined garden"
+// @Success 200 {object} map[string]interface{} "Joined the garden, or already a member"
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Failure 404 {object} map[string]interface{} "Access link not found or expired"
 // @Failure 410 {object} map[string]interface{} "Access link expired or max uses reached"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Failure 409 {object} map[string]interface{} "The caller owns the garden"
 // @Router /garden-shares/join [post]
 func (h *GardenShareHandler) JoinGarden(c *gin.Context) {
 	userID, exists := c.Get("user_id")
@@ -120,6 +123,7 @@ func (h *GardenShareHandler) JoinGarden(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
+	uid := userID.(uuid.UUID)
 
 	var req JoinGardenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -127,10 +131,9 @@ func (h *GardenShareHandler) JoinGarden(c *gin.Context) {
 		return
 	}
 
-	// Find access link
-	var accessLink GardenAccessLink
-	if err := h.db.DB.Where("token = ? AND is_active = ?", req.Token, true).First(&accessLink).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+	var link GardenAccessLink
+	if err := h.db.DB.Where("token = ?", req.Token).Take(&link).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Access link not found or inactive"})
 			return
 		}
@@ -138,50 +141,94 @@ func (h *GardenShareHandler) JoinGarden(c *gin.Context) {
 		return
 	}
 
-	// Check if link is expired
-	if accessLink.ExpiresAt != nil && time.Now().After(*accessLink.ExpiresAt) {
-		c.JSON(http.StatusGone, gin.H{"error": "Access link has expired"})
-		return
-	}
-
-	// Check if max uses reached
-	if accessLink.MaxUses != nil && accessLink.UsedCount >= *accessLink.MaxUses {
-		c.JSON(http.StatusGone, gin.H{"error": "Access link has reached maximum uses"})
-		return
-	}
-
-	// Check if user already has access to this garden
-	var existingShare GardenShare
-	if err := h.db.DB.Where("garden_id = ? AND user_id = ?", accessLink.GardenID, userID).First(&existingShare).Error; err == nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "You already have access to this garden"})
-		return
-	}
-
-	// Create garden share
-	gardenShare := GardenShare{
-		GardenID:    accessLink.GardenID,
-		UserID:      userID.(uuid.UUID),
-		Permissions: accessLink.Permissions,
-		SharedBy:    accessLink.CreatedBy,
-	}
-
-	if err := h.db.DB.Create(&gardenShare).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to join garden"})
-		return
-	}
-
-	// Increment used count
-	h.db.DB.Model(&accessLink).Update("used_count", accessLink.UsedCount+1)
-
-	// Load garden details
 	var garden Garden
-	h.db.DB.Where("id = ?", accessLink.GardenID).First(&garden)
+	if err := h.db.DB.Where("id = ?", link.GardenID).Take(&garden).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch garden"})
+		return
+	}
+	if garden.UserID == uid {
+		c.JSON(http.StatusConflict, gin.H{"error": "You own this garden"})
+		return
+	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Successfully joined garden",
-		"garden":  garden,
-		"share":   gardenShare,
+	share, err := h.redeem(link, uid)
+	if errors.Is(err, errLinkUnavailable) || errors.Is(err, errAlreadyHasAccess) {
+		// Joining is idempotent: members, including those whose concurrent
+		// request won, get their current access back without spending a use.
+		var existing GardenShare
+		if findErr := h.db.DB.Scopes(unexpiredShares).
+			Where("garden_id = ? AND user_id = ?", link.GardenID, uid).
+			Take(&existing).Error; findErr == nil {
+			share, err = existing, nil
+		}
+	}
+
+	switch {
+	case errors.Is(err, errLinkUnavailable):
+		respondLinkUnavailable(c, link)
+	case errors.Is(err, errAlreadyHasAccess):
+		c.JSON(http.StatusConflict, gin.H{"error": "This garden was already shared with you"})
+	case err != nil:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to join garden"})
+	default:
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Successfully joined garden",
+			"garden":  garden,
+			"share":   share,
+		})
+	}
+}
+
+var (
+	errLinkUnavailable  = errors.New("access link inactive, expired, or used up")
+	errAlreadyHasAccess = errors.New("garden already shared with the user")
+)
+
+// redeem spends one use of the link and shares its garden with the user, as
+// one transaction. The use is claimed with a single conditional update, so
+// concurrent requests can never exceed max_uses or redeem an expired or
+// deactivated link; a rejected share gives the use back.
+func (h *GardenShareHandler) redeem(link GardenAccessLink, userID uuid.UUID) (GardenShare, error) {
+	share := GardenShare{
+		GardenID:    link.GardenID,
+		UserID:      userID,
+		Permissions: link.Permissions,
+		SharedBy:    link.CreatedBy,
+	}
+	err := h.db.DB.Transaction(func(tx *gorm.DB) error {
+		claim := tx.Exec(`UPDATE garden_access_links SET used_count = used_count + 1
+			WHERE id = ? AND is_active
+			AND (expires_at IS NULL OR expires_at > ?)
+			AND (max_uses IS NULL OR used_count < max_uses)`, link.ID, time.Now())
+		if claim.Error != nil {
+			return claim.Error
+		}
+		if claim.RowsAffected == 0 {
+			return errLinkUnavailable
+		}
+
+		created := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&share)
+		if created.Error != nil {
+			return created.Error
+		}
+		if created.RowsAffected == 0 {
+			return errAlreadyHasAccess
+		}
+		return nil
 	})
+	return share, err
+}
+
+// respondLinkUnavailable explains why a link could not be redeemed.
+func respondLinkUnavailable(c *gin.Context, link GardenAccessLink) {
+	switch {
+	case !link.IsActive:
+		c.JSON(http.StatusNotFound, gin.H{"error": "Access link not found or inactive"})
+	case link.ExpiresAt != nil && !time.Now().Before(*link.ExpiresAt):
+		c.JSON(http.StatusGone, gin.H{"error": "Access link has expired"})
+	default:
+		c.JSON(http.StatusGone, gin.H{"error": "Access link has reached maximum uses"})
+	}
 }
 
 // GetSharedGardens godoc

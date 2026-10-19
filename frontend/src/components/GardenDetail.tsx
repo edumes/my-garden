@@ -23,7 +23,7 @@ export function GardenDetail({ garden: initialGarden, isOwner, permissions, onBa
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
   const [plantTypes, setPlantTypes] = useState<PlantType[]>([]);
   const [plantTypesLoading, setPlantTypesLoading] = useState(true);
-  const { refreshUser } = useAuth();
+  const { user, refreshUser } = useAuth();
 
   const gardenId = initialGarden.id;
 
@@ -224,12 +224,12 @@ export function GardenDetail({ garden: initialGarden, isOwner, permissions, onBa
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">Level</span>
-                    <span className="text-xs font-medium">{garden.user.level}</span>
+                    <span className="text-xs font-medium">{user?.level}</span>
                   </div>
 
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">Experience</span>
-                    <span className="text-xs font-medium">{garden.user.experience} XP</span>
+                    <span className="text-xs font-medium">{user?.experience} XP</span>
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -237,7 +237,7 @@ export function GardenDetail({ garden: initialGarden, isOwner, permissions, onBa
                       <Coins className="w-3 h-3 text-yellow-500" />
                       <span className="text-xs text-muted-foreground">Coins</span>
                     </div>
-                    <span className="text-xs font-medium">{garden.user.coins}</span>
+                    <span className="text-xs font-medium">{user?.coins}</span>
                   </div>
                 </div>
               </div>

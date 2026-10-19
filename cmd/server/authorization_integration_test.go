@@ -118,6 +118,13 @@ func TestGardenPermissionMatrix(t *testing.T) {
 			},
 			[]int{200, 403, 403, 403, 403, 404, 404},
 		},
+		// Access links carry redeemable tokens, so only the owner sees them.
+		"list access links": {
+			func(g, _ uuid.UUID) request {
+				return request{http.MethodGet, "/garden-shares/garden/" + g.String() + "/access-links", nil}
+			},
+			[]int{200, 403, 403, 403, 403, 404, 404},
+		},
 	}
 
 	for action, tc := range actions {

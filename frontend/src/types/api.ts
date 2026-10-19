@@ -16,6 +16,14 @@ export interface User {
   achievements?: UserAchievement[];
 }
 
+// The part of another player's profile the API exposes.
+export interface PublicUser {
+  id: string;
+  username: string;
+  avatar: string;
+  level: number;
+}
+
 export interface UserAchievement {
   id: string;
   achievement_id: string;
@@ -66,7 +74,7 @@ export interface Garden {
   description?: string;
   created_at: string;
   updated_at: string;
-  user: User;
+  user: PublicUser;
   plants?: Plant[];
 }
 
@@ -182,8 +190,8 @@ export interface GardenShare {
   shared_at: string;
   expires_at?: string;
   garden: Garden;
-  user: User;
-  shared_by_user: User;
+  user: PublicUser;
+  shared_by_user: PublicUser;
 }
 
 export interface GardenAccessLink {
@@ -198,7 +206,7 @@ export interface GardenAccessLink {
   expires_at?: string;
   is_active: boolean;
   garden: Garden;
-  created_by_user: User;
+  created_by_user: PublicUser;
 }
 
 export interface CreateAccessLinkRequest {
@@ -227,7 +235,7 @@ export interface SharedGardenResponse {
   shared_gardens: {
     garden: Garden;
     permission: GardenPermission[];
-    shared_by: User;
+    shared_by: PublicUser;
     shared_at: string;
   }[];
 }

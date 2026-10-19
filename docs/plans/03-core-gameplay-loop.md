@@ -47,7 +47,6 @@ Deliver a complete and rewarding garden loop before expanding secondary systems.
 - Show the next meaningful action for every plant.
 - Display real growth time and the effect of current weather.
 - Refresh currency, experience, inventory, and plant state after successful actions.
-- Make the garden page's "Gardener Stats" agree with the header: a new player currently sees level 0 and 0 coins there, but level 1 and 100 coins in the header.
 - Provide useful empty, loading, offline, and failure states.
 
 ## Validation

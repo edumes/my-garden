@@ -39,32 +39,67 @@ func newTestAPI(t *testing.T) (*testAPI, *database.Database) {
 	return &testAPI{t: t, base: server.URL + "/api/v1"}, db
 }
 
-// call sends body as JSON, requires wantStatus, and decodes the response into out.
-func (a *testAPI) call(method, path string, body any, wantStatus int, out any) {
+// do sends body as JSON and returns the status and raw response. It reports
+// transport errors with t.Errorf, so it is safe to use from goroutines.
+func (a *testAPI) do(method, path string, body any) (int, []byte) {
 	a.t.Helper()
 
 	var reader io.Reader
 	if body != nil {
 		encoded, err := json.Marshal(body)
-		require.NoError(a.t, err)
+		if err != nil {
+			a.t.Errorf("encode %s %s: %v", method, path, err)
+			return 0, nil
+		}
 		reader = bytes.NewReader(encoded)
 	}
 	req, err := http.NewRequest(method, a.base+path, reader)
-	require.NoError(a.t, err)
+	if err != nil {
+		a.t.Errorf("build %s %s: %v", method, path, err)
+		return 0, nil
+	}
 	req.Header.Set("Content-Type", "application/json")
 	if a.token != "" {
 		req.Header.Set("Authorization", "Bearer "+a.token)
 	}
 
 	res, err := http.DefaultClient.Do(req)
-	require.NoError(a.t, err)
+	if err != nil {
+		a.t.Errorf("%s %s: %v", method, path, err)
+		return 0, nil
+	}
 	defer res.Body.Close()
 	raw, err := io.ReadAll(res.Body)
-	require.NoError(a.t, err)
-	require.Equalf(a.t, wantStatus, res.StatusCode, "%s %s: %s", method, path, raw)
+	if err != nil {
+		a.t.Errorf("read %s %s: %v", method, path, err)
+	}
+	return res.StatusCode, raw
+}
+
+// call sends body as JSON, requires wantStatus, and decodes the response into out.
+func (a *testAPI) call(method, path string, body any, wantStatus int, out any) {
+	a.t.Helper()
+	status, raw := a.do(method, path, body)
+	require.Equalf(a.t, wantStatus, status, "%s %s: %s", method, path, raw)
 	if out != nil {
 		require.NoError(a.t, json.Unmarshal(raw, out))
 	}
+}
+
+// as returns a client for the same server authenticated as s.
+func (a *testAPI) as(s session) *testAPI {
+	return &testAPI{t: a.t, base: a.base, token: s.Token}
+}
+
+func (a *testAPI) createGarden(name string) string {
+	a.t.Helper()
+	var created struct {
+		Garden struct {
+			ID string `json:"id"`
+		} `json:"garden"`
+	}
+	a.call(http.MethodPost, "/gardens", map[string]string{"name": name}, http.StatusCreated, &created)
+	return created.Garden.ID
 }
 
 type session struct {

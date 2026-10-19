@@ -19,6 +19,7 @@ Made by Eduardo on 2026-10-19:
 - Planting, harvesting, marketplace sales, and completed deliveries grant experience. Going from level n to n+1 costs 100×n experience.
 - Levels unlock seed types and more gardens.
 - The `/game/status` and `/game/leaderboard` placeholders are removed; leaderboards belong to Phase 6.
+- Redis is removed: its only use was a weather cache that was written and never read. It returns when Phase 6 or Phase 7 needs shared state across instances.
 
 Values chosen during implementation, open to tuning after playtesting:
 

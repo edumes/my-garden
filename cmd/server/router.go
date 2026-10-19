@@ -15,13 +15,13 @@ import (
 	"github.com/my-garden/api/internal/store"
 	"github.com/my-garden/api/internal/weather"
 	pkgAuth "github.com/my-garden/api/pkg/auth"
-	"github.com/redis/go-redis/v9"
+	"github.com/my-garden/api/pkg/game"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 // newRouter wires every handler and middleware of the HTTP API.
-func newRouter(db *database.Database, rdb *redis.Client, cfg *config.Config) *gin.Engine {
+func newRouter(db *database.Database, engine *game.GameEngine, cfg *config.Config) *gin.Engine {
 	// Initialize JWT manager
 	jwtManager := pkgAuth.NewJWTManager(cfg)
 
@@ -41,7 +41,7 @@ func newRouter(db *database.Database, rdb *redis.Client, cfg *config.Config) *gi
 
 	// Initialize weather components
 	weatherRepo := weather.NewRepository(db)
-	weatherService := weather.NewService(weatherRepo, rdb)
+	weatherService := weather.NewService(weatherRepo)
 	weatherHandler := weather.NewWeatherHandler(weatherService)
 
 	// Initialize marketplace components
@@ -70,7 +70,7 @@ func newRouter(db *database.Database, rdb *redis.Client, cfg *config.Config) *gi
 	router.Use(middleware.RateLimitMutations(cfg.API.RateLimitRequests, cfg.API.RateLimitWindow))
 	router.Use(auditMiddleware.AuditLog())
 
-	// Health check endpoint
+	// Liveness: the process answers. Readiness: it can serve requests.
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"status":    "healthy",
@@ -78,6 +78,7 @@ func newRouter(db *database.Database, rdb *redis.Client, cfg *config.Config) *gi
 			"version":   "1.0.0",
 		})
 	})
+	router.GET("/ready", readiness(db, engine))
 
 	// Swagger documentation
 	router.GET("/api/v1/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

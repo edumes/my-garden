@@ -1,6 +1,6 @@
 # Virtual Garden Management System
 
-A full-stack virtual garden game: a Go API (Gin, GORM, PostgreSQL, Redis) and a React + TypeScript frontend (Vite, Tailwind CSS, shadcn/ui). Players create gardens, buy seeds, grow and harvest plants under changing weather, share gardens with other players, and trade on a marketplace.
+A full-stack virtual garden game: a Go API (Gin, GORM, PostgreSQL) and a React + TypeScript frontend (Vite, Tailwind CSS, shadcn/ui). Players create gardens, buy seeds, grow and harvest plants under changing weather, share gardens with other players, and trade on a marketplace.
 
 ![Virtual Garden System](https://github.com/user-attachments/assets/e5a769e1-416d-490e-b497-1e311bdd0498)
 
@@ -10,7 +10,7 @@ A full-stack virtual garden game: a Go API (Gin, GORM, PostgreSQL, Redis) and a 
 
 - **Go** 1.26 or higher; `go.mod` pins the 1.27.2 toolchain, which Go downloads automatically
 - **Node.js** 22.13 or higher
-- **Docker** with Compose, for PostgreSQL and Redis
+- **Docker** with Compose, for PostgreSQL
 - **Air** for API live reload: `make install-air`
 
 ### Run locally
@@ -20,7 +20,7 @@ git clone https://github.com/edumes/my-garden.git
 cd my-garden
 cp env.example .env
 
-# PostgreSQL and Redis, using the credentials and ports from .env
+# PostgreSQL, using the credentials and port from .env
 docker compose up -d --wait
 
 # API with live reload on http://localhost:8080
@@ -34,7 +34,7 @@ npm run dev
 
 The frontend calls the API at the relative path `/api/v1`, and Vite forwards it to `http://localhost:8080` during `npm run dev` and `npm run preview`. Set `VITE_API_URL` when the frontend is served from a different origin than the API.
 
-If PostgreSQL or Redis already run on your machine, stop them or change `DB_PORT` and `REDIS_PORT` in `.env`; Compose publishes the containers on those ports.
+If PostgreSQL already runs on your machine, stop it or change `DB_PORT` in `.env`; Compose publishes the container on that port.
 
 Stop the services with `docker compose down`. Add `-v` to also delete the local database.
 
@@ -72,7 +72,7 @@ On startup the API creates or updates its tables with GORM `AutoMigrate` and see
 
 While the API runs, Swagger UI is available at http://localhost:8080/api/v1/swagger/index.html. The specification in `docs/swagger.json` and `docs/swagger.yaml` is generated from the handler annotations; run `make swagger` after changing an endpoint and commit the result.
 
-`GET /health` reports whether the server is up.
+`GET /health` reports whether the server is up (liveness). `GET /ready` answers `503` while the database is unreachable and reports the game engine's state (`running`, `stale` after three missed ticks, or `stopped`) and last tick, for information.
 
 ## 🎮 Features
 
@@ -82,7 +82,7 @@ While the API runs, Swagger UI is available at http://localhost:8080/api/v1/swag
 - **Harvests**: harvesting frees the plot and pays harvest value × yield, always more than the seed cost. The plant's grower, who planted or bought it, earns the coins and experience, whoever harvests.
 - **Progression**: planting grants 2 XP, harvesting grants the plant's growth time in minutes as XP, and each marketplace sale or completed delivery grants 10 XP. Going from level n to n+1 costs 100×n XP. Levels unlock seed types (levels 1 to 6) and more gardens: one at levels 1 and 2, then one more every two levels.
 - **Store**: browse seeds and buy the ones your level unlocks with coins. Purchases of the same seed add up in one inventory entry, and balances and seed counts can never go negative.
-- **Weather**: current weather, forecast, history, and seasons. The current weather multiplies plant growth.
+- **Weather**: current weather, forecast, history, and seasons. The game tick draws new weather every `WEATHER_UPDATE_INTERVAL`, once per interval even with several API instances, and the current weather multiplies plant growth. Restarting the API keeps weather that is still valid.
 - **Garden sharing**: access links with permissions, expiration dates, and usage limits; joining shared gardens and managing members' permissions. Permissions are independent capabilities (view, plant, harvest, manage): manage grants all of them, any share grants view, and only the owner can delete the garden or manage its shares.
 - **Marketplace**: delivery requests and plant listings paid in coins. Sales and deliveries settle atomically and apply once, even when repeated or concurrent. See [docs/MARKETPLACE.md](docs/MARKETPLACE.md).
 - **Audit log**: API actions are recorded, and each player can query their own. See [docs/AUDIT_SYSTEM.md](docs/AUDIT_SYSTEM.md).
@@ -117,7 +117,7 @@ my-garden/
 │   └── utils/           # Shared helpers
 ├── frontend/            # React frontend (browser smoke tests in frontend/e2e)
 ├── docs/                # Generated Swagger files and feature docs
-├── compose.yaml         # Local PostgreSQL and Redis
+├── compose.yaml         # Local PostgreSQL
 ├── env.example          # Environment variables template
 └── Makefile
 ```
@@ -128,7 +128,7 @@ my-garden/
 |---|---|---|
 | Unit | `make test` | Nothing |
 | PostgreSQL integration | `make test-integration` | PostgreSQL (`docker compose up -d --wait`) |
-| Browser smoke | `make test-e2e` | PostgreSQL, Redis, and Google Chrome |
+| Browser smoke | `make test-e2e` | PostgreSQL and Google Chrome |
 
 **Integration tests** carry the `//go:build integration` tag and call the real HTTP API. `testdb.New(t)` from `internal/testdb` gives each test its own randomly named database on the server from the `DB_*` settings (environment first, then `.env`), applies the migrations and seed data, and drops the database when the test ends. Start new integration tests the same way.
 

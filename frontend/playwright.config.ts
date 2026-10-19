@@ -1,7 +1,7 @@
 import { defineConfig } from '@playwright/test';
 
-// Browser smoke tests against the local stack. PostgreSQL and Redis must be
-// running (`docker compose up -d --wait`); the API and the Vite dev server are
+// Browser smoke tests against the local stack. PostgreSQL must be running
+// (`docker compose up -d --wait`); the API and the Vite dev server are
 // started here unless they already are.
 export default defineConfig({
   testDir: './e2e',

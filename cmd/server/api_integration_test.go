@@ -14,7 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/my-garden/api/internal/database"
 	"github.com/my-garden/api/internal/testdb"
-	"github.com/redis/go-redis/v9"
+	"github.com/my-garden/api/pkg/game"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,11 +29,8 @@ func newTestAPI(t *testing.T) (*testAPI, *database.Database) {
 	gin.SetMode(gin.TestMode)
 	db, cfg := testdb.New(t)
 
-	// Only the weather endpoints use Redis; these tests never reach it.
-	rdb := redis.NewClient(&redis.Options{Addr: cfg.GetRedisAddr()})
-	t.Cleanup(func() { rdb.Close() })
-
-	server := httptest.NewServer(newRouter(db, rdb, cfg))
+	// The engine is not started; tests run its ticks themselves.
+	server := httptest.NewServer(newRouter(db, game.NewGameEngine(db, cfg), cfg))
 	t.Cleanup(server.Close)
 
 	return &testAPI{t: t, base: server.URL + "/api/v1"}, db

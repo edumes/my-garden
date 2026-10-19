@@ -16,7 +16,6 @@ import (
 type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
-	Redis    RedisConfig
 	JWT      JWTConfig
 	Game     GameConfig
 	API      APIConfig
@@ -34,13 +33,6 @@ type DatabaseConfig struct {
 	Password string
 	Name     string
 	SSLMode  string
-}
-
-type RedisConfig struct {
-	Host     string
-	Port     string
-	Password string
-	DB       int
 }
 
 type JWTConfig struct {
@@ -100,12 +92,6 @@ func Load() (*Config, error) {
 			Password: e.get("DB_PASSWORD", developmentDBPassword),
 			Name:     e.get("DB_NAME", "my_garden"),
 			SSLMode:  e.get("DB_SSL_MODE", defaultSSLMode),
-		},
-		Redis: RedisConfig{
-			Host:     e.get("REDIS_HOST", "localhost"),
-			Port:     e.get("REDIS_PORT", "6379"),
-			Password: e.get("REDIS_PASSWORD", ""),
-			DB:       e.getInt("REDIS_DB", 0),
 		},
 		JWT: JWTConfig{
 			Secret: e.get("JWT_SECRET", developmentJWTSecret),
@@ -237,8 +223,4 @@ func (c *Config) GetDatabaseDSN() string {
 		c.Database.Name,
 		c.Database.SSLMode,
 	)
-}
-
-func (c *Config) GetRedisAddr() string {
-	return fmt.Sprintf("%s:%s", c.Redis.Host, c.Redis.Port)
 }

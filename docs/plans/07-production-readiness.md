@@ -49,7 +49,7 @@ Prepare the complete product for real users with controlled releases, recovery, 
 ### 6. Operational verification
 
 - Load-test the core loop and marketplace contention points.
-- Exercise database loss, Redis loss, restart, and degraded dependency scenarios.
+- Exercise database loss, restart, and degraded dependency scenarios.
 - Verify backup restoration in an isolated environment.
 - Record external infrastructure evidence separately from local test evidence.
 

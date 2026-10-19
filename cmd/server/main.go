@@ -24,7 +24,6 @@ import (
 	"github.com/my-garden/api/internal/database"
 	"github.com/my-garden/api/internal/migrations"
 	"github.com/my-garden/api/pkg/game"
-	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -56,26 +55,12 @@ func main() {
 		log.Fatalf("Failed to seed database: %v", err)
 	}
 
-	// Initialize Redis
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     cfg.GetRedisAddr(),
-		Password: cfg.Redis.Password,
-		DB:       cfg.Redis.DB,
-	})
-	defer rdb.Close()
-
-	// Test Redis connection
-	ctx := context.Background()
-	if err := rdb.Ping(ctx).Err(); err != nil {
-		log.Printf("Warning: Redis unavailable at %s: %v; check the REDIS_* settings or start local services with `docker compose up -d --wait`", cfg.GetRedisAddr(), err)
-	}
-
 	// Initialize game engine
-	gameEngine := game.NewGameEngine(db, rdb, cfg)
+	gameEngine := game.NewGameEngine(db, cfg)
 	gameEngine.Start()
 	defer gameEngine.Stop()
 
-	router := newRouter(db, rdb, cfg)
+	router := newRouter(db, gameEngine, cfg)
 
 	// Create HTTP server
 	server := &http.Server{

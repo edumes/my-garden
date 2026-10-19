@@ -4,120 +4,109 @@ import (
 	"context"
 	"log"
 	"math/rand"
+	"sync/atomic"
 	"time"
 
 	"github.com/my-garden/api/internal/config"
 	"github.com/my-garden/api/internal/database"
 	"github.com/my-garden/api/internal/garden"
 	"github.com/my-garden/api/internal/weather"
-	"github.com/redis/go-redis/v9"
 )
 
+// GameEngine runs the game tick: every GAME_TICK_INTERVAL it draws new
+// weather once the current one expires and grows plants up to the present.
+// Ticks are safe to repeat and to run on several instances at once.
 type GameEngine struct {
-	db            *database.Database
-	redis         *redis.Client
-	config        *config.Config
-	ctx           context.Context
-	cancel        context.CancelFunc
-	tickTicker    *time.Ticker
-	weatherTicker *time.Ticker
-	weatherRepo   *weather.Repository
-	weatherSvc    *weather.Service
+	db       *database.Database
+	config   *config.Config
+	weather  *weather.Service
+	cancel   context.CancelFunc
+	running  atomic.Bool
+	lastTick atomic.Int64 // Unix nanoseconds of the last successful tick
 }
 
-func NewGameEngine(db *database.Database, redis *redis.Client, cfg *config.Config) *GameEngine {
-	ctx, cancel := context.WithCancel(context.Background())
-	weatherRepo := weather.NewRepository(db)
-	weatherSvc := weather.NewService(weatherRepo, redis)
-
+func NewGameEngine(db *database.Database, cfg *config.Config) *GameEngine {
 	return &GameEngine{
-		db:            db,
-		redis:         redis,
-		config:        cfg,
-		ctx:           ctx,
-		cancel:        cancel,
-		tickTicker:    time.NewTicker(cfg.Game.TickInterval),
-		weatherTicker: time.NewTicker(cfg.Game.WeatherUpdateInterval),
-		weatherRepo:   weatherRepo,
-		weatherSvc:    weatherSvc,
+		db:      db,
+		config:  cfg,
+		weather: weather.NewService(weather.NewRepository(db)),
 	}
 }
 
+// Start ticks right away, so a restart catches up at once, and then on every
+// interval until Stop.
 func (g *GameEngine) Start() {
 	log.Println("Starting game engine...")
+	ctx, cancel := context.WithCancel(context.Background())
+	g.cancel = cancel
+	g.running.Store(true)
 
-	// Start game tick loop
-	go g.gameTickLoop()
-
-	// Start weather update loop
-	go g.weatherUpdateLoop()
-
-	// Initialize current weather
-	g.updateWeather()
+	go func() {
+		ticker := time.NewTicker(g.config.Game.TickInterval)
+		defer ticker.Stop()
+		for {
+			if err := g.Tick(time.Now()); err != nil {
+				log.Printf("Game tick failed: %v", err)
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+			}
+		}
+	}()
 }
 
 func (g *GameEngine) Stop() {
 	log.Println("Stopping game engine...")
-	g.cancel()
-	g.tickTicker.Stop()
-	g.weatherTicker.Stop()
-}
-
-func (g *GameEngine) gameTickLoop() {
-	for {
-		select {
-		case <-g.ctx.Done():
-			return
-		case <-g.tickTicker.C:
-			g.processGameTick()
-		}
+	g.running.Store(false)
+	if g.cancel != nil {
+		g.cancel()
 	}
 }
 
-func (g *GameEngine) weatherUpdateLoop() {
-	for {
-		select {
-		case <-g.ctx.Done():
-			return
-		case <-g.weatherTicker.C:
-			g.updateWeather()
-		}
-	}
-}
-
-func (g *GameEngine) processGameTick() {
-	// Without current weather, plants grow at the normal rate.
+// Tick draws new weather if the current one has expired and grows every
+// plant up to now under the current weather.
+func (g *GameEngine) Tick(now time.Time) error {
+	// Without weather, plants still grow at the normal rate.
 	multiplier := 1.0
-	if current, err := g.weatherSvc.GetCurrentWeather(); err == nil {
+	current, err := g.weather.RefreshWeather(now, g.config.Game.WeatherUpdateInterval, g.generateWeather)
+	if err == nil {
 		multiplier = current.GrowthMultiplier
 	} else {
 		log.Printf("Growing plants without weather effects: %v", err)
 	}
 
-	if err := garden.GrowPlants(g.db.DB, time.Now(), multiplier, g.config.Game.Speed); err != nil {
-		log.Printf("Failed to grow plants: %v", err)
+	if err := garden.GrowPlants(g.db.DB, now, multiplier, g.config.Game.Speed); err != nil {
+		return err
 	}
+	g.lastTick.Store(now.UnixNano())
+	return nil
 }
 
-func (g *GameEngine) updateWeather() {
-	log.Println("Updating weather...")
+// Status describes the engine for readiness checks.
+type Status struct {
+	// State is "running", "stale" when no tick has succeeded for three
+	// intervals, or "stopped".
+	State    string     `json:"status"`
+	LastTick *time.Time `json:"last_tick,omitempty"`
+}
 
-	// Generate new weather conditions
-	weather := g.generateWeather()
-
-	// Save to database
-	if err := g.weatherRepo.CreateWeather(&weather); err != nil {
-		log.Printf("Failed to save weather: %v", err)
-		return
+func (g *GameEngine) Status() Status {
+	var status Status
+	if nanos := g.lastTick.Load(); nanos != 0 {
+		last := time.Unix(0, nanos)
+		status.LastTick = &last
 	}
-
-	// Cache current weather in Redis
-	if err := g.weatherSvc.CacheCurrentWeather(g.ctx, &weather, g.config.Game.WeatherUpdateInterval); err != nil {
-		log.Printf("Failed to cache weather: %v", err)
+	switch {
+	case !g.running.Load():
+		status.State = "stopped"
+	case status.LastTick == nil || time.Since(*status.LastTick) > 3*g.config.Game.TickInterval:
+		status.State = "stale"
+	default:
+		status.State = "running"
 	}
-
-	log.Printf("Weather updated: %s, Temperature: %.1f°C, Growth Multiplier: %.2f",
-		weather.Condition, weather.Temperature, weather.GrowthMultiplier)
+	return status
 }
 
 func (g *GameEngine) generateWeather() weather.Weather {
@@ -150,7 +139,6 @@ func (g *GameEngine) generateWeather() weather.Weather {
 		Pressure:             1013.25, // Standard atmospheric pressure
 		GrowthMultiplier:     growthMultiplier,
 		WaterEvaporationRate: waterEvaporationRate,
-		ValidUntil:           time.Now().Add(g.config.Game.WeatherUpdateInterval),
 	}
 
 	return weather
@@ -222,23 +210,4 @@ func (g *GameEngine) getBaseTemperatureForSeason(season weather.Season) float64 
 	default:
 		return 15.0
 	}
-}
-
-func (g *GameEngine) GetCurrentWeather() (*weather.Weather, error) {
-	return g.weatherSvc.GetCurrentWeather()
-}
-
-// Helper functions
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

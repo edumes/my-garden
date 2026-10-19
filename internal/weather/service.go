@@ -1,28 +1,28 @@
 package weather
 
 import (
-	"context"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/my-garden/api/pkg/utils"
-	"github.com/redis/go-redis/v9"
 )
 
 type Service struct {
-	repo        *Repository
-	redisClient *redis.Client
+	repo *Repository
 }
 
-func NewService(repo *Repository, redisClient *redis.Client) *Service {
-	return &Service{
-		repo:        repo,
-		redisClient: redisClient,
-	}
+func NewService(repo *Repository) *Service {
+	return &Service{repo: repo}
 }
 
 func (s *Service) GetCurrentWeather() (*Weather, error) {
 	return s.repo.GetCurrentWeather()
+}
+
+// RefreshWeather returns the current weather, drawing a new one with
+// generate when the last has expired.
+func (s *Service) RefreshWeather(now time.Time, validFor time.Duration, generate func() Weather) (*Weather, error) {
+	return s.repo.RefreshWeather(now, validFor, generate)
 }
 
 func (s *Service) GetWeatherHistory(limit int) ([]Weather, error) {
@@ -85,11 +85,4 @@ func (s *Service) GetWeatherForecast() ([]WeatherForecast, error) {
 	}
 
 	return forecasts, nil
-}
-
-func (s *Service) CacheCurrentWeather(ctx context.Context, weather *Weather, duration time.Duration) error {
-	key := "weather:current"
-	// Note: In a real implementation, you'd serialize the weather struct to JSON
-	// For now, we'll just store the condition
-	return s.redisClient.Set(ctx, key, weather.Condition, duration).Err()
 }

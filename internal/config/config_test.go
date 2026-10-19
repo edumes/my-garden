@@ -7,14 +7,14 @@ import (
 )
 
 func TestLoadRejectsMalformedValues(t *testing.T) {
-	t.Setenv("REDIS_DB", "zero")
+	t.Setenv("RATE_LIMIT_REQUESTS", "zero")
 	t.Setenv("JWT_EXPIRY", "1 day")
 
 	_, err := Load()
 	if err == nil {
 		t.Fatal("expected an error for malformed values")
 	}
-	for _, key := range []string{"REDIS_DB", "JWT_EXPIRY"} {
+	for _, key := range []string{"RATE_LIMIT_REQUESTS", "JWT_EXPIRY"} {
 		if !strings.Contains(err.Error(), key) {
 			t.Errorf("error %q does not mention %s", err, key)
 		}
@@ -22,15 +22,15 @@ func TestLoadRejectsMalformedValues(t *testing.T) {
 }
 
 func TestLoadParsesValidValues(t *testing.T) {
-	t.Setenv("REDIS_DB", "2")
+	t.Setenv("RATE_LIMIT_REQUESTS", "2")
 	t.Setenv("JWT_EXPIRY", "1h")
 
 	cfg, err := Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Redis.DB != 2 || cfg.JWT.Expiry != time.Hour {
-		t.Errorf("got REDIS_DB=%d JWT_EXPIRY=%s", cfg.Redis.DB, cfg.JWT.Expiry)
+	if cfg.API.RateLimitRequests != 2 || cfg.JWT.Expiry != time.Hour {
+		t.Errorf("got RATE_LIMIT_REQUESTS=%d JWT_EXPIRY=%s", cfg.API.RateLimitRequests, cfg.JWT.Expiry)
 	}
 }
 

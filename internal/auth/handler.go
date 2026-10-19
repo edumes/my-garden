@@ -1,26 +1,23 @@
-package handlers
+package auth
 
 import (
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/my-garden/api/internal/database"
-	"github.com/my-garden/api/internal/models"
-	"github.com/my-garden/api/pkg/auth"
-	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
+	"github.com/google/uuid"
+	"github.com/my-garden/api/internal/audit"
 )
 
 type AuthHandler struct {
-	db         *database.Database
-	jwtManager *auth.JWTManager
+	service      Service
+	auditService *audit.AuditService
 }
 
-func NewAuthHandler(db *database.Database, jwtManager *auth.JWTManager) *AuthHandler {
+func NewAuthHandler(service Service, auditService *audit.AuditService) *AuthHandler {
 	return &AuthHandler{
-		db:         db,
-		jwtManager: jwtManager,
+		service:      service,
+		auditService: auditService,
 	}
 }
 
@@ -38,9 +35,9 @@ type LoginRequest struct {
 }
 
 type AuthResponse struct {
-	Token     string      `json:"token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
-	User      models.User `json:"user"`
-	ExpiresAt time.Time   `json:"expires_at" example:"2024-01-02T00:00:00Z"`
+	Token     string    `json:"token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
+	User      User      `json:"user"`
+	ExpiresAt time.Time `json:"expires_at" example:"2024-01-02T00:00:00Z"`
 }
 
 // Register godoc
@@ -62,60 +59,27 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	// Check if username already exists
-	var existingUser models.User
-	if err := h.db.DB.Where("username = ?", req.Username).First(&existingUser).Error; err == nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "Username already exists"})
-		return
-	}
-
-	// Check if email already exists
-	if err := h.db.DB.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "Email already exists"})
-		return
-	}
-
-	// Hash password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	response, err := h.service.Register(req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		switch err {
+		case ErrUsernameTaken:
+			c.JSON(http.StatusConflict, gin.H{"error": "Username already exists"})
+		case ErrEmailTaken:
+			c.JSON(http.StatusConflict, gin.H{"error": "Email already exists"})
+		default:
+			h.auditService.LogFailure(c, audit.AuditActionUserRegister, audit.AuditResourceUser, &response.User.ID, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register user"})
+		}
 		return
 	}
 
-	// Create user
-	user := models.User{
-		Username:     req.Username,
-		Email:        req.Email,
-		PasswordHash: string(hashedPassword),
-		FirstName:    req.FirstName,
-		LastName:     req.LastName,
-	}
-
-	if err := h.db.DB.Create(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
-		return
-	}
-
-	// Generate JWT token
-	token, err := h.jwtManager.GenerateToken(user.ID, user.Username, user.Email)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
-		return
-	}
-
-	// Update last login
-	now := time.Now()
-	user.LastLoginAt = &now
-	h.db.DB.Save(&user)
-
-	// Clear password hash from response
-	user.PasswordHash = ""
-
-	c.JSON(http.StatusCreated, AuthResponse{
-		Token:     token,
-		User:      user,
-		ExpiresAt: time.Now().Add(24 * time.Hour), // Default 24 hour expiry
+	h.auditService.LogSuccess(c, audit.AuditActionUserRegister, audit.AuditResourceUser, &response.User.ID, gin.H{
+		"username": response.User.Username,
+		"email":    response.User.Email,
+		"user_id":  response.User.ID,
 	})
+
+	c.JSON(http.StatusCreated, response)
 }
 
 // Login godoc
@@ -137,43 +101,24 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// Find user by username
-	var user models.User
-	if err := h.db.DB.Where("username = ?", req.Username).First(&user).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
-		return
-	}
-
-	// Check password
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
-		return
-	}
-
-	// Generate JWT token
-	token, err := h.jwtManager.GenerateToken(user.ID, user.Username, user.Email)
+	response, err := h.service.Login(req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		switch err {
+		case ErrUserNotFound, ErrInvalidPassword:
+			h.auditService.LogFailure(c, audit.AuditActionUserLogin, audit.AuditResourceUser, nil, gin.H{"error": "Invalid credentials"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to login"})
+		}
 		return
 	}
 
-	// Update last login
-	now := time.Now()
-	user.LastLoginAt = &now
-	h.db.DB.Save(&user)
-
-	// Clear password hash from response
-	user.PasswordHash = ""
-
-	c.JSON(http.StatusOK, AuthResponse{
-		Token:     token,
-		User:      user,
-		ExpiresAt: time.Now().Add(24 * time.Hour), // Default 24 hour expiry
+	h.auditService.LogSuccess(c, audit.AuditActionUserLogin, audit.AuditResourceUser, &response.User.ID, gin.H{
+		"username": response.User.Username,
+		"user_id":  response.User.ID,
 	})
+
+	c.JSON(http.StatusOK, response)
 }
 
 // RefreshToken godoc
@@ -193,14 +138,12 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	// Extract token from "Bearer <token>"
 	tokenString := authHeader
 	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
 		tokenString = authHeader[7:]
 	}
 
-	// Refresh token
-	newToken, err := h.jwtManager.RefreshToken(tokenString)
+	newToken, expiresAt, err := h.service.RefreshToken(tokenString)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 		return
@@ -208,7 +151,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"token":      newToken,
-		"expires_at": time.Now().Add(24 * time.Hour), // Default 24 hour expiry
+		"expires_at": expiresAt,
 	})
 }
 
@@ -222,10 +165,6 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 // @Success 200 {object} map[string]interface{} "Logout success message"
 // @Router /auth/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
-	// In a stateless JWT system, logout is typically handled client-side
-	// by removing the token from storage. However, we can implement
-	// a token blacklist if needed for additional security.
-
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 
@@ -248,18 +187,16 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 		return
 	}
 
-	var user models.User
-	if err := h.db.DB.Preload("Achievements.Achievement").First(&user, userID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+	user, err := h.service.GetProfile(userID.(uuid.UUID))
+	if err != nil {
+		switch err {
+		case ErrUserNotFound:
 			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-			return
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get profile"})
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
-
-	// Clear password hash from response
-	user.PasswordHash = ""
 
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
@@ -298,36 +235,23 @@ func (h *AuthHandler) UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	var user models.User
-	if err := h.db.DB.First(&user, userID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+	user, err := h.service.UpdateProfile(
+		userID.(uuid.UUID),
+		req.FirstName,
+		req.LastName,
+		req.Avatar,
+		req.Timezone,
+		req.Language,
+	)
+	if err != nil {
+		switch err {
+		case ErrUserNotFound:
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
+		}
 		return
 	}
-
-	// Update fields
-	if req.FirstName != "" {
-		user.FirstName = req.FirstName
-	}
-	if req.LastName != "" {
-		user.LastName = req.LastName
-	}
-	if req.Avatar != "" {
-		user.Avatar = req.Avatar
-	}
-	if req.Timezone != "" {
-		user.Timezone = req.Timezone
-	}
-	if req.Language != "" {
-		user.Language = req.Language
-	}
-
-	if err := h.db.DB.Save(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
-		return
-	}
-
-	// Clear password hash from response
-	user.PasswordHash = ""
 
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }

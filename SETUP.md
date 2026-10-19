@@ -109,35 +109,91 @@ curl http://localhost:8080/api/v1/weather/current
 my-garden/
 ├── cmd/
 │   └── server/
-│       └── main.go              # Application entry point
+│       └── main.go                # Application entry point
 ├── internal/
+│   ├── audit/
+│   │   ├── handler.go             # Audit log handlers
+│   │   ├── middleware.go
+│   │   ├── model.go
+│   │   ├── repository.go
+│   │   ├── service.go
+│   │   └── types.go
+│   ├── auth/
+│   │   ├── handler.go             # Auth handlers
+│   │   ├── middleware.go
+│   │   ├── model.go
+│   │   ├── repository.go
+│   │   └── service.go
 │   ├── config/
-│   │   └── config.go            # Configuration management
+│   │   └── config.go              # Configuration management
 │   ├── database/
-│   │   └── database.go          # Database connection and migrations
-│   ├── handlers/
-│   │   ├── auth.go              # Authentication handlers
-│   │   ├── garden.go            # Garden management handlers
-│   │   └── weather.go           # Weather handlers
+│   │   └── database.go            # Database connection
+│   ├── garden/
+│   │   ├── handler.go             # Garden handlers
+│   │   ├── model.go
+│   │   └── share_handler.go
 │   ├── middleware/
-│   │   ├── auth.go              # JWT authentication middleware
-│   │   └── cors.go              # CORS middleware
-│   └── models/
-│       ├── user.go              # User and achievement models
-│       ├── garden.go            # Garden and plant models
-│       └── weather.go           # Weather models
+│   │   └── cors.go                # CORS middleware
+│   ├── migrations/
+│   │   └── migrations.go          # DB migrations
+│   ├── store/
+│   │   ├── handler.go             # Store handlers
+│   │   ├── repository.go
+│   │   └── service.go
+│   └── weather/
+│       ├── handler.go             # Weather handlers
+│       ├── model.go
+│       ├── repository.go
+│       └── service.go
 ├── pkg/
 │   ├── auth/
-│   │   └── jwt.go               # JWT token management
-│   └── game/
-│       └── engine.go            # Game mechanics engine
+│   │   └── jwt.go                 # JWT token management
+│   ├── db/
+│   │   └── database.go            # DB helpers
+│   ├── game/
+│   │   └── engine.go              # Game mechanics engine
+│   └── utils/
+│       └── math.go                # Utility functions
+├── frontend/
+│   ├── src/
+│   │   ├── App.tsx                # Main React app
+│   │   ├── main.tsx
+│   │   ├── index.css
+│   │   ├── components/
+│   │   │   ├── (many component files)
+│   │   │   ├── ui/
+│   │   │   │   ├── button.tsx, card.tsx, ...
+│   │   │   └── animate-ui/
+│   │   │       ├── base/
+│   │   │       ├── components/
+│   │   │       ├── effects/
+│   │   │       └── ui-elements/
+│   │   ├── contexts/
+│   │   │   ├── AuthContext.tsx
+│   │   │   └── ThemeContext.tsx
+│   │   ├── services/
+│   │   │   └── api.ts
+│   │   ├── types/
+│   │   │   └── api.ts
+│   │   └── lib/
+│   │       └── utils.ts
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── ... (other config files)
 ├── docs/
-│   └── API.md                   # Complete API documentation
-├── go.mod                       # Go module file
-├── go.sum                       # Dependency checksums
-├── env.example                  # Environment variables template
-├── README.md                    # Project overview
-└── SETUP.md                     # This file
+│   ├── API.md                     # API documentation
+│   ├── AUDIT_SYSTEM.md
+│   ├── docs.go
+│   ├── swagger.json
+│   └── swagger.yaml
+├── tmp/
+│   ├── main.exe                   # Compiled binary (example)
+│   └── build-errors.log
+├── go.mod                         # Go module file
+├── go.sum                         # Dependency checksums
+├── env.example                    # Environment variables template
+├── README.md                      # Project overview
+└── SETUP.md                       # This file
 ```
 
 ## Features Implemented

@@ -1,10 +1,11 @@
 import { Eye, EyeOff, Leaf, Lock, Mail, User } from 'lucide-react';
 import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router';
+import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Link } from 'react-router-dom';
 
 interface RegisterProps {
   onToggleMode?: () => void;
@@ -12,6 +13,7 @@ interface RegisterProps {
 
 export function Register({ onToggleMode }: RegisterProps) {
   const { register } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -20,18 +22,18 @@ export function Register({ onToggleMode }: RegisterProps) {
     last_name: '',
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
 
     try {
       await register(formData);
+      toast.success('Account created successfully!');
+      navigate('/login');
     } catch (err) {
-      setError('Registration failed. Please try again.');
+      toast.error('Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -135,12 +137,6 @@ export function Register({ onToggleMode }: RegisterProps) {
                 </button>
               </div>
             </div>
-
-            {error && (
-              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-2 sm:p-3">
-                <p className="text-destructive text-sm">{error}</p>
-              </div>
-            )}
 
             <Button
               type="submit"

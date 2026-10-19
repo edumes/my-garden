@@ -15,6 +15,305 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/audit/gardens/{garden_id}/activity": {
+            "get": {
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "description": "Get recent activity for a specific garden",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "audit"
+                ],
+                "summary": "Get garden activity",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Garden ID",
+                        "name": "garden_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit results",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Garden activity logs",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/audit/logs": {
+            "get": {
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "description": "Get audit logs with optional filtering",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "audit"
+                ],
+                "summary": "Get audit logs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID filter",
+                        "name": "user_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Action filter",
+                        "name": "action",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Resource filter",
+                        "name": "resource",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Resource ID filter",
+                        "name": "resource_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status filter",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "end_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Limit results",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset results",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Audit logs with pagination",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/audit/stats": {
+            "get": {
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "description": "Get audit statistics for the system",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "audit"
+                ],
+                "summary": "Get audit statistics",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 30,
+                        "description": "Number of days to analyze",
+                        "name": "days",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Audit statistics",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/audit/users/{user_id}/activity": {
+            "get": {
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "description": "Get recent activity for a specific user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "audit"
+                ],
+                "summary": "Get user activity",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Limit results",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User activity logs",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Login with username and password to get JWT token",
@@ -35,7 +334,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.LoginRequest"
+                            "$ref": "#/definitions/auth.LoginRequest"
                         }
                     }
                 ],
@@ -43,7 +342,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handlers.AuthResponse"
+                            "$ref": "#/definitions/auth.AuthResponse"
                         }
                     },
                     "400": {
@@ -155,7 +454,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.RegisterRequest"
+                            "$ref": "#/definitions/auth.RegisterRequest"
                         }
                     }
                 ],
@@ -163,7 +462,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/handlers.AuthResponse"
+                            "$ref": "#/definitions/auth.AuthResponse"
                         }
                     },
                     "400": {
@@ -175,6 +474,587 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "Conflict - Username or email already exists",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/garden-shares/access-links": {
+            "post": {
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "description": "Create a shareable link for garden access with specified permissions",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "garden-sharing"
+                ],
+                "summary": "Create garden access link",
+                "parameters": [
+                    {
+                        "description": "Access link creation data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/garden.CreateAccessLinkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created access link",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Not garden owner",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Garden not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/garden-shares/garden/{garden_id}": {
+            "get": {
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "description": "Get all users who have access to a specific garden",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "garden-sharing"
+                ],
+                "summary": "Get garden shares",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Garden ID",
+                        "name": "garden_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of garden shares",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Not garden owner",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Garden not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/garden-shares/garden/{garden_id}/access-links": {
+            "get": {
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "description": "Get all access links for a garden",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "garden-sharing"
+                ],
+                "summary": "Get access links",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Garden ID",
+                        "name": "garden_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of access links",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Not garden owner",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Garden not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/garden-shares/garden/{garden_id}/access-links/{link_id}/deactivate": {
+            "post": {
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "description": "Deactivate an access link for a garden",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "garden-sharing"
+                ],
+                "summary": "Deactivate access link",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Garden ID",
+                        "name": "garden_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Access Link ID",
+                        "name": "link_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Access link deactivated successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Not garden owner",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Access link not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/garden-shares/garden/{garden_id}/permissions": {
+            "put": {
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "description": "Update permissions for a user's access to a garden",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "garden-sharing"
+                ],
+                "summary": "Update share permissions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Garden ID",
+                        "name": "garden_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Permission update data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/garden.UpdateSharePermissionsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated garden share",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Not garden owner",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Garden share not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/garden-shares/garden/{garden_id}/user/{user_id}": {
+            "delete": {
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "description": "Remove a user's access to a garden",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "garden-sharing"
+                ],
+                "summary": "Remove garden share",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Garden ID",
+                        "name": "garden_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User ID to remove",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Garden share removed successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Not garden owner",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Garden share not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/garden-shares/join": {
+            "post": {
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "description": "Join a garden using an access link token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "garden-sharing"
+                ],
+                "summary": "Join garden via access link",
+                "parameters": [
+                    {
+                        "description": "Join garden data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/garden.JoinGardenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully joined garden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Access link not found or expired",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "410": {
+                        "description": "Access link expired or max uses reached",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/garden-shares/shared-with-me": {
+            "get": {
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "description": "Get all gardens shared with the current user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "garden-sharing"
+                ],
+                "summary": "Get shared gardens",
+                "responses": {
+                    "200": {
+                        "description": "List of shared gardens",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -256,7 +1136,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.CreateGardenRequest"
+                            "$ref": "#/definitions/garden.CreateGardenRequest"
                         }
                     }
                 ],
@@ -390,7 +1270,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.UpdateGardenRequest"
+                            "$ref": "#/definitions/garden.UpdateGardenRequest"
                         }
                     }
                 ],
@@ -531,7 +1411,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.PlantRequest"
+                            "$ref": "#/definitions/garden.PlantRequest"
                         }
                     }
                 ],
@@ -582,88 +1462,6 @@ const docTemplate = `{
             }
         },
         "/gardens/{id}/plants/{plantId}": {
-            "put": {
-                "security": [
-                    {
-                        "bearer": []
-                    }
-                ],
-                "description": "Water a plant to increase its water level",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "plants"
-                ],
-                "summary": "Water a plant",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "example": "\"123e4567-e89b-12d3-a456-426614174000\"",
-                        "description": "Garden ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "example": "\"123e4567-e89b-12d3-a456-426614174001\"",
-                        "description": "Plant ID",
-                        "name": "plantId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Water amount",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handlers.WaterPlantRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Updated plant",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Plant not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            },
             "delete": {
                 "security": [
                     {
@@ -702,90 +1500,6 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "Plant removed successfully",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "404": {
-                        "description": "Plant not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/gardens/{id}/plants/{plantId}/fertilize": {
-            "post": {
-                "security": [
-                    {
-                        "bearer": []
-                    }
-                ],
-                "description": "Apply fertilizer to a plant",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "plants"
-                ],
-                "summary": "Fertilize a plant",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "example": "\"123e4567-e89b-12d3-a456-426614174000\"",
-                        "description": "Garden ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "example": "\"123e4567-e89b-12d3-a456-426614174001\"",
-                        "description": "Plant ID",
-                        "name": "plantId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Fertilizer amount",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handlers.FertilizePlantRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Updated plant",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -913,6 +1627,137 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "List of plant types",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/store/buy": {
+            "post": {
+                "description": "Purchase seeds for planting",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "store"
+                ],
+                "summary": "Buy seeds",
+                "parameters": [
+                    {
+                        "description": "Buy seed request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/store.BuySeedRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Purchase successful",
+                        "schema": {
+                            "$ref": "#/definitions/store.BuySeedResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Plant type not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/store/inventory": {
+            "get": {
+                "description": "Get all available plant types with their prices",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "store"
+                ],
+                "summary": "Get store inventory",
+                "responses": {
+                    "200": {
+                        "description": "Store inventory",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/store/inventory/user": {
+            "get": {
+                "description": "Get the user's purchased seeds",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "store"
+                ],
+                "summary": "Get user's seed inventory",
+                "responses": {
+                    "200": {
+                        "description": "User seed inventory",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1140,7 +1985,36 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "handlers.AuthResponse": {
+        "auth.Achievement": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "points": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "auth.AuthResponse": {
             "type": "object",
             "properties": {
                 "expires_at": {
@@ -1152,43 +2026,11 @@ const docTemplate = `{
                     "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                 },
                 "user": {
-                    "$ref": "#/definitions/models.User"
+                    "$ref": "#/definitions/auth.User"
                 }
             }
         },
-        "handlers.CreateGardenRequest": {
-            "type": "object",
-            "required": [
-                "name"
-            ],
-            "properties": {
-                "description": {
-                    "type": "string",
-                    "example": "A beautiful garden for growing vegetables"
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 100,
-                    "minLength": 1,
-                    "example": "My First Garden"
-                }
-            }
-        },
-        "handlers.FertilizePlantRequest": {
-            "type": "object",
-            "required": [
-                "amount"
-            ],
-            "properties": {
-                "amount": {
-                    "type": "integer",
-                    "maximum": 100,
-                    "minimum": 1,
-                    "example": 20
-                }
-            }
-        },
-        "handlers.LoginRequest": {
+        "auth.LoginRequest": {
             "type": "object",
             "required": [
                 "password",
@@ -1205,26 +2047,7 @@ const docTemplate = `{
                 }
             }
         },
-        "handlers.PlantRequest": {
-            "type": "object",
-            "required": [
-                "plant_type_id",
-                "position"
-            ],
-            "properties": {
-                "plant_type_id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
-                },
-                "position": {
-                    "type": "integer",
-                    "maximum": 8,
-                    "minimum": 0,
-                    "example": 0
-                }
-            }
-        },
-        "handlers.RegisterRequest": {
+        "auth.RegisterRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -1257,289 +2080,13 @@ const docTemplate = `{
                 }
             }
         },
-        "handlers.UpdateGardenRequest": {
-            "type": "object",
-            "properties": {
-                "description": {
-                    "type": "string",
-                    "example": "Updated garden description"
-                },
-                "name": {
-                    "type": "string",
-                    "example": "Updated Garden Name"
-                }
-            }
-        },
-        "handlers.WaterPlantRequest": {
-            "type": "object",
-            "required": [
-                "amount"
-            ],
-            "properties": {
-                "amount": {
-                    "type": "integer",
-                    "maximum": 100,
-                    "minimum": 1,
-                    "example": 30
-                }
-            }
-        },
-        "models.Achievement": {
-            "type": "object",
-            "properties": {
-                "category": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "icon": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "points": {
-                    "type": "integer"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.Garden": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "description": "Timestamps",
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "fertilizer_level": {
-                    "description": "0-100",
-                    "type": "integer"
-                },
-                "has_composter": {
-                    "type": "boolean"
-                },
-                "has_greenhouse": {
-                    "type": "boolean"
-                },
-                "has_sprinkler": {
-                    "description": "Garden upgrades",
-                    "type": "boolean"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "last_fertilized_at": {
-                    "type": "string"
-                },
-                "last_watered_at": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "plants": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.Plant"
-                    }
-                },
-                "size": {
-                    "description": "Garden properties",
-                    "type": "integer"
-                },
-                "soil_quality": {
-                    "description": "0-100",
-                    "type": "integer"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "user": {
-                    "description": "Relationships",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.User"
-                        }
-                    ]
-                },
-                "user_id": {
-                    "type": "string"
-                },
-                "water_level": {
-                    "description": "0-100",
-                    "type": "integer"
-                }
-            }
-        },
-        "models.Plant": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "garden": {
-                    "description": "Relationships",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.Garden"
-                        }
-                    ]
-                },
-                "garden_id": {
-                    "type": "string"
-                },
-                "growth_progress": {
-                    "description": "0-100",
-                    "type": "number"
-                },
-                "harvested_at": {
-                    "type": "string"
-                },
-                "health": {
-                    "description": "0-100",
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "last_fertilized_at": {
-                    "type": "string"
-                },
-                "last_watered_at": {
-                    "type": "string"
-                },
-                "plant_type": {
-                    "$ref": "#/definitions/models.PlantType"
-                },
-                "plant_type_id": {
-                    "type": "string"
-                },
-                "planted_at": {
-                    "description": "Timestamps",
-                    "type": "string"
-                },
-                "position": {
-                    "description": "Position in garden grid (0-8 for 3x3 grid)",
-                    "type": "integer"
-                },
-                "stage": {
-                    "description": "Plant state",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.PlantStage"
-                        }
-                    ]
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "water_level": {
-                    "description": "0-100",
-                    "type": "integer"
-                }
-            }
-        },
-        "models.PlantStage": {
-            "type": "string",
-            "enum": [
-                "seed",
-                "sprout",
-                "growing",
-                "mature",
-                "harvestable",
-                "withered"
-            ],
-            "x-enum-varnames": [
-                "PlantStageSeed",
-                "PlantStageSprout",
-                "PlantStageGrowing",
-                "PlantStageMature",
-                "PlantStageHarvestable",
-                "PlantStageWithered"
-            ]
-        },
-        "models.PlantType": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "experience_value": {
-                    "description": "XP per harvest",
-                    "type": "integer"
-                },
-                "fertilizer_needs": {
-                    "description": "0-100",
-                    "type": "integer"
-                },
-                "growth_time": {
-                    "description": "Growth properties",
-                    "type": "integer"
-                },
-                "harvest_value": {
-                    "description": "coins per item",
-                    "type": "integer"
-                },
-                "icon": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "min_level": {
-                    "description": "Requirements",
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "rarity": {
-                    "description": "Rarity",
-                    "type": "string"
-                },
-                "season": {
-                    "description": "spring, summer, autumn, winter, all",
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "water_needs": {
-                    "description": "0-100",
-                    "type": "integer"
-                },
-                "weather": {
-                    "description": "sunny, cloudy, rainy, all",
-                    "type": "string"
-                },
-                "yield": {
-                    "description": "Harvest properties",
-                    "type": "integer"
-                }
-            }
-        },
-        "models.User": {
+        "auth.User": {
             "type": "object",
             "properties": {
                 "achievements": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/models.UserAchievement"
+                        "$ref": "#/definitions/auth.UserAchievement"
                     }
                 },
                 "avatar": {
@@ -1549,7 +2096,6 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "created_at": {
-                    "description": "Timestamps",
                     "type": "string"
                 },
                 "email": {
@@ -1560,13 +2106,6 @@ const docTemplate = `{
                 },
                 "first_name": {
                     "type": "string"
-                },
-                "gardens": {
-                    "description": "Relationships",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.Garden"
-                    }
                 },
                 "id": {
                     "type": "string"
@@ -1581,11 +2120,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "level": {
-                    "description": "Game progression",
                     "type": "integer"
                 },
                 "timezone": {
-                    "description": "Game settings",
                     "type": "string"
                 },
                 "updated_at": {
@@ -1596,11 +2133,11 @@ const docTemplate = `{
                 }
             }
         },
-        "models.UserAchievement": {
+        "auth.UserAchievement": {
             "type": "object",
             "properties": {
                 "achievement": {
-                    "$ref": "#/definitions/models.Achievement"
+                    "$ref": "#/definitions/auth.Achievement"
                 },
                 "achievement_id": {
                     "type": "string"
@@ -1611,16 +2148,192 @@ const docTemplate = `{
                 "unlocked_at": {
                     "type": "string"
                 },
-                "user": {
-                    "description": "Relationships",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/models.User"
-                        }
-                    ]
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "garden.CreateAccessLinkRequest": {
+            "type": "object",
+            "required": [
+                "garden_id",
+                "permissions"
+            ],
+            "properties": {
+                "expires_at": {
+                    "type": "string"
+                },
+                "garden_id": {
+                    "type": "string"
+                },
+                "max_uses": {
+                    "type": "integer"
+                },
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/garden.GardenPermission"
+                    }
+                }
+            }
+        },
+        "garden.CreateGardenRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "A beautiful garden for growing vegetables"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "example": "My First Garden"
+                }
+            }
+        },
+        "garden.GardenPermission": {
+            "type": "string",
+            "enum": [
+                "view",
+                "plant",
+                "harvest",
+                "manage"
+            ],
+            "x-enum-varnames": [
+                "GardenPermissionView",
+                "GardenPermissionPlant",
+                "GardenPermissionHarvest",
+                "GardenPermissionManage"
+            ]
+        },
+        "garden.JoinGardenRequest": {
+            "type": "object",
+            "required": [
+                "token"
+            ],
+            "properties": {
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "garden.PlantRequest": {
+            "type": "object",
+            "required": [
+                "plant_type_id",
+                "position"
+            ],
+            "properties": {
+                "plant_type_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "position": {
+                    "type": "integer",
+                    "maximum": 8,
+                    "minimum": 0,
+                    "example": 0
+                }
+            }
+        },
+        "garden.PlantType": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "growth_time": {
+                    "description": "Growth properties",
+                    "type": "integer"
+                },
+                "harvest_value": {
+                    "type": "integer"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "seed_price": {
+                    "description": "Store properties",
+                    "type": "integer"
+                },
+                "yield": {
+                    "description": "items per harvest",
+                    "type": "integer"
+                }
+            }
+        },
+        "garden.UpdateGardenRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Updated garden description"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Updated Garden Name"
+                }
+            }
+        },
+        "garden.UpdateSharePermissionsRequest": {
+            "type": "object",
+            "required": [
+                "permissions",
+                "user_id"
+            ],
+            "properties": {
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/garden.GardenPermission"
+                    }
                 },
                 "user_id": {
                     "type": "string"
+                }
+            }
+        },
+        "store.BuySeedRequest": {
+            "type": "object",
+            "required": [
+                "plant_type_id",
+                "quantity"
+            ],
+            "properties": {
+                "plant_type_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "maximum": 10,
+                    "minimum": 1
+                }
+            }
+        },
+        "store.BuySeedResponse": {
+            "type": "object",
+            "properties": {
+                "plant_type": {
+                    "$ref": "#/definitions/garden.PlantType"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "total_cost": {
+                    "type": "integer"
+                },
+                "user_coins": {
+                    "type": "integer"
                 }
             }
         }

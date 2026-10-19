@@ -1,4 +1,4 @@
-package models
+package weather
 
 import (
 	"time"

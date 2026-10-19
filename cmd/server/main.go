@@ -20,11 +20,17 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/my-garden/api/docs"
+	"github.com/my-garden/api/internal/audit"
+	auth "github.com/my-garden/api/internal/auth"
 	"github.com/my-garden/api/internal/config"
 	"github.com/my-garden/api/internal/database"
-	"github.com/my-garden/api/internal/handlers"
+	"github.com/my-garden/api/internal/garden"
+	"github.com/my-garden/api/internal/marketplace"
 	"github.com/my-garden/api/internal/middleware"
-	"github.com/my-garden/api/pkg/auth"
+	"github.com/my-garden/api/internal/migrations"
+	"github.com/my-garden/api/internal/store"
+	"github.com/my-garden/api/internal/weather"
+	pkgAuth "github.com/my-garden/api/pkg/auth"
 	"github.com/my-garden/api/pkg/game"
 	"github.com/redis/go-redis/v9"
 	swaggerFiles "github.com/swaggo/files"
@@ -48,7 +54,17 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
-	defer db.Close()
+
+	// Run migrations
+	gormDB := db.GetDB()
+	if err := migrations.AutoMigrate(gormDB); err != nil {
+		log.Fatalf("Failed to migrate models: %v", err)
+	}
+
+	// Run seeds
+	if err := migrations.Seed(gormDB); err != nil {
+		log.Fatalf("Failed to seed database: %v", err)
+	}
 
 	// Initialize Redis
 	rdb := redis.NewClient(&redis.Options{
@@ -65,25 +81,52 @@ func main() {
 	}
 
 	// Initialize JWT manager
-	jwtManager := auth.NewJWTManager(cfg)
+	jwtManager := pkgAuth.NewJWTManager(cfg)
 
 	// Initialize game engine
 	gameEngine := game.NewGameEngine(db, rdb, cfg)
 	gameEngine.Start()
 	defer gameEngine.Stop()
 
-	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(db, jwtManager)
-	gardenHandler := handlers.NewGardenHandler(db)
-	weatherHandler := handlers.NewWeatherHandler(db, gameEngine)
+	// Initialize services
+	auditService := audit.NewAuditService(db)
+
+	// Initialize auth components
+	authRepo := auth.NewRepository(db.GetDB())
+	authService := auth.NewService(authRepo, jwtManager)
+	authHandler := auth.NewAuthHandler(authService, auditService)
+
+	// Initialize store components
+	storeRepo := store.NewRepository(db)
+	storeService := store.NewService(storeRepo, auditService)
+	storeHandler := store.NewStoreHandler(storeService, auditService)
+
+	// Initialize weather components
+	weatherRepo := weather.NewRepository(db)
+	weatherService := weather.NewService(weatherRepo, rdb)
+	weatherHandler := weather.NewWeatherHandler(weatherService)
+
+	// Initialize marketplace components
+	marketplaceRepo := marketplace.NewRepository(db.GetDB())
+	marketplaceService := marketplace.NewService(marketplaceRepo, auditService)
+	marketplaceHandler := marketplace.NewHandler(marketplaceService, auditService)
+
+	// Initialize other handlers
+	gardenHandler := garden.NewGardenHandler(db, auditService)
+	gardenShareHandler := garden.NewGardenShareHandler(db)
+	auditHandler := audit.NewAuditHandler(db, auditService)
 
 	// Initialize router
 	router := gin.Default()
+
+	// Initialize middleware
+	auditMiddleware := audit.NewAuditMiddleware(auditService)
 
 	// Add middleware
 	router.Use(middleware.CORSMiddleware(cfg))
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
+	router.Use(auditMiddleware.AuditLog())
 
 	// Health check endpoint
 	router.GET("/health", func(c *gin.Context) {
@@ -97,68 +140,27 @@ func main() {
 	// Swagger documentation
 	router.GET("/api/v1/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// API routes
+	// Setup API v1 routes
 	api := router.Group("/api/v1")
-	{
-		// Authentication routes
-		auth := api.Group("/auth")
-		{
-			auth.POST("/register", authHandler.Register)
-			auth.POST("/login", authHandler.Login)
-			auth.POST("/refresh", authHandler.RefreshToken)
-			auth.POST("/logout", authHandler.Logout)
-		}
+	auth.RegisterRoutes(api, authHandler, jwtManager)
+	garden.RegisterRoutes(api, gardenHandler, gardenShareHandler, jwtManager)
+	store.RegisterRoutes(api, storeHandler, auditService, jwtManager)
+	weather.RegisterRoutes(api, weatherHandler)
+	marketplace.RegisterRoutes(api, marketplaceHandler, auditService, jwtManager)
+	audit.RegisterRoutes(api, auditHandler, jwtManager, auth.AuthMiddleware(jwtManager))
 
-		// User routes (protected)
-		users := api.Group("/users")
-		users.Use(middleware.AuthMiddleware(jwtManager))
-		{
-			users.GET("/profile", authHandler.GetProfile)
-			users.PUT("/profile", authHandler.UpdateProfile)
-		}
+	// Game and WebSocket endpoints (if not domain-specific, keep here)
+	api.GET("/game/status", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "Game status endpoint - coming soon"})
+	})
+	api.GET("/game/leaderboard", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "Leaderboard endpoint - coming soon"})
+	})
 
-		// Garden routes (protected)
-		gardens := api.Group("/gardens")
-		gardens.Use(middleware.AuthMiddleware(jwtManager))
-		{
-			gardens.GET("", gardenHandler.GetGardens)
-			gardens.POST("", gardenHandler.CreateGarden)
-			gardens.GET("/:id", gardenHandler.GetGarden)
-			gardens.PUT("/:id", gardenHandler.UpdateGarden)
-			gardens.DELETE("/:id", gardenHandler.DeleteGarden)
-
-			// Plant routes
-			gardens.POST("/:id/plants", gardenHandler.PlantSeed)
-			gardens.PUT("/:id/plants/:plantId", gardenHandler.WaterPlant)
-			gardens.POST("/:id/plants/:plantId/fertilize", gardenHandler.FertilizePlant)
-			gardens.POST("/:id/plants/:plantId/harvest", gardenHandler.HarvestPlant)
-			gardens.DELETE("/:id/plants/:plantId", gardenHandler.RemovePlant)
-		}
-
-		// Public routes
-		api.GET("/plants", gardenHandler.ListPlantTypes)
-
-		api.GET("/weather/current", weatherHandler.GetCurrentWeather)
-		api.GET("/weather/forecast", weatherHandler.GetWeatherForecast)
-		api.GET("/weather/history", weatherHandler.GetWeatherHistory)
-
-		api.GET("/game/status", func(c *gin.Context) {
-			// TODO: Implement game status endpoint
-			c.JSON(http.StatusOK, gin.H{"message": "Game status endpoint - coming soon"})
-		})
-
-		api.GET("/game/leaderboard", func(c *gin.Context) {
-			// TODO: Implement leaderboard endpoint
-			c.JSON(http.StatusOK, gin.H{"message": "Leaderboard endpoint - coming soon"})
-		})
-	}
-
-	// WebSocket routes (protected)
 	ws := router.Group("/api/v1/ws")
-	ws.Use(middleware.AuthMiddleware(jwtManager))
+	ws.Use(auth.AuthMiddleware(jwtManager))
 	{
 		ws.GET("/garden/:gardenId", func(c *gin.Context) {
-			// TODO: Implement WebSocket handler for real-time garden updates
 			c.JSON(http.StatusOK, gin.H{"message": "WebSocket endpoint - coming soon"})
 		})
 	}

@@ -1,15 +1,21 @@
 import { Loader } from 'lucide-react';
-import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
-import { AuthScreen } from './components/AuthScreen';
+import { useEffect, useState } from 'react';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
+import { TooltipProvider } from './components/animate-ui/components/tooltip';
+import { Dashboard } from './components/Dashboard';
+import { GardenDetail } from './components/GardenDetail';
+import { Header } from './components/Header';
+import JoinGardenPage from './components/JoinGardenPage';
 import { Login } from './components/Login';
 import { Register } from './components/Register';
-import { Dashboard } from './components/Dashboard';
-import { Header } from './components/Header';
+import { Store } from './components/Store';
+import { AuditLogs } from './components/AuditLogs';
+import { Marketplace } from './components/Marketplace';
+import { Settings } from './components/Settings';
+import { Sidebar } from './components/admin-panel/sidebar';
+import { Toaster } from './components/ui/sonner';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { UserProfile } from './components/UserProfile';
-import { GardenDetail } from './components/GardenDetail';
-import { useEffect, useState } from 'react';
 import { apiService } from './services/api';
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
@@ -33,8 +39,10 @@ function PrivateRoute({ children }: { children: JSX.Element }) {
 function GardenDetailRoute() {
   const { id } = useParams();
   const [garden, setGarden] = useState<any>(null);
+  const [permission, setPermission] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showStore, setShowStore] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -42,6 +50,7 @@ function GardenDetailRoute() {
     apiService.getGarden(id)
       .then((res) => {
         setGarden(res.garden);
+        setPermission(res.permission);
         setError('');
       })
       .catch(() => {
@@ -61,36 +70,94 @@ function GardenDetailRoute() {
   if (error || !garden) {
     return <div className="min-h-screen flex items-center justify-center text-2xl text-muted-foreground">Garden not found</div>;
   }
-  return <GardenDetail garden={garden} onBack={() => window.history.back()} />;
+  return (
+    <>
+      <GardenDetail
+        garden={garden}
+        permission={permission}
+        isShared={!!permission && permission !== 'manage'}
+        onBack={() => window.history.back()}
+        onOpenStore={() => setShowStore(true)}
+      />
+      <Store open={showStore} onClose={() => setShowStore(false)} />
+    </>
+  );
 }
 
 function AppContent() {
   const location = useLocation();
   const hideHeader = location.pathname === '/login' || location.pathname === '/register';
+  const [showStore, setShowStore] = useState(false);
+
   return (
     <>
-      {!hideHeader && <Header />}
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          }
-        />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route
-          path="/garden/:id"
-          element={
-            <PrivateRoute>
-              <GardenDetailRoute />
-            </PrivateRoute>
-          }
-        />
-        <Route path="*" element={<div className="min-h-screen flex items-center justify-center text-2xl text-muted-foreground">404 Not Found</div>} />
-      </Routes>
+      {!hideHeader && <Header onOpenStore={() => setShowStore(true)} />}
+      {!hideHeader && <Sidebar />}
+      <div className={!hideHeader ? "lg:ml-72 transition-all duration-300 pt-16 lg:pt-0" : ""}>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/garden"
+            element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route
+            path="/join-garden/:token"
+            element={
+              <PrivateRoute>
+                <JoinGardenPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/garden/:id"
+            element={
+              <PrivateRoute>
+                <GardenDetailRoute />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/marketplace"
+            element={
+              <PrivateRoute>
+                <Marketplace />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/audit"
+            element={
+              <PrivateRoute>
+                <AuditLogs />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <PrivateRoute>
+                <Settings />
+              </PrivateRoute>
+            }
+          />
+          <Route path="*" element={<div className="min-h-screen flex items-center justify-center text-2xl text-muted-foreground">404 Not Found</div>} />
+        </Routes>
+      </div>
+
+      <Store open={showStore} onClose={() => setShowStore(false)} />
     </>
   );
 }
@@ -98,11 +165,14 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <BrowserRouter>
-          <AppContent />
-        </BrowserRouter>
-      </AuthProvider>
+      <TooltipProvider openDelay={1} closeDelay={1}>
+        <AuthProvider>
+          <BrowserRouter>
+            <AppContent />
+            <Toaster richColors position='bottom-center' closeButton duration={1800} />
+          </BrowserRouter>
+        </AuthProvider>
+      </TooltipProvider>
     </ThemeProvider>
   );
 }

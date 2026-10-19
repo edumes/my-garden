@@ -13,6 +13,7 @@ interface AuthContextType {
     last_name?: string;
   }) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   loading: boolean;
 }
 
@@ -75,11 +76,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(null);
   };
 
+  const refreshUser = async () => {
+    try {
+      const response = await apiService.getUserProfile();
+      setUser(response.user);
+    } catch (error) {
+      console.error('Failed to refresh user data:', error);
+    }
+  };
+
   const value = {
     user,
     login,
     register,
     logout,
+    refreshUser,
     loading,
   };
 

@@ -1,5 +1,6 @@
-import { Coins, Leaf, LogOut, Settings, Trophy, User } from 'lucide-react';
+import { Activity, Coins, Leaf, LogOut, Settings, ShoppingCart, TrendingUp, Trophy, User } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
 import { Badge } from './ui/badge';
@@ -13,8 +14,13 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 
-export function Header() {
+interface HeaderProps {
+  onOpenStore?: () => void;
+}
+
+export function Header({ onOpenStore }: HeaderProps) {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
@@ -50,6 +56,17 @@ export function Header() {
                   </Badge>
                 </div>
 
+                {onOpenStore && (
+                  <Button
+                    onClick={onOpenStore}
+                    variant="outline"
+                    className="flex items-center space-x-2"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    <span>Store</span>
+                  </Button>
+                )}
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -63,9 +80,13 @@ export function Header() {
                   <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuLabel>My Account</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/settings')}>
                       <Settings className="w-4 h-4 mr-2" />
                       <span>Settings</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/audit')}>
+                      <Activity className="w-4 h-4 mr-2" />
+                      <span>Audit Logs</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
                       <LogOut className="w-4 h-4 mr-2" />
@@ -108,11 +129,28 @@ export function Header() {
                 </div>
               </div>
               <div className="flex flex-col space-y-2">
+                {onOpenStore && (
+                  <Button
+                    onClick={onOpenStore}
+                    variant="secondary"
+                    className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-muted-foreground hover:bg-accent rounded-lg text-left"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    <span>Store</span>
+                  </Button>
+                )}
                 <Button
                   variant="secondary"
                   className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-muted-foreground hover:bg-accent rounded-lg text-left">
                   <Settings className="w-4 h-4" />
                   <span>Settings</span>
+                </Button>
+                <Button
+                  onClick={() => navigate('/audit')}
+                  variant="secondary"
+                  className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-muted-foreground hover:bg-accent rounded-lg text-left">
+                  <Activity className="w-4 h-4" />
+                  <span>Audit Logs</span>
                 </Button>
                 <Button
                   onClick={logout}

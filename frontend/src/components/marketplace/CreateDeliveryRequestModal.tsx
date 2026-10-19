@@ -38,8 +38,8 @@ export function CreateDeliveryRequestModal({
     }
 
     const reward = parseInt(formData.reward);
-    if (isNaN(reward) || reward <= 0) {
-      toast.error('Please enter a valid reward amount');
+    if (isNaN(reward) || reward < 10) {
+      toast.error('The reward must be at least 10 coins');
       return;
     }
 
@@ -62,7 +62,7 @@ export function CreateDeliveryRequestModal({
       onSuccess();
     } catch (error) {
       console.error('Failed to create delivery request:', error);
-      toast.error('Failed to create delivery request');
+      toast.error(`Failed to create delivery request: ${(error as Error).message}`);
     } finally {
       setLoading(false);
     }
@@ -118,7 +118,7 @@ export function CreateDeliveryRequestModal({
               placeholder="Enter reward amount"
               value={formData.reward}
               onChange={(e) => setFormData(prev => ({ ...prev, reward: e.target.value }))}
-              min="1"
+              min="10"
             />
           </div>
 

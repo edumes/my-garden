@@ -1,4 +1,4 @@
-import { CheckCircle, DollarSign, Loader, Plus, Search, ShoppingCart, XCircle } from 'lucide-react';
+import { CheckCircle, DollarSign, Loader, Plus, Search, ShoppingCart } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { apiService } from '../../services/api';
@@ -59,9 +59,7 @@ export function PlantListingsTab({ onRefresh }: PlantListingsTabProps) {
 
   const handleBuyListing = async (listingId: string) => {
     try {
-      // In a real implementation, you would sign the transaction here
-      const signature = "mygarden"; // This should be generated using the user's private key
-      await apiService.buyPlantListing(listingId, { signature });
+      await apiService.buyPlantListing(listingId);
       toast.success('Plant purchased successfully');
       reload();
       onRefresh();
@@ -77,8 +75,6 @@ export function PlantListingsTab({ onRefresh }: PlantListingsTabProps) {
     const statusConfig = {
       active: { variant: 'default' as const, text: 'Active', icon: ShoppingCart },
       sold: { variant: 'secondary' as const, text: 'Sold', icon: CheckCircle },
-      expired: { variant: 'destructive' as const, text: 'Expired', icon: XCircle },
-      cancelled: { variant: 'destructive' as const, text: 'Cancelled', icon: XCircle },
     };
     const config = statusConfig[status];
     const Icon = config.icon;
@@ -141,8 +137,6 @@ export function PlantListingsTab({ onRefresh }: PlantListingsTabProps) {
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="sold">Sold</SelectItem>
-            <SelectItem value="expired">Expired</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
         </Select>
 

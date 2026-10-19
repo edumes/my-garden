@@ -1,15 +1,11 @@
 import { Coins, Loader, Package, ShoppingCart, TrendingUp } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
-import {
-    MarketplaceStats,
-    Wallet
-} from '../types/api';
-import { BlockchainTab } from './marketplace/BlockchainTab';
+import { MarketplaceStats } from '../types/api';
 import { DeliveryRequestsTab } from './marketplace/DeliveryRequestsTab';
 import { PlantListingsTab } from './marketplace/PlantListingsTab';
-import { WalletTab } from './marketplace/WalletTab';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsContents, TabsList, TabsTrigger } from './animate-ui/components/tabs';
 
@@ -17,17 +13,11 @@ export function Marketplace() {
     const [activeTab, setActiveTab] = useState('delivery-requests');
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState<MarketplaceStats | null>(null);
-    const [wallet, setWallet] = useState<Wallet | null>(null);
+    const { user, refreshUser } = useAuth();
 
     const loadData = useCallback(() =>
-        Promise.all([
-            apiService.getMarketplaceStats(),
-            apiService.getWalletBalance()
-        ])
-            .then(([statsResponse, walletResponse]) => {
-                setStats(statsResponse);
-                setWallet(walletResponse.wallet);
-            })
+        apiService.getMarketplaceStats()
+            .then(setStats)
             .catch((error) => {
                 console.error('Failed to load marketplace data:', error);
                 toast.error('Failed to load marketplace data');
@@ -41,7 +31,7 @@ export function Marketplace() {
 
     const refresh = () => {
         setLoading(true);
-        return loadData();
+        return Promise.all([loadData(), refreshUser()]);
     };
 
     if (loading) {
@@ -62,7 +52,7 @@ export function Marketplace() {
                 <div className="mb-8">
                     <h1 className="text-4xl font-bold text-foreground mb-2">Marketplace</h1>
                     <p className="text-muted-foreground text-lg">
-                        Trade plants, fulfill delivery requests, and explore the blockchain-powered economy
+                        Trade plants and fulfill delivery requests for coins
                     </p>
                 </div>
 
@@ -114,10 +104,8 @@ export function Marketplace() {
                                 <Coins className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">{wallet?.balance?.toLocaleString() || 0}</div>
-                                <p className="text-xs text-muted-foreground">
-                                    Reputation: {wallet?.reputation || 0}
-                                </p>
+                                <div className="text-2xl font-bold">{user?.coins.toLocaleString() ?? 0}</div>
+                                <p className="text-xs text-muted-foreground">coins</p>
                             </CardContent>
                         </Card>
                     </div>
@@ -134,14 +122,6 @@ export function Marketplace() {
                             <ShoppingCart className="h-4 w-4 mr-2" />
                             Plant Listings
                         </TabsTrigger>
-                        <TabsTrigger value="blockchain" className="text-sm font-medium">
-                            <TrendingUp className="h-4 w-4 mr-2" />
-                            Blockchain
-                        </TabsTrigger>
-                        <TabsTrigger value="wallet" className="text-sm font-medium">
-                            <Coins className="h-4 w-4 mr-2" />
-                            Wallet
-                        </TabsTrigger>
                     </TabsList>
                     <TabsContents className="mt-6">
                         <TabsContent value="delivery-requests">
@@ -150,14 +130,6 @@ export function Marketplace() {
 
                         <TabsContent value="listings">
                             <PlantListingsTab onRefresh={refresh} />
-                        </TabsContent>
-
-                        <TabsContent value="blockchain">
-                            <BlockchainTab />
-                        </TabsContent>
-
-                        <TabsContent value="wallet">
-                            <WalletTab wallet={wallet} onRefresh={refresh} />
                         </TabsContent>
                     </TabsContents>
                 </Tabs>

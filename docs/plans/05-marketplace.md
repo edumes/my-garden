@@ -32,11 +32,11 @@ Add trading and delivery systems on top of the proven economy without compromisi
 - Explain fees and final amounts before confirmation.
 - Expose owned listings, purchases, deliveries, and outcomes.
 - Provide filters and pagination only after the core flow is correct.
-- Fix wallet creation from the UI: the frontend sends `encrypted_private_key`, but `POST /wallet` requires `password`, so the request always fails. Accept, complete, and buy actions also send placeholder signatures.
+- Show players the delivery requests they accepted: `GET /marketplace/delivery-requests` returns open requests only, so the complete action is unreachable from the interface.
 
 ### 4. Blockchain decision gate
 
-Do not expand blockchain behavior by default. Continue only if a written requirement explains why an append-only database ledger cannot satisfy the product need. Otherwise, remove unused consensus and cryptographic complexity while preserving auditable economic history.
+Phase 2 removed wallets, keys, the ledger, and the `/wallet` and `/blockchain` endpoints; user coins are the only currency. Reintroduce a ledger only as an append-only database table, and only if a written requirement needs more than the economic history above.
 
 ## Validation
 
@@ -48,7 +48,8 @@ Do not expand blockchain behavior by default. Continue only if a written require
 ## Risks
 
 - The current plant-transfer model silently chooses a buyer garden.
-- Automatically created wallets currently mint starting balances.
+- A seller can still harvest a listed plant, which resets it to a seed that the buyer then receives.
+- Concurrent trades in opposite directions between the same two players can deadlock; PostgreSQL aborts one transaction, which the API reports as a server error.
 - Commission rounding for small integer prices needs an explicit rule.
 
 ## Exit criteria

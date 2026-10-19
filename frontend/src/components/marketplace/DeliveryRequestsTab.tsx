@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Loader, Package, Clock, CheckCircle, XCircle, Plus, Search } from 'lucide-react';
+import { Loader, Package, Clock, CheckCircle, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiService } from '../../services/api';
 import { DeliveryRequest, PlantType, RequestStatus } from '../../types/api';
@@ -50,28 +50,25 @@ export function DeliveryRequestsTab({ onRefresh }: DeliveryRequestsTabProps) {
 
   const handleAcceptRequest = async (requestId: string) => {
     try {
-      // In a real implementation, you would sign the transaction here
-      const signature = "mock_signature"; // This should be generated using the user's private key
-      await apiService.acceptDeliveryRequest(requestId, { signature });
+      await apiService.acceptDeliveryRequest(requestId);
       toast.success('Delivery request accepted successfully');
       reload();
       onRefresh();
     } catch (error) {
       console.error('Failed to accept delivery request:', error);
-      toast.error('Failed to accept delivery request');
+      toast.error(`Failed to accept delivery request: ${(error as Error).message}`);
     }
   };
 
   const handleCompleteRequest = async (requestId: string) => {
     try {
-      const signature = "mock_signature"; // This should be generated using the user's private key
-      await apiService.completeDeliveryRequest(requestId, { signature });
-      toast.success('Delivery request completed successfully');
+      const { reward_paid } = await apiService.completeDeliveryRequest(requestId);
+      toast.success(`Delivery completed: you earned ${reward_paid} coins`);
       reload();
       onRefresh();
     } catch (error) {
       console.error('Failed to complete delivery request:', error);
-      toast.error('Failed to complete delivery request');
+      toast.error(`Failed to complete delivery request: ${(error as Error).message}`);
     }
   };
 
@@ -80,8 +77,6 @@ export function DeliveryRequestsTab({ onRefresh }: DeliveryRequestsTabProps) {
       open: { variant: 'default' as const, text: 'Open', icon: Package },
       accepted: { variant: 'secondary' as const, text: 'Accepted', icon: Clock },
       completed: { variant: 'default' as const, text: 'Completed', icon: CheckCircle },
-      expired: { variant: 'destructive' as const, text: 'Expired', icon: XCircle },
-      cancelled: { variant: 'destructive' as const, text: 'Cancelled', icon: XCircle },
     };
     const config = statusConfig[status];
     const Icon = config.icon;
@@ -142,8 +137,6 @@ export function DeliveryRequestsTab({ onRefresh }: DeliveryRequestsTabProps) {
             <SelectItem value="open">Open</SelectItem>
             <SelectItem value="accepted">Accepted</SelectItem>
             <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="expired">Expired</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
         </Select>
       </div>

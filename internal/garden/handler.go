@@ -278,6 +278,9 @@ func (h *GardenHandler) DeleteGarden(c *gin.Context) {
 
 	// The schema has no cascading deletes, so remove dependents first.
 	err = h.db.DB.Transaction(func(tx *gorm.DB) error {
+		if err := deleteListingsOf(tx, "SELECT id FROM plants WHERE garden_id = ?", gardenID); err != nil {
+			return err
+		}
 		for _, dependent := range []any{&Plant{}, &GardenShare{}, &GardenAccessLink{}} {
 			if err := tx.Where("garden_id = ?", gardenID).Delete(dependent).Error; err != nil {
 				return err
@@ -576,8 +579,13 @@ func (h *GardenHandler) RemovePlant(c *gin.Context) {
 		return
 	}
 
-	// Delete plant
-	if err := h.db.DB.Delete(&plant).Error; err != nil {
+	err = h.db.DB.Transaction(func(tx *gorm.DB) error {
+		if err := deleteListingsOf(tx, "SELECT id FROM plants WHERE id = ?", plant.ID); err != nil {
+			return err
+		}
+		return tx.Delete(&plant).Error
+	})
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove plant"})
 		return
 	}
@@ -601,6 +609,12 @@ func (h *GardenHandler) ListPlantTypes(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"plant_types": plantTypes})
+}
+
+// deleteListingsOf removes marketplace listings, active or sold, for the plants
+// the subquery selects, so the plants themselves can be deleted.
+func deleteListingsOf(tx *gorm.DB, plantsQuery string, args ...any) error {
+	return tx.Exec("DELETE FROM plant_listings WHERE plant_id IN ("+plantsQuery+")", args...).Error
 }
 
 var (

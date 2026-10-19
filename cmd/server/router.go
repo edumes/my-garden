@@ -44,9 +44,7 @@ func newRouter(db *database.Database, rdb *redis.Client, cfg *config.Config) *gi
 	weatherHandler := weather.NewWeatherHandler(weatherService)
 
 	// Initialize marketplace components
-	marketplaceRepo := marketplace.NewRepository(db.GetDB())
-	marketplaceService := marketplace.NewService(marketplaceRepo, auditService)
-	marketplaceHandler := marketplace.NewHandler(marketplaceService, auditService)
+	marketplaceHandler := marketplace.NewHandler(marketplace.NewService(db.GetDB()))
 
 	// Initialize other handlers
 	gardenHandler := garden.NewGardenHandler(db, auditService)
@@ -83,7 +81,7 @@ func newRouter(db *database.Database, rdb *redis.Client, cfg *config.Config) *gi
 	garden.RegisterRoutes(api, gardenHandler, gardenShareHandler, jwtManager)
 	store.RegisterRoutes(api, storeHandler, auditService, jwtManager)
 	weather.RegisterRoutes(api, weatherHandler)
-	marketplace.RegisterRoutes(api, marketplaceHandler, auditService, jwtManager)
+	marketplace.RegisterRoutes(api, marketplaceHandler, jwtManager)
 	audit.RegisterRoutes(api, auditHandler, jwtManager, auth.AuthMiddleware(jwtManager))
 
 	// Game and WebSocket endpoints (if not domain-specific, keep here)

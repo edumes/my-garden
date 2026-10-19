@@ -33,10 +33,6 @@ func AutoMigrate(db *gorm.DB) error {
 		&weather.WeatherForecast{},
 		&marketplace.DeliveryRequest{},
 		&marketplace.PlantListing{},
-		&marketplace.Transaction{},
-		&marketplace.Block{},
-		&marketplace.Wallet{},
-		&marketplace.ConsensusNode{},
 	); err != nil {
 		return err
 	}

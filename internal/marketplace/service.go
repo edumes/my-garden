@@ -1,45 +1,85 @@
 package marketplace
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/hex"
-	"fmt"
-	"math/big"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/my-garden/api/internal/audit"
+	"github.com/my-garden/api/internal/auth"
 	"github.com/my-garden/api/internal/garden"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
+// Marketplace rules.
+const (
+	minReward          = 10
+	minDeadlineLead    = time.Hour
+	listingLifetime    = 7 * 24 * time.Hour
+	commissionPerMille = 5 // 0.5% of each sale, withheld from the seller
+	latePenaltyDivisor = 5 // late deliveries lose 20% of the reward
+)
+
+// Errors the handler maps to client responses.
+var (
+	ErrInvalidReward     = errors.New("reward must be at least 10 coins")
+	ErrInvalidDeadline   = errors.New("deadline must be at least 1 hour in the future")
+	ErrInvalidPrice      = errors.New("price must be at least 1 coin")
+	ErrNotFound          = errors.New("not found")
+	ErrOwnItem           = errors.New("you cannot accept or buy your own request or listing")
+	ErrNotAvailable      = errors.New("no longer available")
+	ErrAlreadyListed     = errors.New("this plant is already listed")
+	ErrNotYourPlant      = errors.New("you can only list plants from your own gardens")
+	ErrNotHarvestable    = errors.New("only harvestable plants can be listed")
+	ErrInsufficientCoins = errors.New("insufficient coins")
+	ErrRequesterBroke    = errors.New("the requester can no longer pay the reward")
+)
+
+// Service runs marketplace commands. Every command that moves coins or plants
+// is one transaction, and claims its request or listing with a conditional
+// update first, so concurrent or repeated commands cannot apply twice.
 type Service struct {
-	repo         *Repository
-	auditService *audit.AuditService
+	db *gorm.DB
 }
 
-func NewService(repo *Repository, auditService *audit.AuditService) *Service {
-	return &Service{
-		repo:         repo,
-		auditService: auditService,
-	}
+func NewService(db *gorm.DB) *Service {
+	return &Service{db: db}
 }
 
-// DeliveryRequest methods
-func (s *Service) CreateDeliveryRequest(userID uuid.UUID, plantTypeID uuid.UUID, reward int, deadline time.Time) (*DeliveryRequest, error) {
-	// Validate reward amount
-	if reward < 10 {
-		return nil, fmt.Errorf("reward must be at least 10 coins")
+// chargeCoins deducts amount from the user only if they can afford it.
+func chargeCoins(tx *gorm.DB, userID uuid.UUID, amount int) (bool, error) {
+	res := tx.Model(&auth.User{}).
+		Where("id = ? AND coins >= ?", userID, amount).
+		Update("coins", gorm.Expr("coins - ?", amount))
+	return res.RowsAffected == 1, res.Error
+}
+
+func payCoins(tx *gorm.DB, userID uuid.UUID, amount int) error {
+	return tx.Model(&auth.User{}).Where("id = ?", userID).
+		Update("coins", gorm.Expr("coins + ?", amount)).Error
+}
+
+func (s *Service) CreateDeliveryRequest(userID, plantTypeID uuid.UUID, reward int, deadline time.Time) (*DeliveryRequest, error) {
+	if reward < minReward {
+		return nil, ErrInvalidReward
+	}
+	if deadline.Before(time.Now().Add(minDeadlineLead)) {
+		return nil, ErrInvalidDeadline
 	}
 
-	// Validate deadline
-	if deadline.Before(time.Now().Add(time.Hour)) {
-		return nil, fmt.Errorf("deadline must be at least 1 hour in the future")
+	var plantType garden.PlantType
+	if err := s.db.Take(&plantType, "id = ?", plantTypeID).Error; err != nil {
+		return nil, notFoundOr(err)
+	}
+
+	// The reward is charged on completion; refusing requests the requester
+	// cannot pay today avoids promising rewards that do not exist.
+	var requester auth.User
+	if err := s.db.Take(&requester, "id = ?", userID).Error; err != nil {
+		return nil, err
+	}
+	if requester.Coins < reward {
+		return nil, ErrInsufficientCoins
 	}
 
 	request := &DeliveryRequest{
@@ -49,639 +89,252 @@ func (s *Service) CreateDeliveryRequest(userID uuid.UUID, plantTypeID uuid.UUID,
 		Deadline:    deadline,
 		Status:      RequestStatusOpen,
 	}
-
-	if err := s.repo.CreateDeliveryRequest(request); err != nil {
-		return nil, fmt.Errorf("failed to create delivery request: %w", err)
+	if err := s.db.Create(request).Error; err != nil {
+		return nil, err
 	}
-
+	request.PlantType = plantType
 	return request, nil
 }
 
 func (s *Service) GetOpenDeliveryRequests() ([]DeliveryRequest, error) {
-	return s.repo.GetOpenDeliveryRequests()
+	var requests []DeliveryRequest
+	err := s.db.Preload("Requester").Preload("PlantType").
+		Where("status = ? AND deadline > ?", RequestStatusOpen, time.Now()).
+		Order("created_at DESC").
+		Find(&requests).Error
+	return requests, err
 }
 
-func (s *Service) AcceptDeliveryRequest(requestID uuid.UUID, acceptorID uuid.UUID) error {
-	request, err := s.repo.GetDeliveryRequest(requestID)
-	if err != nil {
-		return fmt.Errorf("failed to get delivery request: %w", err)
+func (s *Service) AcceptDeliveryRequest(requestID, acceptorID uuid.UUID) error {
+	res := s.db.Model(&DeliveryRequest{}).
+		Where("id = ? AND status = ? AND deadline > ? AND requester_id <> ?",
+			requestID, RequestStatusOpen, time.Now(), acceptorID).
+		Updates(map[string]any{"status": RequestStatusAccepted, "accepted_by": acceptorID})
+	if res.Error != nil {
+		return res.Error
 	}
-
-	if request.Status != RequestStatusOpen {
-		return fmt.Errorf("request is not open for acceptance")
+	if res.RowsAffected == 1 {
+		return nil
 	}
+	return s.explainRequest(requestID, func(r DeliveryRequest) bool { return r.RequesterID == acceptorID })
+}
 
-	if request.RequesterID == acceptorID {
-		return fmt.Errorf("cannot accept your own request")
-	}
-
-	// Check if user has enough balance for the reward - create wallet if it doesn't exist
-	wallet, err := s.repo.GetWallet(acceptorID)
-	if err != nil {
-		// If wallet doesn't exist, create one with default balance
-		if err == gorm.ErrRecordNotFound {
-			// Generate key pair for new wallet
-			_, publicKey, err := GenerateKeyPair()
-			if err != nil {
-				return fmt.Errorf("failed to generate key pair for new wallet: %w", err)
-			}
-
-			// Create wallet with default balance (no encryption for auto-created wallet)
-			wallet = &Wallet{
-				UserID:     acceptorID,
-				PublicKey:  PublicKeyToString(publicKey),
-				Balance:    100, // Default starting balance
-				Reputation: 0,
-				Nonce:      0,
-			}
-
-			if err := s.repo.CreateWallet(wallet); err != nil {
-				return fmt.Errorf("failed to create wallet: %w", err)
-			}
-		} else {
-			return fmt.Errorf("failed to get wallet: %w", err)
+// CompleteDeliveryRequest pays the acceptor and returns the reward paid,
+// which drops by 20% after the deadline.
+func (s *Service) CompleteDeliveryRequest(requestID, acceptorID uuid.UUID) (int, error) {
+	var paid int
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		now := time.Now()
+		var request DeliveryRequest
+		if err := tx.Raw(`UPDATE delivery_requests SET status = ?, completed_at = ?, updated_at = ?
+			WHERE id = ? AND status = ? AND accepted_by = ?
+			RETURNING *`,
+			RequestStatusCompleted, now, now, requestID, RequestStatusAccepted, acceptorID,
+		).Scan(&request).Error; err != nil {
+			return err
 		}
-	}
-
-	if wallet.Balance < request.Reward {
-		return fmt.Errorf("insufficient balance to accept request")
-	}
-
-	request.Status = RequestStatusAccepted
-	request.AcceptedBy = &acceptorID
-
-	if err := s.repo.UpdateDeliveryRequest(request); err != nil {
-		return fmt.Errorf("failed to update delivery request: %w", err)
-	}
-
-	return nil
-}
-
-func (s *Service) CompleteDeliveryRequest(requestID uuid.UUID, userID uuid.UUID) error {
-	request, err := s.repo.GetDeliveryRequest(requestID)
-	if err != nil {
-		return fmt.Errorf("failed to get delivery request: %w", err)
-	}
-
-	if request.Status != RequestStatusAccepted {
-		return fmt.Errorf("request is not in accepted status")
-	}
-
-	if request.AcceptedBy == nil || *request.AcceptedBy != userID {
-		return fmt.Errorf("only the acceptor can complete the request")
-	}
-
-	// Check if deadline has passed
-	if time.Now().After(request.Deadline) {
-		// Apply penalty
-		penalty := int(float64(request.Reward) * 0.2) // 20% penalty
-		request.Reward -= penalty
-
-		// Update reputation
-		currentRep, _ := s.repo.GetUserReputation(userID)
-		s.repo.UpdateUserReputation(userID, currentRep-0.5)
-	}
-
-	request.Status = RequestStatusCompleted
-	now := time.Now()
-	request.CompletedAt = &now
-
-	if err := s.repo.UpdateDeliveryRequest(request); err != nil {
-		return fmt.Errorf("failed to update delivery request: %w", err)
-	}
-
-	// Get acceptor wallet for reward - create wallet if it doesn't exist
-	acceptorWallet, err := s.repo.GetWallet(userID)
-	if err != nil {
-		// If wallet doesn't exist, create one with default balance
-		if err == gorm.ErrRecordNotFound {
-			// Generate key pair for new wallet
-			_, publicKey, err := GenerateKeyPair()
-			if err != nil {
-				return fmt.Errorf("failed to generate key pair for new wallet: %w", err)
-			}
-
-			// Create wallet with default balance (no encryption for auto-created wallet)
-			acceptorWallet = &Wallet{
-				UserID:     userID,
-				PublicKey:  PublicKeyToString(publicKey),
-				Balance:    100, // Default starting balance
-				Reputation: 0,
-				Nonce:      0,
-			}
-
-			if err := s.repo.CreateWallet(acceptorWallet); err != nil {
-				return fmt.Errorf("failed to create acceptor wallet: %w", err)
-			}
-		} else {
-			return fmt.Errorf("failed to get acceptor wallet: %w", err)
+		if request.ID == uuid.Nil {
+			return s.explainRequest(requestID, func(DeliveryRequest) bool { return false })
 		}
-	}
 
-	// Create reward transaction
-	rewardTx := &Transaction{
-		SenderKey:   "system", // System wallet
-		ReceiverKey: acceptorWallet.PublicKey,
-		Amount:      request.Reward,
-		TxType:      TransactionTypeReward,
-		Nonce:       time.Now().UnixNano(),
-		Status:      TransactionStatusPending,
-	}
-
-	if err := s.repo.CreateTransaction(rewardTx); err != nil {
-		return fmt.Errorf("failed to create reward transaction: %w", err)
-	}
-
-	// Update balances
-	s.repo.UpdateWalletBalance(request.RequesterID, -request.Reward)
-	s.repo.UpdateWalletBalance(userID, request.Reward)
-
-	// Update reputation for successful completion
-	currentRep, _ := s.repo.GetUserReputation(userID)
-	s.repo.UpdateUserReputation(userID, currentRep+0.1)
-
-	return nil
+		paid = request.Reward
+		if now.After(request.Deadline) {
+			paid -= paid / latePenaltyDivisor
+		}
+		charged, err := chargeCoins(tx, request.RequesterID, paid)
+		if err != nil {
+			return err
+		}
+		if !charged {
+			return ErrRequesterBroke
+		}
+		return payCoins(tx, acceptorID, paid)
+	})
+	return paid, err
 }
 
-// PlantListing methods
-func (s *Service) CreatePlantListing(userID uuid.UUID, plantID uuid.UUID, price int) (*PlantListing, error) {
-	// Validate price
+// explainRequest tells why a delivery request command matched nothing.
+func (s *Service) explainRequest(requestID uuid.UUID, own func(DeliveryRequest) bool) error {
+	var request DeliveryRequest
+	if err := s.db.Take(&request, "id = ?", requestID).Error; err != nil {
+		return notFoundOr(err)
+	}
+	if own(request) {
+		return ErrOwnItem
+	}
+	return ErrNotAvailable
+}
+
+func (s *Service) CreatePlantListing(sellerID, plantID uuid.UUID, price int) (*PlantListing, error) {
 	if price < 1 {
-		return nil, fmt.Errorf("price must be at least 1 coin")
+		return nil, ErrInvalidPrice
 	}
 
-	// Check if user owns the plant
 	var plant garden.Plant
-	if err := s.repo.db.Preload("Garden").First(&plant, plantID).Error; err != nil {
-		return nil, fmt.Errorf("plant not found: %w", err)
+	if err := s.db.Preload("Garden").Take(&plant, "id = ?", plantID).Error; err != nil {
+		return nil, notFoundOr(err)
 	}
-
-	if plant.Garden.UserID != userID {
-		return nil, fmt.Errorf("you can only list your own plants")
+	if plant.Garden.UserID != sellerID {
+		return nil, ErrNotYourPlant
 	}
-
-	// Check if plant is harvestable
 	if plant.Stage != garden.PlantStageHarvestable {
-		return nil, fmt.Errorf("only harvestable plants can be listed")
+		return nil, ErrNotHarvestable
 	}
 
 	listing := &PlantListing{
-		SellerID:  userID,
+		SellerID:  sellerID,
 		PlantID:   plantID,
 		Price:     price,
 		Status:    ListingStatusActive,
-		ExpiresAt: time.Now().AddDate(0, 0, 7), // 7 days
+		ExpiresAt: time.Now().Add(listingLifetime),
 	}
-
-	if err := s.repo.CreatePlantListing(listing); err != nil {
-		return nil, fmt.Errorf("failed to create plant listing: %w", err)
+	// An expired listing gives up the plant's one active listing.
+	if err := s.db.Model(&PlantListing{}).
+		Where("plant_id = ? AND status = ? AND expires_at <= ?", plantID, ListingStatusActive, time.Now()).
+		Update("status", ListingStatusExpired).Error; err != nil {
+		return nil, err
 	}
-
+	// The partial unique index allows one active listing per plant.
+	res := s.db.Clauses(clause.OnConflict{DoNothing: true}).Create(listing)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	if res.RowsAffected == 0 {
+		return nil, ErrAlreadyListed
+	}
+	listing.Plant = plant
 	return listing, nil
 }
 
-func (s *Service) GetActiveListings(filters map[string]interface{}) ([]PlantListing, error) {
-	return s.repo.GetActiveListings(filters)
+// ListingFilters narrows GetActiveListings; nil fields do not filter.
+type ListingFilters struct {
+	PlantTypeID *uuid.UUID
+	MinPrice    *int
+	MaxPrice    *int
 }
 
-func (s *Service) PurchasePlantListing(listingID uuid.UUID, buyerID uuid.UUID) error {
-	listing, err := s.repo.GetPlantListing(listingID)
-	if err != nil {
-		return fmt.Errorf("failed to get plant listing: %w", err)
+func (s *Service) GetActiveListings(filters ListingFilters) ([]PlantListing, error) {
+	query := s.db.Preload("Seller").Preload("Plant.PlantType").
+		Where("plant_listings.status = ? AND plant_listings.expires_at > ?", ListingStatusActive, time.Now())
+	if filters.PlantTypeID != nil {
+		query = query.Joins("JOIN plants ON plants.id = plant_listings.plant_id").
+			Where("plants.plant_type_id = ?", *filters.PlantTypeID)
+	}
+	if filters.MinPrice != nil {
+		query = query.Where("plant_listings.price >= ?", *filters.MinPrice)
+	}
+	if filters.MaxPrice != nil {
+		query = query.Where("plant_listings.price <= ?", *filters.MaxPrice)
 	}
 
-	if listing.Status != ListingStatusActive {
-		return fmt.Errorf("listing is not active")
+	var listings []PlantListing
+	err := query.Order("plant_listings.created_at DESC").Find(&listings).Error
+	return listings, err
+}
+
+// PurchasePlantListing charges the buyer, pays the seller minus commission,
+// and moves the plant into a free cell of the buyer's gardens, creating a
+// garden when none has room.
+func (s *Service) PurchasePlantListing(listingID, buyerID uuid.UUID) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		var listing PlantListing
+		if err := tx.Raw(`UPDATE plant_listings SET status = ?, buyer_id = ?, updated_at = ?
+			WHERE id = ? AND status = ? AND expires_at > ? AND seller_id <> ?
+			RETURNING *`,
+			ListingStatusSold, buyerID, time.Now(), listingID, ListingStatusActive, time.Now(), buyerID,
+		).Scan(&listing).Error; err != nil {
+			return err
+		}
+		if listing.ID == uuid.Nil {
+			return s.explainListing(listingID, buyerID)
+		}
+
+		// Charging locks the buyer's row, so the buyer's concurrent purchases
+		// pick free cells one at a time.
+		charged, err := chargeCoins(tx, buyerID, listing.Price)
+		if err != nil {
+			return err
+		}
+		if !charged {
+			return ErrInsufficientCoins
+		}
+		if err := payCoins(tx, listing.SellerID, listing.Price-listing.Price*commissionPerMille/1000); err != nil {
+			return err
+		}
+
+		gardenID, position, err := freeCell(tx, buyerID)
+		if err != nil {
+			return err
+		}
+		moved := tx.Model(&garden.Plant{}).
+			Where("id = ? AND garden_id IN (SELECT id FROM gardens WHERE user_id = ?)", listing.PlantID, listing.SellerID).
+			Updates(map[string]any{"garden_id": gardenID, "position": position})
+		if moved.Error != nil {
+			return moved.Error
+		}
+		if moved.RowsAffected == 0 {
+			// The seller removed or gave away the plant after listing it.
+			return ErrNotAvailable
+		}
+		return nil
+	})
+}
+
+// freeCell returns the first empty cell across the user's gardens, creating
+// a garden for purchases when every cell is taken.
+func freeCell(tx *gorm.DB, userID uuid.UUID) (uuid.UUID, int, error) {
+	var cell struct {
+		GardenID uuid.UUID
+		Position int
+	}
+	err := tx.Raw(`SELECT g.id AS garden_id, cell.position
+		FROM gardens g CROSS JOIN generate_series(0, 8) AS cell(position)
+		WHERE g.user_id = ?
+		AND NOT EXISTS (SELECT 1 FROM plants p WHERE p.garden_id = g.id AND p.position = cell.position)
+		ORDER BY g.created_at, cell.position
+		LIMIT 1`, userID).Scan(&cell).Error
+	if err != nil || cell.GardenID != uuid.Nil {
+		return cell.GardenID, cell.Position, err
 	}
 
+	purchases := garden.Garden{UserID: userID, Name: "Marketplace Purchases"}
+	if err := tx.Create(&purchases).Error; err != nil {
+		return uuid.Nil, 0, err
+	}
+	return purchases.ID, 0, nil
+}
+
+// explainListing tells why a purchase matched no active listing.
+func (s *Service) explainListing(listingID, buyerID uuid.UUID) error {
+	var listing PlantListing
+	if err := s.db.Take(&listing, "id = ?", listingID).Error; err != nil {
+		return notFoundOr(err)
+	}
 	if listing.SellerID == buyerID {
-		return fmt.Errorf("cannot purchase your own listing")
+		return ErrOwnItem
 	}
-
-	// Check buyer's balance - create wallet if it doesn't exist
-	buyerWallet, err := s.repo.GetWallet(buyerID)
-	if err != nil {
-		// If wallet doesn't exist, create one with default balance
-		if err == gorm.ErrRecordNotFound {
-			// Generate key pair for new wallet
-			_, publicKey, err := GenerateKeyPair()
-			if err != nil {
-				return fmt.Errorf("failed to generate key pair for new wallet: %w", err)
-			}
-
-			// Create wallet with default balance (no encryption for auto-created wallet)
-			buyerWallet = &Wallet{
-				UserID:     buyerID,
-				PublicKey:  PublicKeyToString(publicKey),
-				Balance:    100, // Default starting balance
-				Reputation: 0,
-				Nonce:      0,
-			}
-
-			if err := s.repo.CreateWallet(buyerWallet); err != nil {
-				return fmt.Errorf("failed to create buyer wallet: %w", err)
-			}
-		} else {
-			return fmt.Errorf("failed to get buyer wallet: %w", err)
-		}
-	}
-
-	if buyerWallet.Balance < listing.Price {
-		return fmt.Errorf("insufficient balance")
-	}
-
-	// Check seller's balance - create wallet if it doesn't exist
-	sellerWallet, err := s.repo.GetWallet(listing.SellerID)
-	if err != nil {
-		// If wallet doesn't exist, create one with default balance
-		if err == gorm.ErrRecordNotFound {
-			// Generate key pair for new wallet
-			_, publicKey, err := GenerateKeyPair()
-			if err != nil {
-				return fmt.Errorf("failed to generate key pair for seller wallet: %w", err)
-			}
-
-			// Create wallet with default balance (no encryption for auto-created wallet)
-			sellerWallet = &Wallet{
-				UserID:     listing.SellerID,
-				PublicKey:  PublicKeyToString(publicKey),
-				Balance:    100, // Default starting balance
-				Reputation: 0,
-				Nonce:      0,
-			}
-
-			if err := s.repo.CreateWallet(sellerWallet); err != nil {
-				return fmt.Errorf("failed to create seller wallet: %w", err)
-			}
-		} else {
-			return fmt.Errorf("failed to get seller wallet: %w", err)
-		}
-	}
-
-	// Calculate commission (0.5%)
-	commission := int(float64(listing.Price) * 0.005)
-	sellerAmount := listing.Price - commission
-
-	// Create purchase transaction
-	purchaseTx := &Transaction{
-		SenderKey:   buyerWallet.PublicKey,
-		ReceiverKey: sellerWallet.PublicKey,
-		PlantID:     &listing.PlantID,
-		Amount:      listing.Price,
-		TxType:      TransactionTypePurchase,
-		Nonce:       time.Now().UnixNano(),
-		Status:      TransactionStatusPending,
-	}
-
-	if err := s.repo.CreateTransaction(purchaseTx); err != nil {
-		return fmt.Errorf("failed to create purchase transaction: %w", err)
-	}
-
-	// Update balances
-	s.repo.UpdateWalletBalance(buyerID, -listing.Price)
-	s.repo.UpdateWalletBalance(listing.SellerID, sellerAmount)
-
-	// Transfer plant ownership - find or create a garden for the buyer
-	var buyerGarden garden.Garden
-	if err := s.repo.db.Where("user_id = ?", buyerID).First(&buyerGarden).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			// Create a default garden for the buyer if they don't have one
-			buyerGarden = garden.Garden{
-				UserID:      buyerID,
-				Name:        "My Garden",
-				Description: "Default garden for purchased plants",
-			}
-			if err := s.repo.db.Create(&buyerGarden).Error; err != nil {
-				return fmt.Errorf("failed to create garden for buyer: %w", err)
-			}
-		} else {
-			return fmt.Errorf("failed to find buyer's garden: %w", err)
-		}
-	}
-
-	// Update plant's garden_id to the buyer's garden
-	if err := s.repo.db.Model(&garden.Plant{}).Where("id = ?", listing.PlantID).
-		Update("garden_id", buyerGarden.ID).Error; err != nil {
-		return fmt.Errorf("failed to transfer plant ownership: %w", err)
-	}
-
-	// Update listing status
-	listing.Status = ListingStatusSold
-	if err := s.repo.UpdatePlantListing(listing); err != nil {
-		return fmt.Errorf("failed to update listing status: %w", err)
-	}
-
-	// Update reputations
-	buyerRep, _ := s.repo.GetUserReputation(buyerID)
-	sellerRep, _ := s.repo.GetUserReputation(listing.SellerID)
-	s.repo.UpdateUserReputation(buyerID, buyerRep+0.1)
-	s.repo.UpdateUserReputation(listing.SellerID, sellerRep+0.1)
-
-	return nil
-}
-
-// Blockchain methods
-func (s *Service) SubmitTransaction(transaction *Transaction) error {
-	// Verify transaction signature
-	senderWallet, err := s.repo.GetWalletByPublicKey(transaction.SenderKey)
-	if err != nil {
-		return fmt.Errorf("sender wallet not found: %w", err)
-	}
-
-	publicKey, err := PublicKeyFromString(senderWallet.PublicKey)
-	if err != nil {
-		return fmt.Errorf("invalid public key: %w", err)
-	}
-
-	if !VerifySignature(publicKey, transaction, transaction.Signature) {
-		return fmt.Errorf("invalid transaction signature")
-	}
-
-	// Check nonce
-	if transaction.Nonce <= senderWallet.Nonce {
-		return fmt.Errorf("invalid nonce")
-	}
-
-	// Check balance for transfers
-	if transaction.TxType == TransactionTypeTransfer {
-		if senderWallet.Balance < transaction.Amount {
-			return fmt.Errorf("insufficient balance")
-		}
-	}
-
-	// Create transaction
-	if err := s.repo.CreateTransaction(transaction); err != nil {
-		return fmt.Errorf("failed to create transaction: %w", err)
-	}
-
-	// Update sender nonce
-	senderWallet.Nonce = transaction.Nonce
-	if err := s.repo.UpdateWallet(senderWallet); err != nil {
-		return fmt.Errorf("failed to update sender nonce: %w", err)
-	}
-
-	return nil
-}
-
-func (s *Service) GetTransactionStatus(hash string) (*Transaction, error) {
-	return s.repo.GetTransaction(hash)
-}
-
-func (s *Service) GetBlockchainLedger(limit, offset int) ([]Block, error) {
-	return s.repo.GetBlockchainLedger(limit, offset)
-}
-
-// Wallet methods
-func (s *Service) CreateWallet(userID uuid.UUID, password string) (*Wallet, error) {
-	// Generate key pair
-	privateKey, publicKey, err := GenerateKeyPair()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate key pair: %w", err)
-	}
-
-	// Encrypt private key
-	encryptedKey, err := s.encryptPrivateKey(privateKey, password)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt private key: %w", err)
-	}
-
-	wallet := &Wallet{
-		UserID:       userID,
-		PublicKey:    PublicKeyToString(publicKey),
-		EncryptedKey: encryptedKey,
-		Balance:      100, // Starting balance
-		Reputation:   0,
-		Nonce:        0,
-	}
-
-	if err := s.repo.CreateWallet(wallet); err != nil {
-		return nil, fmt.Errorf("failed to create wallet: %w", err)
-	}
-
-	return wallet, nil
-}
-
-func (s *Service) GetWalletBalance(userID uuid.UUID) (int, error) {
-	return s.repo.GetWalletBalance(userID)
-}
-
-func (s *Service) TransferCurrency(fromUserID uuid.UUID, toPublicKey string, amount int, password string) error {
-	// Get sender wallet
-	senderWallet, err := s.repo.GetWallet(fromUserID)
-	if err != nil {
-		return fmt.Errorf("sender wallet not found: %w", err)
-	}
-
-	// Decrypt private key
-	privateKey, err := s.decryptPrivateKey(senderWallet.EncryptedKey, password)
-	if err != nil {
-		return fmt.Errorf("failed to decrypt private key: %w", err)
-	}
-
-	// Get receiver wallet
-	receiverWallet, err := s.repo.GetWalletByPublicKey(toPublicKey)
-	if err != nil {
-		return fmt.Errorf("receiver wallet not found: %w", err)
-	}
-
-	// Check balance
-	if senderWallet.Balance < amount {
-		return fmt.Errorf("insufficient balance")
-	}
-
-	// Create transaction
-	transaction := &Transaction{
-		SenderKey:   senderWallet.PublicKey,
-		ReceiverKey: receiverWallet.PublicKey,
-		Amount:      amount,
-		TxType:      TransactionTypeTransfer,
-		Nonce:       senderWallet.Nonce + 1,
-		Status:      TransactionStatusPending,
-	}
-
-	// Sign transaction
-	signature, err := SignTransaction(privateKey, transaction)
-	if err != nil {
-		return fmt.Errorf("failed to sign transaction: %w", err)
-	}
-	transaction.Signature = signature
-
-	// Submit transaction
-	if err := s.SubmitTransaction(transaction); err != nil {
-		return fmt.Errorf("failed to submit transaction: %w", err)
-	}
-
-	// Update balances
-	s.repo.UpdateWalletBalance(fromUserID, -amount)
-	s.repo.UpdateWalletBalance(receiverWallet.UserID, amount)
-
-	// Update sender nonce
-	senderWallet.Nonce++
-	s.repo.UpdateWallet(senderWallet)
-
-	return nil
-}
-
-// Helper methods for encryption/decryption
-func (s *Service) encryptPrivateKey(privateKey *ecdsa.PrivateKey, password string) (string, error) {
-	// Convert private key to bytes
-	privateKeyBytes := privateKey.D.Bytes()
-
-	// Generate key from password
-	key := sha256.Sum256([]byte(password))
-	block, err := aes.NewCipher(key[:])
-	if err != nil {
-		return "", err
-	}
-
-	// Create GCM mode
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return "", err
-	}
-
-	// Generate nonce
-	nonce := make([]byte, gcm.NonceSize())
-	if _, err := rand.Read(nonce); err != nil {
-		return "", err
-	}
-
-	// Encrypt
-	ciphertext := gcm.Seal(nonce, nonce, privateKeyBytes, nil)
-	return hex.EncodeToString(ciphertext), nil
-}
-
-func (s *Service) decryptPrivateKey(encryptedKey string, password string) (*ecdsa.PrivateKey, error) {
-	// Decode hex string
-	ciphertext, err := hex.DecodeString(encryptedKey)
-	if err != nil {
-		return nil, err
-	}
-
-	// Generate key from password
-	key := sha256.Sum256([]byte(password))
-	block, err := aes.NewCipher(key[:])
-	if err != nil {
-		return nil, err
-	}
-
-	// Create GCM mode
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, err
-	}
-
-	// Extract nonce
-	nonceSize := gcm.NonceSize()
-	if len(ciphertext) < nonceSize {
-		return nil, fmt.Errorf("ciphertext too short")
-	}
-	nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
-
-	// Decrypt
-	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// Reconstruct private key
-	privateKey := &ecdsa.PrivateKey{
-		PublicKey: ecdsa.PublicKey{
-			Curve: elliptic.P256(),
-		},
-		D: new(big.Int).SetBytes(plaintext),
-	}
-
-	return privateKey, nil
-}
-
-// Consensus methods
-func (s *Service) ValidateTransaction(transaction *Transaction) bool {
-	// Basic validation
-	if transaction.Amount <= 0 {
-		return false
-	}
-
-	// Check if transaction already exists
-	existingTx, err := s.repo.GetTransaction(transaction.Hash)
-	if err == nil && existingTx != nil {
-		return false // Transaction already exists
-	}
-
-	// Verify signature
-	senderWallet, err := s.repo.GetWalletByPublicKey(transaction.SenderKey)
-	if err != nil {
-		return false
-	}
-
-	publicKey, err := PublicKeyFromString(senderWallet.PublicKey)
-	if err != nil {
-		return false
-	}
-
-	return VerifySignature(publicKey, transaction, transaction.Signature)
-}
-
-func (s *Service) ProcessPendingTransactions() error {
-	transactions, err := s.repo.GetPendingTransactions()
-	if err != nil {
-		return fmt.Errorf("failed to get pending transactions: %w", err)
-	}
-
-	for _, tx := range transactions {
-		if s.ValidateTransaction(&tx) {
-			tx.Status = TransactionStatusConfirmed
-			if err := s.repo.UpdateTransaction(&tx); err != nil {
-				return fmt.Errorf("failed to update transaction: %w", err)
-			}
-		} else {
-			tx.Status = TransactionStatusRejected
-			if err := s.repo.UpdateTransaction(&tx); err != nil {
-				return fmt.Errorf("failed to update transaction: %w", err)
-			}
-		}
-	}
-
-	return nil
+	return ErrNotAvailable
 }
 
 func (s *Service) GetMarketplaceStats() (*MarketplaceStatsResponse, error) {
-	// Get active delivery requests count
-	activeRequests, err := s.repo.GetOpenDeliveryRequests()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get active delivery requests: %w", err)
-	}
+	var stats MarketplaceStatsResponse
+	now := time.Now()
+	err := s.db.Raw(`SELECT
+		(SELECT COUNT(*) FROM delivery_requests WHERE status = ? AND deadline > ?) AS active_delivery_requests,
+		(SELECT COUNT(*) FROM delivery_requests) AS total_delivery_requests,
+		(SELECT COUNT(*) FROM plant_listings WHERE status = ? AND expires_at > ?) AS active_listings,
+		(SELECT COUNT(*) FROM plant_listings) AS total_listings,
+		(SELECT COALESCE(SUM(price), 0) FROM plant_listings WHERE status = ?) AS total_volume,
+		(SELECT COUNT(*) FROM plant_listings WHERE status = ?) +
+		(SELECT COUNT(*) FROM delivery_requests WHERE status = ?) AS total_transactions`,
+		RequestStatusOpen, now, ListingStatusActive, now, ListingStatusSold, ListingStatusSold, RequestStatusCompleted,
+	).Scan(&stats).Error
+	return &stats, err
+}
 
-	// Get all delivery requests count
-	allRequests, err := s.repo.GetAllDeliveryRequests()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get all delivery requests: %w", err)
+func notFoundOr(err error) error {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return ErrNotFound
 	}
-
-	// Get active listings count
-	activeListings, err := s.repo.GetActiveListings(map[string]interface{}{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get active listings: %w", err)
-	}
-
-	// Get all listings count
-	allListings, err := s.repo.GetAllListings()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get all listings: %w", err)
-	}
-
-	// Get total volume and transaction count
-	totalVolume, totalTransactions, err := s.repo.GetTransactionStats()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get transaction stats: %w", err)
-	}
-
-	return &MarketplaceStatsResponse{
-		ActiveDeliveryRequests: len(activeRequests),
-		TotalDeliveryRequests:  len(allRequests),
-		ActiveListings:         len(activeListings),
-		TotalListings:          len(allListings),
-		TotalVolume:            totalVolume,
-		TotalTransactions:      totalTransactions,
-	}, nil
+	return err
 }

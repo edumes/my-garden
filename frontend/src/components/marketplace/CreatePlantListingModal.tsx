@@ -26,14 +26,13 @@ export function CreatePlantListingModal({
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     plant_id: '',
-    price: '',
-    expires_at: ''
+    price: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.plant_id || !formData.price || !formData.expires_at) {
+    if (!formData.plant_id || !formData.price) {
       toast.error('Please fill in all fields');
       return;
     }
@@ -44,26 +43,15 @@ export function CreatePlantListingModal({
       return;
     }
 
-    const expiresAt = new Date(formData.expires_at);
-    if (expiresAt <= new Date()) {
-      toast.error('Expiration date must be in the future');
-      return;
-    }
-
     try {
       setLoading(true);
-      await apiService.createPlantListing({
-        plant_id: formData.plant_id,
-        price,
-        expires_at: expiresAt.toISOString()
-      });
-      
+      await apiService.createPlantListing({ plant_id: formData.plant_id, price });
       toast.success('Plant listing created successfully');
-      setFormData({ plant_id: '', price: '', expires_at: '' });
+      setFormData({ plant_id: '', price: '' });
       onSuccess();
     } catch (error) {
       console.error('Failed to create plant listing:', error);
-      toast.error('Failed to create plant listing');
+      toast.error(`Failed to create plant listing: ${(error as Error).message}`);
     } finally {
       setLoading(false);
     }
@@ -71,14 +59,12 @@ export function CreatePlantListingModal({
 
   const handleClose = () => {
     if (!loading) {
-      setFormData({ plant_id: '', price: '', expires_at: '' });
+      setFormData({ plant_id: '', price: '' });
       onOpenChange(false);
     }
   };
 
-  const availablePlants = userPlants.filter(plant => 
-    plant.stage === 'harvestable' || plant.stage === 'mature'
-  );
+  const availablePlants = userPlants.filter(plant => plant.stage === 'harvestable');
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -126,7 +112,7 @@ export function CreatePlantListingModal({
             </Select>
             {availablePlants.length === 0 && (
               <p className="text-sm text-muted-foreground">
-                You need harvestable or mature plants to create listings.
+                You need harvestable plants to create listings.
               </p>
             )}
           </div>
@@ -143,19 +129,9 @@ export function CreatePlantListingModal({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="expires_at">Expiration Date</Label>
-            <Input
-              id="expires_at"
-              type="datetime-local"
-              value={formData.expires_at}
-              onChange={(e) => setFormData(prev => ({ ...prev, expires_at: e.target.value }))}
-              min={new Date().toISOString().slice(0, 16)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Listings expire after 7 days by default
-            </p>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            Listings expire after 7 days. A 0.5% commission is withheld from the sale.
+          </p>
 
           <div className="flex justify-end gap-2 pt-4">
             <Button

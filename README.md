@@ -82,7 +82,7 @@ While the API runs, Swagger UI is available at http://localhost:8080/api/v1/swag
 - **Store**: browse seeds and buy them with coins. Purchases of the same seed add up in one inventory entry, and balances and seed counts can never go negative.
 - **Weather**: current weather, forecast, history, and seasons. The current weather multiplies plant growth.
 - **Garden sharing**: access links with permissions, expiration dates, and usage limits; joining shared gardens and managing members' permissions. Permissions are independent capabilities (view, plant, harvest, manage): manage grants all of them, any share grants view, and only the owner can delete the garden or manage its shares.
-- **Marketplace**: delivery requests, plant listings, wallets, and signed transactions. See [docs/MARKETPLACE.md](docs/MARKETPLACE.md).
+- **Marketplace**: delivery requests and plant listings paid in coins. Sales and deliveries settle atomically and apply once, even when repeated or concurrent. See [docs/MARKETPLACE.md](docs/MARKETPLACE.md).
 - **Audit log**: API actions are recorded, and each player can query their own. See [docs/AUDIT_SYSTEM.md](docs/AUDIT_SYSTEM.md).
 
 ### Not implemented yet
@@ -102,7 +102,7 @@ my-garden/
 │   ├── config/          # Environment configuration
 │   ├── database/        # Database connection
 │   ├── garden/          # Gardens, plants, and sharing
-│   ├── marketplace/     # Marketplace, wallets, and ledger
+│   ├── marketplace/     # Delivery requests and plant listings
 │   ├── middleware/      # HTTP middleware
 │   ├── migrations/      # AutoMigrate and seed data
 │   ├── store/           # Seed store and inventory

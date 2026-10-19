@@ -301,36 +301,17 @@ definitions:
     - permissions
     - user_id
     type: object
-  marketplace.Block:
+  marketplace.CompleteDeliveryResponse:
     properties:
-      created_at:
+      message:
         type: string
-      hash:
-        type: string
-      height:
+      reward_paid:
         type: integer
-      id:
-        type: string
-      merkle_root:
-        type: string
-      prev_hash:
-        type: string
-      timestamp:
-        type: string
-      transactions:
-        items:
-          $ref: '#/definitions/marketplace.Transaction'
-        type: array
-      validator:
-        allOf:
-        - $ref: '#/definitions/auth.User'
-        description: Relationships
-      validator_id:
-        type: string
     type: object
   marketplace.CreateDeliveryRequestRequest:
     properties:
       deadline:
+        example: "2026-01-15T18:00:00Z"
         type: string
       plant_type_id:
         type: string
@@ -353,20 +334,12 @@ definitions:
     - plant_id
     - price
     type: object
-  marketplace.CreateWalletRequest:
-    properties:
-      password:
-        minLength: 8
-        type: string
-    required:
-    - password
-    type: object
   marketplace.DeliveryRequest:
     properties:
       accepted_by:
         type: string
       acceptor:
-        $ref: '#/definitions/auth.User'
+        $ref: '#/definitions/auth.PublicUser'
       completed_at:
         type: string
       created_at:
@@ -381,7 +354,7 @@ definitions:
         type: string
       requester:
         allOf:
-        - $ref: '#/definitions/auth.User'
+        - $ref: '#/definitions/auth.PublicUser'
         description: Relationships
       requester_id:
         type: string
@@ -411,13 +384,11 @@ definitions:
     - active
     - sold
     - expired
-    - cancelled
     type: string
     x-enum-varnames:
     - ListingStatusActive
     - ListingStatusSold
     - ListingStatusExpired
-    - ListingStatusCancelled
   marketplace.MarketplaceStatsResponse:
     properties:
       active_delivery_requests:
@@ -435,6 +406,8 @@ definitions:
     type: object
   marketplace.PlantListing:
     properties:
+      buyer_id:
+        type: string
       created_at:
         type: string
       expires_at:
@@ -449,7 +422,7 @@ definitions:
         type: integer
       seller:
         allOf:
-        - $ref: '#/definitions/auth.User'
+        - $ref: '#/definitions/auth.PublicUser'
         description: Relationships
       seller_id:
         type: string
@@ -472,148 +445,15 @@ definitions:
     - open
     - accepted
     - completed
-    - expired
-    - cancelled
     type: string
     x-enum-varnames:
     - RequestStatusOpen
     - RequestStatusAccepted
     - RequestStatusCompleted
-    - RequestStatusExpired
-    - RequestStatusCancelled
-  marketplace.SignTransactionRequest:
-    properties:
-      amount:
-        minimum: 1
-        type: integer
-      nonce:
-        type: integer
-      password:
-        type: string
-      plant_id:
-        type: string
-      receiver_key:
-        type: string
-      tx_type:
-        $ref: '#/definitions/marketplace.TransactionType'
-    required:
-    - amount
-    - nonce
-    - password
-    - receiver_key
-    - tx_type
-    type: object
-  marketplace.SignTransactionResponse:
-    properties:
-      hash:
-        type: string
-      signature:
-        type: string
-    type: object
   marketplace.SuccessResponse:
     properties:
       message:
         type: string
-    type: object
-  marketplace.Transaction:
-    properties:
-      amount:
-        type: integer
-      block_height:
-        type: integer
-      created_at:
-        type: string
-      hash:
-        type: string
-      id:
-        type: string
-      nonce:
-        type: integer
-      plant:
-        allOf:
-        - $ref: '#/definitions/garden.Plant'
-        description: Relationships
-      plant_id:
-        type: string
-      receiver_key:
-        type: string
-      sender_key:
-        type: string
-      signature:
-        type: string
-      status:
-        $ref: '#/definitions/marketplace.TransactionStatus'
-      tx_type:
-        $ref: '#/definitions/marketplace.TransactionType'
-      updated_at:
-        type: string
-    type: object
-  marketplace.TransactionStatus:
-    enum:
-    - pending
-    - confirmed
-    - rejected
-    type: string
-    x-enum-varnames:
-    - TransactionStatusPending
-    - TransactionStatusConfirmed
-    - TransactionStatusRejected
-  marketplace.TransactionType:
-    enum:
-    - transfer
-    - purchase
-    - reward
-    - commission
-    type: string
-    x-enum-varnames:
-    - TransactionTypeTransfer
-    - TransactionTypePurchase
-    - TransactionTypeReward
-    - TransactionTypeCommission
-  marketplace.TransferCurrencyRequest:
-    properties:
-      amount:
-        minimum: 1
-        type: integer
-      password:
-        type: string
-      to_public_key:
-        type: string
-    required:
-    - amount
-    - password
-    - to_public_key
-    type: object
-  marketplace.Wallet:
-    properties:
-      balance:
-        type: integer
-      created_at:
-        type: string
-      encrypted_key:
-        description: AES-256-GCM encrypted private key
-        type: string
-      id:
-        type: string
-      nonce:
-        type: integer
-      public_key:
-        type: string
-      reputation:
-        type: number
-      updated_at:
-        type: string
-      user:
-        allOf:
-        - $ref: '#/definitions/auth.User'
-        description: Relationships
-      user_id:
-        type: string
-    type: object
-  marketplace.WalletResponse:
-    properties:
-      wallet:
-        $ref: '#/definitions/marketplace.Wallet'
     type: object
   store.BuySeedRequest:
     properties:
@@ -961,83 +801,6 @@ paths:
       summary: Register a new user
       tags:
       - authentication
-  /blockchain/ledger:
-    get:
-      description: Get the blockchain ledger with pagination
-      parameters:
-      - description: Number of blocks to return (default 10)
-        in: query
-        name: limit
-        type: integer
-      - description: Number of blocks to skip (default 0)
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/marketplace.Block'
-            type: array
-      summary: Get blockchain ledger
-      tags:
-      - blockchain
-  /blockchain/transactions:
-    post:
-      consumes:
-      - application/json
-      description: Submit a signed transaction to the blockchain
-      parameters:
-      - description: Transaction details
-        in: body
-        name: transaction
-        required: true
-        schema:
-          $ref: '#/definitions/marketplace.Transaction'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/marketplace.Transaction'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/marketplace.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/marketplace.ErrorResponse'
-      summary: Submit a blockchain transaction
-      tags:
-      - blockchain
-  /blockchain/transactions/{hash}:
-    get:
-      description: Get the status of a transaction by hash
-      parameters:
-      - description: Transaction hash
-        in: path
-        name: hash
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/marketplace.Transaction'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/marketplace.ErrorResponse'
-      summary: Get transaction status
-      tags:
-      - blockchain
   /garden-shares/access-links:
     post:
       consumes:
@@ -1823,7 +1586,7 @@ paths:
       - plants
   /marketplace/delivery-requests:
     get:
-      description: Get all open delivery requests
+      description: Get all open delivery requests whose deadline has not passed
       produces:
       - application/json
       responses:
@@ -1831,15 +1594,18 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/marketplace.DeliveryRequestsResponse'
+      security:
+      - bearer: []
       summary: Get open delivery requests
       tags:
       - marketplace
     post:
       consumes:
       - application/json
-      description: Create a new delivery request for a specific plant type
+      description: Ask other players to deliver a plant type for a coin reward, charged
+        on completion
       parameters:
-      - description: Delivery request details
+      - description: Delivery request data
         in: body
         name: request
         required: true
@@ -1853,69 +1619,85 @@ paths:
           schema:
             $ref: '#/definitions/marketplace.DeliveryRequest'
         "400":
-          description: Bad Request
+          description: Invalid reward or deadline, or not enough coins for the reward
           schema:
             $ref: '#/definitions/marketplace.ErrorResponse'
-        "401":
-          description: Unauthorized
+        "404":
+          description: Plant type not found
           schema:
             $ref: '#/definitions/marketplace.ErrorResponse'
+      security:
+      - bearer: []
       summary: Create a delivery request
       tags:
       - marketplace
   /marketplace/delivery-requests/{id}/accept:
     post:
-      description: Accept an open delivery request
+      description: Commit to delivering an open request before its deadline
       parameters:
-      - description: Request ID
+      - description: Delivery request ID
         in: path
         name: id
         required: true
         type: string
+      produces:
+      - application/json
       responses:
         "200":
           description: OK
           schema:
             $ref: '#/definitions/marketplace.SuccessResponse'
         "400":
-          description: Bad Request
+          description: Own request
           schema:
             $ref: '#/definitions/marketplace.ErrorResponse'
-        "401":
-          description: Unauthorized
+        "404":
+          description: Request not found
           schema:
             $ref: '#/definitions/marketplace.ErrorResponse'
+        "409":
+          description: Request already accepted or expired
+          schema:
+            $ref: '#/definitions/marketplace.ErrorResponse'
+      security:
+      - bearer: []
       summary: Accept a delivery request
       tags:
       - marketplace
   /marketplace/delivery-requests/{id}/complete:
     post:
-      description: Complete an accepted delivery request
+      description: Complete an accepted request and receive the reward, minus 20%
+        after the deadline
       parameters:
-      - description: Request ID
+      - description: Delivery request ID
         in: path
         name: id
         required: true
         type: string
+      produces:
+      - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/marketplace.SuccessResponse'
-        "400":
-          description: Bad Request
+            $ref: '#/definitions/marketplace.CompleteDeliveryResponse'
+        "404":
+          description: Request not found
           schema:
             $ref: '#/definitions/marketplace.ErrorResponse'
-        "401":
-          description: Unauthorized
+        "409":
+          description: Not accepted by the caller, already completed, or the requester
+            cannot pay
           schema:
             $ref: '#/definitions/marketplace.ErrorResponse'
+      security:
+      - bearer: []
       summary: Complete a delivery request
       tags:
       - marketplace
   /marketplace/listings:
     get:
-      description: Get all active plant listings with optional filters
+      description: Get active, unexpired plant listings with optional filters
       parameters:
       - description: Plant type ID filter
         in: query
@@ -1936,15 +1718,21 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/marketplace.PlantListingsResponse'
+        "400":
+          description: Invalid filter
+          schema:
+            $ref: '#/definitions/marketplace.ErrorResponse'
+      security:
+      - bearer: []
       summary: Get active plant listings
       tags:
       - marketplace
     post:
       consumes:
       - application/json
-      description: Create a new plant listing for sale
+      description: List a harvestable plant from one of your gardens for 7 days
       parameters:
-      - description: Plant listing details
+      - description: Listing data
         in: body
         name: request
         required: true
@@ -1958,45 +1746,64 @@ paths:
           schema:
             $ref: '#/definitions/marketplace.PlantListing'
         "400":
-          description: Bad Request
+          description: Invalid price or plant not harvestable
           schema:
             $ref: '#/definitions/marketplace.ErrorResponse'
-        "401":
-          description: Unauthorized
+        "403":
+          description: Plant is not in one of your gardens
           schema:
             $ref: '#/definitions/marketplace.ErrorResponse'
-      summary: Create a plant listing
+        "404":
+          description: Plant not found
+          schema:
+            $ref: '#/definitions/marketplace.ErrorResponse'
+        "409":
+          description: Plant already listed
+          schema:
+            $ref: '#/definitions/marketplace.ErrorResponse'
+      security:
+      - bearer: []
+      summary: List a plant for sale
       tags:
       - marketplace
   /marketplace/listings/{id}/buy:
     post:
-      description: Purchase a plant from a listing
+      description: Pay for a listing with coins; the plant moves to a free cell in
+        your gardens
       parameters:
       - description: Listing ID
         in: path
         name: id
         required: true
         type: string
+      produces:
+      - application/json
       responses:
         "200":
           description: OK
           schema:
             $ref: '#/definitions/marketplace.SuccessResponse'
         "400":
-          description: Bad Request
+          description: Own listing or not enough coins
           schema:
             $ref: '#/definitions/marketplace.ErrorResponse'
-        "401":
-          description: Unauthorized
+        "404":
+          description: Listing not found
           schema:
             $ref: '#/definitions/marketplace.ErrorResponse'
-      summary: Purchase a plant listing
+        "409":
+          description: Listing sold, expired, or its plant is gone
+          schema:
+            $ref: '#/definitions/marketplace.ErrorResponse'
+      security:
+      - bearer: []
+      summary: Buy a plant listing
       tags:
       - marketplace
   /marketplace/stats:
     get:
-      description: Get overall marketplace statistics including active requests, listings,
-        and volume
+      description: Counts of requests and listings, and the coin volume of completed
+        sales
       produces:
       - application/json
       responses:
@@ -2004,10 +1811,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/marketplace.MarketplaceStatsResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/marketplace.ErrorResponse'
+      security:
+      - bearer: []
       summary: Get marketplace statistics
       tags:
       - marketplace
@@ -2199,113 +2004,6 @@ paths:
       summary: Update user profile
       tags:
       - users
-  /wallet:
-    post:
-      consumes:
-      - application/json
-      description: Create a new wallet for the authenticated user
-      parameters:
-      - description: Wallet creation details
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/marketplace.CreateWalletRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/marketplace.Wallet'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/marketplace.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/marketplace.ErrorResponse'
-      summary: Create a wallet
-      tags:
-      - wallet
-  /wallet/balance:
-    get:
-      description: Get the current user's wallet balance and details
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/marketplace.WalletResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/marketplace.ErrorResponse'
-      summary: Get wallet balance
-      tags:
-      - wallet
-  /wallet/sign:
-    post:
-      consumes:
-      - application/json
-      description: Generate a signature for a transaction (offline operation)
-      parameters:
-      - description: Transaction to sign
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/marketplace.SignTransactionRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/marketplace.SignTransactionResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/marketplace.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/marketplace.ErrorResponse'
-      summary: Sign a transaction
-      tags:
-      - wallet
-  /wallet/transfer:
-    post:
-      consumes:
-      - application/json
-      description: Transfer currency to another user's wallet
-      parameters:
-      - description: Transfer details
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/marketplace.TransferCurrencyRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/marketplace.SuccessResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/marketplace.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/marketplace.ErrorResponse'
-      summary: Transfer currency
-      tags:
-      - wallet
   /weather/current:
     get:
       consumes:

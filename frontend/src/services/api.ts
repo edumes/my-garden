@@ -1,18 +1,13 @@
 import {
-  AcceptDeliveryRequestRequest,
   AuditActivityResponse,
   AuditLogsResponse,
   AuditStatsResponse,
   AuthResponse,
-  BlockchainLedger,
-  BuyPlantListingRequest,
   BuySeedRequest,
   BuySeedResponse,
-  CompleteDeliveryRequestRequest,
   CreateAccessLinkRequest,
   CreateDeliveryRequestRequest,
   CreatePlantListingRequest,
-  CreateWalletRequest,
   CurrentWeatherResponse,
   DeliveryRequest,
   Garden,
@@ -26,14 +21,9 @@ import {
   PlantType,
   SeedInventory,
   SharedGardenResponse,
-  SignRequest,
-  SignResponse,
-  Transaction,
-  TransferRequest,
   UpdateProfileRequest,
   UpdateSharePermissionsRequest,
   User,
-  Wallet,
   Weather,
   WeatherForecast
 } from "@/types/api";
@@ -301,62 +291,36 @@ class ApiService {
     return this.request<AuditStatsResponse>(`/audit/stats${queryParams}`);
   }
 
-  // Marketplace API Methods
+  // Marketplace
   async createDeliveryRequest(request: CreateDeliveryRequestRequest) {
-    return this.request<{ delivery_request: DeliveryRequest }>('/marketplace/delivery-requests', {
+    return this.request<DeliveryRequest>('/marketplace/delivery-requests', {
       method: 'POST',
       data: request,
     });
   }
 
-  async getDeliveryRequests(params?: {
-    status?: string;
-    plant_type_id?: string;
-    requester_id?: string;
-    limit?: number;
-    offset?: number;
-  }) {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          queryParams.append(key, value.toString());
-        }
-      });
-    }
-    return this.request<{ delivery_requests: DeliveryRequest[]; total: number }>(`/marketplace/delivery-requests?${queryParams.toString()}`);
+  async getDeliveryRequests() {
+    return this.request<{ delivery_requests: DeliveryRequest[]; total: number }>('/marketplace/delivery-requests');
   }
 
-  async acceptDeliveryRequest(id: string, request: AcceptDeliveryRequestRequest) {
-    return this.request<{ delivery_request: DeliveryRequest; transaction: Transaction }>(`/marketplace/delivery-requests/${id}/accept`, {
-      method: 'POST',
-      data: request,
-    });
+  async acceptDeliveryRequest(id: string) {
+    return this.request<{ message: string }>(`/marketplace/delivery-requests/${id}/accept`, { method: 'POST' });
   }
 
-  async completeDeliveryRequest(id: string, request: CompleteDeliveryRequestRequest) {
-    return this.request<{ delivery_request: DeliveryRequest; transaction: Transaction }>(`/marketplace/delivery-requests/${id}/complete`, {
+  async completeDeliveryRequest(id: string) {
+    return this.request<{ message: string; reward_paid: number }>(`/marketplace/delivery-requests/${id}/complete`, {
       method: 'POST',
-      data: request,
     });
   }
 
   async createPlantListing(request: CreatePlantListingRequest) {
-    return this.request<{ listing: PlantListing }>('/marketplace/listings', {
+    return this.request<PlantListing>('/marketplace/listings', {
       method: 'POST',
       data: request,
     });
   }
 
-  async getPlantListings(params?: {
-    status?: string;
-    plant_type_id?: string;
-    seller_id?: string;
-    min_price?: number;
-    max_price?: number;
-    limit?: number;
-    offset?: number;
-  }) {
+  async getPlantListings(params?: { plant_type_id?: string; min_price?: number; max_price?: number }) {
     const queryParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -368,74 +332,10 @@ class ApiService {
     return this.request<{ listings: PlantListing[]; total: number }>(`/marketplace/listings?${queryParams.toString()}`);
   }
 
-  async buyPlantListing(id: string, request: BuyPlantListingRequest) {
-    return this.request<{ listing: PlantListing; transaction: Transaction }>(`/marketplace/listings/${id}/buy`, {
-      method: 'POST',
-      data: request,
-    });
+  async buyPlantListing(id: string) {
+    return this.request<{ message: string }>(`/marketplace/listings/${id}/buy`, { method: 'POST' });
   }
 
-  // Blockchain API Methods
-  async submitTransaction(transaction: {
-    sender_key: string;
-    receiver_key: string;
-    plant_id?: string;
-    amount: number;
-    tx_type: string;
-    signature: string;
-  }) {
-    return this.request<{ transaction: Transaction }>('/blockchain/transactions', {
-      method: 'POST',
-      data: transaction,
-    });
-  }
-
-  async getTransactionStatus(hash: string) {
-    return this.request<{ transaction: Transaction }>(`/blockchain/transactions/${hash}`);
-  }
-
-  async getBlockchainLedger(params?: {
-    limit?: number;
-    offset?: number;
-  }) {
-    const queryParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          queryParams.append(key, value.toString());
-        }
-      });
-    }
-    return this.request<BlockchainLedger>(`/blockchain/ledger?${queryParams.toString()}`);
-  }
-
-  // Wallet API Methods
-  async createWallet(request: CreateWalletRequest) {
-    return this.request<{ wallet: Wallet }>('/wallet', {
-      method: 'POST',
-      data: request,
-    });
-  }
-
-  async getWalletBalance() {
-    return this.request<{ wallet: Wallet }>('/wallet/balance');
-  }
-
-  async transferCurrency(request: TransferRequest) {
-    return this.request<{ transaction: Transaction }>('/wallet/transfer', {
-      method: 'POST',
-      data: request,
-    });
-  }
-
-  async signData(request: SignRequest) {
-    return this.request<SignResponse>('/wallet/sign', {
-      method: 'POST',
-      data: request,
-    });
-  }
-
-  // Marketplace Stats
   async getMarketplaceStats() {
     return this.request<MarketplaceStats>('/marketplace/stats');
   }

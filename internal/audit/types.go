@@ -17,6 +17,27 @@ type AuditLog struct {
 	CreatedAt  time.Time  `json:"created_at"`
 }
 
+// AuditStats summarizes audit activity since a start date.
+type AuditStats struct {
+	TotalActions      int64           `json:"total_actions"`
+	SuccessfulActions int64           `json:"successful_actions"`
+	FailedActions     int64           `json:"failed_actions"`
+	ErrorActions      int64           `json:"error_actions"`
+	UniqueUsers       int64           `json:"unique_users"`
+	TopActions        []ActionCount   `json:"top_actions"`
+	TopResources      []ResourceCount `json:"top_resources"`
+}
+
+type ActionCount struct {
+	Action string `json:"action"`
+	Count  int64  `json:"count"`
+}
+
+type ResourceCount struct {
+	Resource string `json:"resource"`
+	Count    int64  `json:"count"`
+}
+
 type AuditAction string
 
 const (

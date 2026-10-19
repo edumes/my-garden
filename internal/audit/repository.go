@@ -92,36 +92,8 @@ func (r *AuditRepository) GetGardenActivity(ctx context.Context, gardenID uuid.U
 	return logs, err
 }
 
-func (r *AuditRepository) GetAuditStats(ctx context.Context, startDate time.Time) (struct {
-	TotalActions      int64
-	SuccessfulActions int64
-	FailedActions     int64
-	ErrorActions      int64
-	UniqueUsers       int64
-	TopActions        []struct {
-		Action string
-		Count  int64
-	}
-	TopResources []struct {
-		Resource string
-		Count    int64
-	}
-}, error) {
-	var stats struct {
-		TotalActions      int64
-		SuccessfulActions int64
-		FailedActions     int64
-		ErrorActions      int64
-		UniqueUsers       int64
-		TopActions        []struct {
-			Action string
-			Count  int64
-		}
-		TopResources []struct {
-			Resource string
-			Count    int64
-		}
-	}
+func (r *AuditRepository) GetAuditStats(ctx context.Context, startDate time.Time) (AuditStats, error) {
+	var stats AuditStats
 
 	if err := r.db.GetDB().WithContext(ctx).Model(&AuditLog{}).
 		Where("created_at >= ?", startDate).

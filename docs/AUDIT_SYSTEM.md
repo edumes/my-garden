@@ -125,8 +125,7 @@ The audit system includes a React component (`AuditLogs.tsx`) that provides:
 
 ### Access Control
 - Audit endpoints require authentication
-- Only authorized users can view audit logs
-- Audit data is protected by the same security measures as other API endpoints
+- Any authenticated user can currently read every user's audit logs and statistics; restricting this is part of the [security phase](plans/02-security-and-integrity.md) of the development plan
 
 ## Monitoring and Alerts
 

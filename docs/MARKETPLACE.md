@@ -2,36 +2,34 @@
 
 ## Overview
 
-The Virtual Garden Marketplace System is a decentralized plant marketplace with blockchain-inspired mechanics for the gardening game. It enables players to trade plants, request deliveries, and participate in a secure economic system with digital signatures and immutable records.
+The Virtual Garden Marketplace System is a plant marketplace with blockchain-inspired mechanics for the gardening game. It enables players to trade plants, request deliveries, and hold coins in wallets backed by ECDSA key pairs. See [Current Limitations](#current-limitations) for the parts of the design that are not implemented.
 
 ## Features
 
 ### 🏪 Two Marketplace Modes
 
 1. **Service Orders (Delivery Requests)**
-   - Players can request specific plants with delivery rewards
-   - Time-based deadlines with penalties for late delivery
-   - Reputation system for successful/failed deliveries
+   - Players request a plant type and offer a reward of at least 10 coins
+   - Deadlines must be at least one hour in the future; completing late costs 20% of the reward
+   - Completing a request raises the deliverer's reputation; completing late lowers it
 
 2. **Direct Sales Listings**
-   - Players can list harvested plants for direct purchase
-   - Fixed pricing with automatic expiration (7 days)
-   - Real-time marketplace browsing with filters
+   - Players list plants they own at a fixed price
+   - Listings carry a 7-day expiry date
+   - Listings can be filtered by plant type and price range
 
 ### ⛓️ Blockchain Mechanics
 
-- **Digitally Signed Transactions**: ECDSA signatures for all transactions
-- **Immutable Transaction Ledger**: Public blockchain with transaction history
-- **Simplified Consensus**: 3-node validation system
-- **Double-Spend Prevention**: Nonce-based transaction verification
-- **System Commission**: 0.5% fee on all marketplace transactions
+- **Digitally Signed Transactions**: transactions submitted to `POST /blockchain/transactions` must carry a valid ECDSA signature
+- **Replay Protection**: a submitted transaction's nonce must be greater than the sender wallet's last nonce
+- **Transaction Records**: purchases and delivery rewards are recorded as pending transactions
+- **System Commission**: 0.5% fee on direct sales
 
 ### 💰 Economic System
 
-- **In-Game Currency**: Secure wallet system with encrypted private keys
-- **Reputation Scoring**: Player reputation affects transaction success rates
-- **Penalties & Rewards**: Failed deliveries incur 20% penalty + reputation decrease
-- **Cooling Periods**: Large transactions (>1000 currency) have 24-hour cooling period
+- **In-Game Currency**: wallets hold coin balances
+- **Reputation Scoring**: completed trades and deliveries raise reputation
+- **Penalties**: late deliveries lose 20% of the reward and 0.5 reputation
 
 ## API Endpoints
 
@@ -114,40 +112,31 @@ POST /api/v1/wallet/sign
 
 ## Business Rules
 
-### Transaction Processing
-- **2-of-2 Signatures**: Marketplace transactions require both buyer and seller signatures
-- **3-Node Consensus**: Blockchain transactions validated by 3 active consensus nodes
-- **System Commission**: 0.5% fee automatically deducted from all transactions
-- **Nonce Verification**: Prevents replay attacks and double-spending
-
 ### Penalties & Rewards
-- **Failed Deliveries**: 20% reward penalty + 0.5 reputation decrease
-- **Successful Transactions**: +0.1 reputation point per successful transaction
-- **Listing Expiration**: Automatic cancellation after 7 days
-- **Large Transaction Cooling**: 24-hour period for transactions >1000 currency
+- **Late Deliveries**: completing after the deadline removes 20% of the reward and 0.5 reputation
+- **Successful Trades**: +0.1 reputation for the buyer, the seller, and the deliverer
+- **Listing Expiration**: listings carry a 7-day expiry date
+- **Commission**: 0.5% of the listing price is withheld from the seller
 
 ### Security Measures
-- **AES-256-GCM Encryption**: Private keys encrypted with user passwords
-- **ECDSA Signatures**: All transactions digitally signed
-- **Transaction Nonces**: Prevents replay attacks
-- **Public Key Verification**: Ensures transaction authenticity
+- **AES-256-GCM Encryption**: private keys of wallets created through `POST /wallet` are encrypted with a key derived from the wallet password
+- **ECDSA Signatures**: required for transactions submitted to `POST /blockchain/transactions`
+- **Transaction Nonces**: prevent replaying submitted transactions
 
 ## Workflows
 
 ### Direct Purchase Flow
-1. **Seller lists plant** at fixed price
-2. **Buyer initiates purchase** (signs TX1)
-3. **System holds plant** in escrow
-4. **Seller signs TX2** to confirm
-5. **Transaction added** to blockchain after validation
-6. **Plant transferred** to buyer, currency to seller
+1. **Seller lists a plant** they own at a fixed price
+2. **Buyer purchases** the listing, and the price leaves the buyer's wallet immediately
+3. **Seller receives** the price minus the 0.5% commission
+4. **Plant moves** to the buyer's garden; a garden is created if the buyer has none
+5. **A pending transaction** is recorded and the listing is marked sold
 
 ### Delivery Request Flow
-1. **Player A creates** delivery request for rare plant
-2. **Player B accepts** request (signs contract)
-3. **Player B delivers** plant before deadline
-4. **Both parties sign** completion transaction
-5. **Reward transferred** after validation
+1. **Player A creates** a delivery request for a plant type with a reward and a deadline
+2. **Player B accepts** the request
+3. **Player B marks it complete**, and the reward moves from A's wallet to B's, minus the late penalty if the deadline passed
+4. **A pending reward transaction** is recorded
 
 ## Database Schema
 
@@ -168,50 +157,30 @@ POST /api/v1/wallet/sign
 ## Security Considerations
 
 ### Private Key Management
-- Private keys are **never stored in plain text**
-- AES-256-GCM encryption with user passwords
-- Keys are only decrypted temporarily for signing
-- Password-based key derivation for additional security
+- Private keys of wallets created through `POST /wallet` are stored encrypted with AES-256-GCM
+- The encryption key is a single SHA-256 hash of the wallet password
+- Keys are decrypted only to sign a transfer or a transaction
 
 ### Transaction Security
-- All transactions require valid ECDSA signatures
-- Nonce-based replay protection
-- Double-spend prevention through transaction ordering
-- Public key verification for all operations
-
-### Consensus Security
-- 3-node validation requirement
-- Merkle tree verification for block integrity
-- Timestamp-based block ordering
-- Validator reputation tracking
+- Transactions submitted to the blockchain endpoint require valid ECDSA signatures
+- Nonce checks reject replayed submissions
 
 ## Performance Considerations
 
 ### Database Optimization
-- Indexed fields for fast queries
-- Pagination support for large datasets
-- Efficient joins for related data
-- Automatic cleanup of expired items
+- The ledger endpoint supports `limit` and `offset` pagination
 
-### Blockchain Performance
-- Batch transaction processing
-- Efficient merkle tree calculations
-- Optimized signature verification
-- Cached public key lookups
+## Current Limitations
 
-## Monitoring & Maintenance
+These parts of the original design are not implemented. The [marketplace phase](plans/05-marketplace.md) of the development plan addresses them.
 
-### Automated Tasks
-- **Expired Listing Cleanup**: Daily cleanup of expired listings
-- **Failed Request Cleanup**: Automatic expiration of overdue requests
-- **Transaction Processing**: Background processing of pending transactions
-- **Reputation Updates**: Automatic reputation adjustments
-
-### Health Checks
-- Database connectivity monitoring
-- Blockchain consensus node status
-- Transaction processing latency
-- Wallet balance verification
+- Pending transactions are never validated or added to blocks: nothing calls `ProcessPendingTransactions`, so the ledger stays empty and there is no consensus step.
+- Purchases settle immediately, with no escrow, seller confirmation (2-of-2 signatures), or cooling period for large amounts.
+- Completing a delivery request does not check or transfer any plant.
+- Expired listings and overdue requests are never cleaned up: nothing calls `CleanupExpiredItems`.
+- Wallets created implicitly by a purchase or delivery start with 100 coins and store no private key.
+- Wallet passwords are hashed once with SHA-256 instead of a slow key-derivation function.
+- Reputation does not influence any outcome.
 
 ## Future Enhancements
 

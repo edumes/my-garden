@@ -29,10 +29,11 @@ var (
 	ErrOwnItem           = errors.New("you cannot accept or buy your own request or listing")
 	ErrNotAvailable      = errors.New("no longer available")
 	ErrAlreadyListed     = errors.New("this plant is already listed")
-	ErrNotYourPlant      = errors.New("you can only list plants from your own gardens")
+	ErrNotYourPlant      = errors.New("you can only list plants you grow")
 	ErrNotHarvestable    = errors.New("only harvestable plants can be listed")
 	ErrInsufficientCoins = errors.New("insufficient coins")
 	ErrRequesterBroke    = errors.New("the requester can no longer pay the reward")
+	ErrNoFreePlot        = errors.New("you need a free plot in one of your gardens to receive this plant")
 )
 
 // Service runs marketplace commands. Every command that moves coins or plants
@@ -148,7 +149,11 @@ func (s *Service) CompleteDeliveryRequest(requestID, acceptorID uuid.UUID) (int,
 		if !charged {
 			return ErrRequesterBroke
 		}
-		return payCoins(tx, acceptorID, paid)
+		if err := payCoins(tx, acceptorID, paid); err != nil {
+			return err
+		}
+		_, _, err = auth.GrantExperience(tx, acceptorID, auth.TradeExperience)
+		return err
 	})
 	return paid, err
 }
@@ -171,10 +176,10 @@ func (s *Service) CreatePlantListing(sellerID, plantID uuid.UUID, price int) (*P
 	}
 
 	var plant garden.Plant
-	if err := s.db.Preload("Garden").Take(&plant, "id = ?", plantID).Error; err != nil {
+	if err := s.db.Take(&plant, "id = ?", plantID).Error; err != nil {
 		return nil, notFoundOr(err)
 	}
-	if plant.Garden.UserID != sellerID {
+	if plant.GrowerID != sellerID {
 		return nil, ErrNotYourPlant
 	}
 	if plant.Stage != garden.PlantStageHarvestable {
@@ -232,9 +237,9 @@ func (s *Service) GetActiveListings(filters ListingFilters) ([]PlantListing, err
 	return listings, err
 }
 
-// PurchasePlantListing charges the buyer, pays the seller minus commission,
-// and moves the plant into a free cell of the buyer's gardens, creating a
-// garden when none has room.
+// PurchasePlantListing charges the buyer, pays the seller minus commission
+// plus trade experience, and moves the plant into the first free plot of the
+// buyer's gardens, making the buyer its grower.
 func (s *Service) PurchasePlantListing(listingID, buyerID uuid.UUID) error {
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		var listing PlantListing
@@ -261,14 +266,17 @@ func (s *Service) PurchasePlantListing(listingID, buyerID uuid.UUID) error {
 		if err := payCoins(tx, listing.SellerID, listing.Price-listing.Price*commissionPerMille/1000); err != nil {
 			return err
 		}
+		if _, _, err := auth.GrantExperience(tx, listing.SellerID, auth.TradeExperience); err != nil {
+			return err
+		}
 
 		gardenID, position, err := freeCell(tx, buyerID)
 		if err != nil {
 			return err
 		}
 		moved := tx.Model(&garden.Plant{}).
-			Where("id = ? AND garden_id IN (SELECT id FROM gardens WHERE user_id = ?)", listing.PlantID, listing.SellerID).
-			Updates(map[string]any{"garden_id": gardenID, "position": position})
+			Where("id = ? AND grower_id = ?", listing.PlantID, listing.SellerID).
+			Updates(map[string]any{"garden_id": gardenID, "position": position, "grower_id": buyerID})
 		if moved.Error != nil {
 			return moved.Error
 		}
@@ -280,8 +288,7 @@ func (s *Service) PurchasePlantListing(listingID, buyerID uuid.UUID) error {
 	})
 }
 
-// freeCell returns the first empty cell across the user's gardens, creating
-// a garden for purchases when every cell is taken.
+// freeCell returns the first empty plot across the user's gardens.
 func freeCell(tx *gorm.DB, userID uuid.UUID) (uuid.UUID, int, error) {
 	var cell struct {
 		GardenID uuid.UUID
@@ -293,15 +300,10 @@ func freeCell(tx *gorm.DB, userID uuid.UUID) (uuid.UUID, int, error) {
 		AND NOT EXISTS (SELECT 1 FROM plants p WHERE p.garden_id = g.id AND p.position = cell.position)
 		ORDER BY g.created_at, cell.position
 		LIMIT 1`, userID).Scan(&cell).Error
-	if err != nil || cell.GardenID != uuid.Nil {
-		return cell.GardenID, cell.Position, err
+	if err == nil && cell.GardenID == uuid.Nil {
+		err = ErrNoFreePlot
 	}
-
-	purchases := garden.Garden{UserID: userID, Name: "Marketplace Purchases"}
-	if err := tx.Create(&purchases).Error; err != nil {
-		return uuid.Nil, 0, err
-	}
-	return purchases.ID, 0, nil
+	return cell.GardenID, cell.Position, err
 }
 
 // explainListing tells why a purchase matched no active listing.

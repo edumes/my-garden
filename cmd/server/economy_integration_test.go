@@ -50,6 +50,13 @@ func coinsOf(t *testing.T, db *database.Database, userID uuid.UUID) int {
 	return user.Coins
 }
 
+func experienceOf(t *testing.T, db *database.Database, userID uuid.UUID) int {
+	t.Helper()
+	var user auth.User
+	require.NoError(t, db.DB.Take(&user, "id = ?", userID).Error)
+	return user.Experience
+}
+
 func giveSeeds(t *testing.T, db *database.Database, userID uuid.UUID, pt garden.PlantType, quantity int) {
 	t.Helper()
 	require.NoError(t, db.DB.Create(&garden.SeedInventory{
@@ -67,6 +74,25 @@ func seedsOf(t *testing.T, db *database.Database, userID uuid.UUID, pt garden.Pl
 	return quantity, int64(len(inventory))
 }
 
+// ripePlant puts a harvestable plant of the given type, grown by grower, in
+// the garden.
+func ripePlant(t *testing.T, db *database.Database, gardenID, grower uuid.UUID, pt garden.PlantType, position int) garden.Plant {
+	t.Helper()
+	now := time.Now()
+	plant := garden.Plant{
+		GardenID:       gardenID,
+		PlantTypeID:    pt.ID,
+		GrowerID:       grower,
+		Position:       position,
+		Stage:          garden.PlantStageHarvestable,
+		GrowthProgress: 100,
+		PlantedAt:      now,
+		GrownAt:        now,
+	}
+	require.NoError(t, db.DB.Create(&plant).Error)
+	return plant
+}
+
 func plantsIn(t *testing.T, db *database.Database, gardenID string) int64 {
 	t.Helper()
 	var count int64
@@ -77,20 +103,20 @@ func plantsIn(t *testing.T, db *database.Database, gardenID string) int64 {
 func TestSeedPurchasesNeverOverspend(t *testing.T) {
 	a, db := newTestAPI(t)
 	player := a.register("shopper")
-	tomato := plantTypeNamed(t, db, "Tomato")
+	lettuce := plantTypeNamed(t, db, "Lettuce")
 	require.Equal(t, 100, player.User.Coins)
-	require.Equal(t, 20, tomato.SeedPrice)
+	require.Equal(t, 10, lettuce.SeedPrice)
 
 	buyer := a.as(player)
-	counts := concurrently(10, func(int) int {
-		status, _ := buyer.do(http.MethodPost, "/store/buy", map[string]any{"plant_type_id": tomato.ID, "quantity": 1})
+	counts := concurrently(15, func(int) int {
+		status, _ := buyer.do(http.MethodPost, "/store/buy", map[string]any{"plant_type_id": lettuce.ID, "quantity": 1})
 		return status
 	})
-	require.Equal(t, map[int]int{http.StatusOK: 5, http.StatusBadRequest: 5}, counts)
+	require.Equal(t, map[int]int{http.StatusOK: 10, http.StatusBadRequest: 5}, counts)
 
 	require.Equal(t, 0, coinsOf(t, db, player.User.ID))
-	quantity, rows := seedsOf(t, db, player.User.ID, tomato)
-	require.Equal(t, 5, quantity)
+	quantity, rows := seedsOf(t, db, player.User.ID, lettuce)
+	require.Equal(t, 10, quantity)
 	require.EqualValues(t, 1, rows, "purchases of one seed type share an inventory row")
 }
 
@@ -143,22 +169,18 @@ func TestHarvestPaysOnce(t *testing.T) {
 	gardenID := a.createGarden("Garden")
 	lettuce := plantTypeNamed(t, db, "Lettuce")
 
-	plant := garden.Plant{
-		GardenID:       uuid.MustParse(gardenID),
-		PlantTypeID:    lettuce.ID,
-		Position:       0,
-		Stage:          garden.PlantStageHarvestable,
-		GrowthProgress: 100,
-		PlantedAt:      time.Now(),
-	}
-	require.NoError(t, db.DB.Create(&plant).Error)
+	plant := ripePlant(t, db, uuid.MustParse(gardenID), player.User.ID, lettuce, 0)
 
 	counts := concurrently(5, func(int) int {
 		status, _ := a.do(http.MethodPost, fmt.Sprintf("/gardens/%s/plants/%s/harvest", gardenID, plant.ID), nil)
 		return status
 	})
-	require.Equal(t, map[int]int{http.StatusOK: 1, http.StatusBadRequest: 4}, counts)
+	// Losers either find the plant gone (404) or lose the race to claim it (400).
+	require.Equal(t, 1, counts[http.StatusOK], counts)
+	require.Equal(t, 4, counts[http.StatusNotFound]+counts[http.StatusBadRequest], counts)
 	require.Equal(t, player.User.Coins+lettuce.HarvestValue*lettuce.Yield, coinsOf(t, db, player.User.ID))
+	require.Equal(t, lettuce.GrowthTime, experienceOf(t, db, player.User.ID))
+	require.Zero(t, plantsIn(t, db, gardenID), "harvesting frees the plot")
 }
 
 func TestDatabaseRejectsNegativeBalances(t *testing.T) {

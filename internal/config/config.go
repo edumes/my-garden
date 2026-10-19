@@ -51,7 +51,9 @@ type JWTConfig struct {
 type GameConfig struct {
 	TickInterval          time.Duration
 	WeatherUpdateInterval time.Duration
-	PlantGrowthInterval   time.Duration
+	// Speed multiplies plant growth: 1 is real time, 60 grows an hour's worth
+	// each minute. It changes pacing only, never the rules.
+	Speed float64
 }
 
 type APIConfig struct {
@@ -112,7 +114,7 @@ func Load() (*Config, error) {
 		Game: GameConfig{
 			TickInterval:          e.getDuration("GAME_TICK_INTERVAL", 5*time.Minute),
 			WeatherUpdateInterval: e.getDuration("WEATHER_UPDATE_INTERVAL", 10*time.Minute),
-			PlantGrowthInterval:   e.getDuration("PLANT_GROWTH_INTERVAL", 15*time.Minute),
+			Speed:                 e.getFloat("GAME_SPEED", 1),
 		},
 		API: APIConfig{
 			CORSOrigin:        e.get("CORS_ORIGIN", "http://localhost:5173"),
@@ -134,6 +136,9 @@ func (c *Config) validate() []error {
 	var errs []error
 	if !slices.Contains(sslModes, c.Database.SSLMode) {
 		errs = append(errs, fmt.Errorf("DB_SSL_MODE=%q is not one of %s", c.Database.SSLMode, strings.Join(sslModes, ", ")))
+	}
+	if c.Game.Speed <= 0 {
+		errs = append(errs, errors.New("GAME_SPEED must be positive"))
 	}
 	if c.JWT.Expiry <= 0 {
 		errs = append(errs, errors.New("JWT_EXPIRY must be positive"))
@@ -195,6 +200,19 @@ func (e *env) getInt(key string, defaultValue int) int {
 		return defaultValue
 	}
 	return intValue
+}
+
+func (e *env) getFloat(key string, defaultValue float64) float64 {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+	floatValue, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		e.errs = append(e.errs, fmt.Errorf("%s=%q is not a number", key, value))
+		return defaultValue
+	}
+	return floatValue
 }
 
 func (e *env) getDuration(key string, defaultValue time.Duration) time.Duration {

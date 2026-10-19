@@ -101,13 +101,14 @@ func TestLoadKeepsDevelopmentDefaults(t *testing.T) {
 func TestLoadRejectsUnusableValues(t *testing.T) {
 	t.Setenv("DB_SSL_MODE", "sometimes")
 	t.Setenv("RATE_LIMIT_REQUESTS", "0")
+	t.Setenv("GAME_SPEED", "-1")
 	t.Setenv("TRUSTED_PROXIES", "10.0.0.0/8, proxy.internal")
 
 	_, err := Load()
 	if err == nil {
 		t.Fatal("expected unusable values to be rejected")
 	}
-	for _, key := range []string{"DB_SSL_MODE", "RATE_LIMIT_REQUESTS", "proxy.internal"} {
+	for _, key := range []string{"DB_SSL_MODE", "RATE_LIMIT_REQUESTS", "GAME_SPEED", "proxy.internal"} {
 		if !strings.Contains(err.Error(), key) {
 			t.Errorf("error %q does not mention %s", err, key)
 		}

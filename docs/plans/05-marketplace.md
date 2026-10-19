@@ -47,8 +47,8 @@ Phase 2 removed wallets, keys, the ledger, and the `/wallet` and `/blockchain` e
 
 ## Risks
 
-- The current plant-transfer model silently chooses a buyer garden.
-- A seller can still harvest a listed plant, which resets it to a seed that the buyer then receives.
+- The current plant-transfer model silently chooses the first free plot across the buyer's gardens.
+- Two accounts of one person can farm trade experience by selling a cheap plant back and forth or completing deliveries for each other: commission rounds to zero below 200 coins, and deliveries transfer no plant.
 - Concurrent trades in opposite directions between the same two players can deadlock; PostgreSQL aborts one transaction, which the API reports as a server error.
 - Commission rounding for small integer prices needs an explicit rule.
 

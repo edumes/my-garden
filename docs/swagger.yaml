@@ -106,6 +106,12 @@ definitions:
         type: string
       level:
         type: integer
+      level_experience:
+        description: Experience at which the current level started and the next one
+          starts.
+        type: integer
+      next_level_experience:
+        type: integer
       timezone:
         type: string
       updated_at:
@@ -206,11 +212,22 @@ definitions:
         description: Relationships
       garden_id:
         type: string
+      grower:
+        $ref: '#/definitions/auth.PublicUser'
+      grower_id:
+        description: |-
+          GrowerID earns the harvest's coins and experience, whoever harvests:
+          the player who spent the seed, or who bought the plant on the
+          marketplace.
+        type: string
+      grown_at:
+        description: |-
+          GrownAt is when growth was last applied; the next tick grows the plant
+          from here.
+        type: string
       growth_progress:
         description: 0-100
         type: number
-      harvested_at:
-        type: string
       id:
         type: string
       plant_type:
@@ -266,6 +283,7 @@ definitions:
         description: Growth properties
         type: integer
       harvest_value:
+        description: coins per item
         type: integer
       icon:
         type: string
@@ -275,6 +293,9 @@ definitions:
         type: string
       seed_price:
         description: Store properties
+        type: integer
+      unlock_level:
+        description: level needed to buy its seeds
         type: integer
       yield:
         description: items per harvest
@@ -1232,7 +1253,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a new garden for the current user
+      description: Create a new garden for the current user. Players own one garden
+        at levels 1 and 2 and one more every two levels
       parameters:
       - description: Garden creation data
         in: body
@@ -1255,6 +1277,11 @@ paths:
             type: object
         "401":
           description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Garden limit for the player's level reached
           schema:
             additionalProperties: true
             type: object
@@ -1421,7 +1448,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Plant a seed in a garden
+      description: Plant one of your seeds in a garden plot and earn experience
       parameters:
       - description: Garden ID
         example: '"123e4567-e89b-12d3-a456-426614174000"'
@@ -1439,7 +1466,7 @@ paths:
       - application/json
       responses:
         "201":
-          description: Planted seed
+          description: Planted seed and the planting reward
           schema:
             additionalProperties: true
             type: object
@@ -1538,7 +1565,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Harvest a mature plant to get rewards
+      description: Harvest a ripe plant, freeing its plot. Its grower, who planted
+        or bought it, earns its coins and experience
       parameters:
       - description: Garden ID
         example: '"123e4567-e89b-12d3-a456-426614174000"'
@@ -1556,7 +1584,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: Harvest results
+          description: Reward paid to the plant's grower
           schema:
             additionalProperties: true
             type: object
@@ -1736,7 +1764,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: List a harvestable plant from one of your gardens for 7 days
+      description: List a harvestable plant you grow for 7 days
       parameters:
       - description: Listing data
         in: body
@@ -1756,7 +1784,7 @@ paths:
           schema:
             $ref: '#/definitions/marketplace.ErrorResponse'
         "403":
-          description: Plant is not in one of your gardens
+          description: You do not grow this plant
           schema:
             $ref: '#/definitions/marketplace.ErrorResponse'
         "404":
@@ -1774,8 +1802,8 @@ paths:
       - marketplace
   /marketplace/listings/{id}/buy:
     post:
-      description: Pay for a listing with coins; the plant moves to a free cell in
-        your gardens
+      description: Pay for a listing with coins; the plant moves to the first free
+        plot in your gardens
       parameters:
       - description: Listing ID
         in: path
@@ -1798,7 +1826,8 @@ paths:
           schema:
             $ref: '#/definitions/marketplace.ErrorResponse'
         "409":
-          description: Listing sold, expired, or its plant is gone
+          description: Listing sold or expired, its plant is gone, or you have no
+            free plot
           schema:
             $ref: '#/definitions/marketplace.ErrorResponse'
       security:
@@ -1869,6 +1898,11 @@ paths:
             type: object
         "401":
           description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Seed unlocks at a higher level
           schema:
             additionalProperties: true
             type: object

@@ -22,7 +22,7 @@ func NewRepository(db *database.Database) *Repository {
 
 func (r *Repository) GetPlantTypes() ([]garden.PlantType, error) {
 	var plantTypes []garden.PlantType
-	if err := r.db.DB.Find(&plantTypes).Error; err != nil {
+	if err := r.db.DB.Order("unlock_level, seed_price, name").Find(&plantTypes).Error; err != nil {
 		return nil, err
 	}
 	return plantTypes, nil
@@ -36,8 +36,12 @@ func (r *Repository) GetPlantTypeByID(id uuid.UUID) (*garden.PlantType, error) {
 	return &plantType, nil
 }
 
-// ErrInsufficientCoins means the user cannot afford the purchase.
-var ErrInsufficientCoins = errors.New("insufficient coins")
+var (
+	// ErrInsufficientCoins means the user cannot afford the purchase.
+	ErrInsufficientCoins = errors.New("insufficient coins")
+	// ErrLocked means the user's level is below the plant type's unlock level.
+	ErrLocked = errors.New("seed locked")
+)
 
 // BuySeeds charges the user and adds the seeds to their inventory in one
 // transaction, returning the coins left. Checking the balance and charging it
@@ -46,6 +50,15 @@ func (r *Repository) BuySeeds(userID uuid.UUID, plantType garden.PlantType, quan
 	totalCost := plantType.SeedPrice * quantity
 	var coins int
 	err := r.db.DB.Transaction(func(tx *gorm.DB) error {
+		// Levels never drop, so a level read here still holds at commit.
+		var level int
+		if err := tx.Model(&auth.User{}).Select("level").Where("id = ?", userID).Scan(&level).Error; err != nil {
+			return err
+		}
+		if level < plantType.UnlockLevel {
+			return ErrLocked
+		}
+
 		charge := tx.Model(&auth.User{}).
 			Where("id = ? AND coins >= ?", userID, totalCost).
 			Update("coins", gorm.Expr("coins - ?", totalCost))

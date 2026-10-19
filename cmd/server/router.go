@@ -91,14 +91,7 @@ func newRouter(db *database.Database, rdb *redis.Client, cfg *config.Config) *gi
 	marketplace.RegisterRoutes(api, marketplaceHandler, requireAuth)
 	audit.RegisterRoutes(api, auditHandler, requireAuth)
 
-	// Game and WebSocket endpoints (if not domain-specific, keep here)
-	api.GET("/game/status", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "Game status endpoint - coming soon"})
-	})
-	api.GET("/game/leaderboard", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "Leaderboard endpoint - coming soon"})
-	})
-
+	// Real-time updates arrive in the social and real-time phase.
 	ws := router.Group("/api/v1/ws")
 	ws.Use(requireAuth)
 	{

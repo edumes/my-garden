@@ -1126,7 +1126,7 @@
                         "bearer": []
                     }
                 ],
-                "description": "Create a new garden for the current user",
+                "description": "Create a new garden for the current user. Players own one garden at levels 1 and 2 and one more every two levels",
                 "consumes": [
                     "application/json"
                 ],
@@ -1165,6 +1165,13 @@
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Garden limit for the player's level reached",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1407,7 +1414,7 @@
                         "bearer": []
                     }
                 ],
-                "description": "Plant a seed in a garden",
+                "description": "Plant one of your seeds in a garden plot and earn experience",
                 "consumes": [
                     "application/json"
                 ],
@@ -1439,7 +1446,7 @@
                 ],
                 "responses": {
                     "201": {
-                        "description": "Planted seed",
+                        "description": "Planted seed and the planting reward",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1579,7 +1586,7 @@
                         "bearer": []
                     }
                 ],
-                "description": "Harvest a mature plant to get rewards",
+                "description": "Harvest a ripe plant, freeing its plot. Its grower, who planted or bought it, earns its coins and experience",
                 "consumes": [
                     "application/json"
                 ],
@@ -1610,7 +1617,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Harvest results",
+                        "description": "Reward paid to the plant's grower",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1882,7 +1889,7 @@
                         "bearer": []
                     }
                 ],
-                "description": "List a harvestable plant from one of your gardens for 7 days",
+                "description": "List a harvestable plant you grow for 7 days",
                 "consumes": [
                     "application/json"
                 ],
@@ -1918,7 +1925,7 @@
                         }
                     },
                     "403": {
-                        "description": "Plant is not in one of your gardens",
+                        "description": "You do not grow this plant",
                         "schema": {
                             "$ref": "#/definitions/marketplace.ErrorResponse"
                         }
@@ -1945,7 +1952,7 @@
                         "bearer": []
                     }
                 ],
-                "description": "Pay for a listing with coins; the plant moves to a free cell in your gardens",
+                "description": "Pay for a listing with coins; the plant moves to the first free plot in your gardens",
                 "produces": [
                     "application/json"
                 ],
@@ -1982,7 +1989,7 @@
                         }
                     },
                     "409": {
-                        "description": "Listing sold, expired, or its plant is gone",
+                        "description": "Listing sold or expired, its plant is gone, or you have no free plot",
                         "schema": {
                             "$ref": "#/definitions/marketplace.ErrorResponse"
                         }
@@ -2086,6 +2093,13 @@
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Seed unlocks at a higher level",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2543,6 +2557,13 @@
                 "level": {
                     "type": "integer"
                 },
+                "level_experience": {
+                    "description": "Experience at which the current level started and the next one starts.",
+                    "type": "integer"
+                },
+                "next_level_experience": {
+                    "type": "integer"
+                },
                 "timezone": {
                     "type": "string"
                 },
@@ -2692,12 +2713,20 @@
                 "garden_id": {
                     "type": "string"
                 },
+                "grower": {
+                    "$ref": "#/definitions/auth.PublicUser"
+                },
+                "grower_id": {
+                    "description": "GrowerID earns the harvest's coins and experience, whoever harvests:\nthe player who spent the seed, or who bought the plant on the\nmarketplace.",
+                    "type": "string"
+                },
+                "grown_at": {
+                    "description": "GrownAt is when growth was last applied; the next tick grows the plant\nfrom here.",
+                    "type": "string"
+                },
                 "growth_progress": {
                     "description": "0-100",
                     "type": "number"
-                },
-                "harvested_at": {
-                    "type": "string"
                 },
                 "id": {
                     "type": "string"
@@ -2776,6 +2805,7 @@
                     "type": "integer"
                 },
                 "harvest_value": {
+                    "description": "coins per item",
                     "type": "integer"
                 },
                 "icon": {
@@ -2789,6 +2819,10 @@
                 },
                 "seed_price": {
                     "description": "Store properties",
+                    "type": "integer"
+                },
+                "unlock_level": {
+                    "description": "level needed to buy its seeds",
                     "type": "integer"
                 },
                 "yield": {

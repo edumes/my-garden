@@ -6,6 +6,9 @@ export interface User {
   last_name?: string;
   level: number;
   experience: number;
+  // Experience at which the current level started and the next one starts.
+  level_experience: number;
+  next_level_experience: number;
   coins: number;
   avatar?: string;
   timezone?: string;
@@ -88,17 +91,19 @@ export interface UpdateGardenRequest {
   description?: string;
 }
 
-export type PlantStage = 'seed' | 'sprout' | 'growing' | 'mature' | 'harvestable' | 'withered';
+export type PlantStage = 'seed' | 'sprout' | 'growing' | 'mature' | 'harvestable';
 
 export interface Plant {
   id: string;
   garden_id: string;
   plant_type_id: string;
   position: number;
+  // Earns the harvest: whoever planted the seed or bought the plant.
+  grower_id: string;
   stage: PlantStage;
   growth_progress: number;
   planted_at: string;
-  harvested_at?: string;
+  grown_at: string;
   created_at: string;
   updated_at: string;
   garden: Garden;
@@ -114,6 +119,16 @@ export interface PlantType {
   yield: number;
   harvest_value: number;
   seed_price: number;
+  unlock_level: number;
+}
+
+// What an action paid and to whom.
+export interface Reward {
+  user_id: string;
+  coins: number;
+  experience: number;
+  level: number;
+  level_up: boolean;
 }
 
 export interface SeedInventory {

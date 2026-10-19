@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { Loader, Plus, Users } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { apiService } from '../services/api';
@@ -36,6 +37,7 @@ export function GardenList({ onSelectGarden }: GardenListProps) {
       }));
     } catch (error) {
       console.error('Failed to create garden:', error);
+      toast.error(`Failed to create garden: ${(error as Error).message}`);
     }
   };
 

@@ -40,8 +40,11 @@ func (s *Service) BuySeed(userID uuid.UUID, plantTypeID uuid.UUID, quantity int)
 
 	totalCost := plantType.SeedPrice * quantity
 	coins, err := s.repo.BuySeeds(userID, *plantType, quantity)
-	if errors.Is(err, ErrInsufficientCoins) {
+	switch {
+	case errors.Is(err, ErrInsufficientCoins):
 		return nil, fmt.Errorf("%w: these seeds cost %d coins", err, totalCost)
+	case errors.Is(err, ErrLocked):
+		return nil, fmt.Errorf("%w: %s unlocks at level %d", err, plantType.Name, plantType.UnlockLevel)
 	}
 	if err != nil {
 		return nil, err

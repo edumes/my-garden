@@ -1,6 +1,7 @@
 import { CheckCircle, DollarSign, Loader, Plus, Search, ShoppingCart } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { useAuth } from '../../contexts/AuthContext';
 import { apiService } from '../../services/api';
 import { ListingStatus, Plant, PlantListing } from '../../types/api';
 import { Badge } from '../ui/badge';
@@ -15,6 +16,8 @@ interface PlantListingsTabProps {
 }
 
 export function PlantListingsTab({ onRefresh }: PlantListingsTabProps) {
+  const { user } = useAuth();
+  const userId = user?.id;
   const [listings, setListings] = useState<PlantListing[]>([]);
   const [userPlants, setUserPlants] = useState<Plant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,21 +35,23 @@ export function PlantListingsTab({ onRefresh }: PlantListingsTabProps) {
       .then(([listingsResponse, gardensResponse]) => {
         setListings(listingsResponse.listings);
 
-        // Get user's plants from all gardens
-        const allPlants: Plant[] = [];
-        gardensResponse.owned_gardens.forEach(garden => {
-          if (garden.plants) {
-            allPlants.push(...garden.plants);
-          }
-        });
-        setUserPlants(allPlants);
+        // Players can list the plants they grow, in their own or shared gardens.
+        const gardens = [
+          ...gardensResponse.owned_gardens,
+          ...gardensResponse.shared_gardens.map(shared => shared.garden),
+        ];
+        setUserPlants(gardens.flatMap(garden =>
+          (garden.plants ?? [])
+            .filter(plant => plant.grower_id === userId)
+            .map(plant => ({ ...plant, garden }))
+        ));
       })
       .catch((error) => {
         console.error('Failed to load plant listings:', error);
         toast.error('Failed to load plant listings');
       })
       .finally(() => setLoading(false)),
-  []);
+  [userId]);
 
   useEffect(() => {
     loadData();

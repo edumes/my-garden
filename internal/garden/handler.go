@@ -93,7 +93,7 @@ func (h *GardenHandler) GetGardens(c *gin.Context) {
 
 // CreateGarden godoc
 // @Summary Create a new garden
-// @Description Create a new garden for the current user
+// @Description Create a new garden for the current user. Players own one garden at levels 1 and 2 and one more every two levels
 // @Tags gardens
 // @Accept json
 // @Produce json
@@ -102,6 +102,7 @@ func (h *GardenHandler) GetGardens(c *gin.Context) {
 // @Success 201 {object} map[string]interface{} "Created garden"
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 403 {object} map[string]interface{} "Garden limit for the player's level reached"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /gardens [post]
 func (h *GardenHandler) CreateGarden(c *gin.Context) {
@@ -123,7 +124,28 @@ func (h *GardenHandler) CreateGarden(c *gin.Context) {
 		Description: req.Description,
 	}
 
-	if err := h.db.DB.Create(&garden).Error; err != nil {
+	err := h.db.DB.Transaction(func(tx *gorm.DB) error {
+		// Locking the owner's row serializes their garden creations, so
+		// concurrent requests cannot exceed the limit.
+		var level int
+		if err := tx.Raw("SELECT level FROM users WHERE id = ? FOR UPDATE", garden.UserID).Scan(&level).Error; err != nil {
+			return err
+		}
+		var owned int64
+		if err := tx.Model(&Garden{}).Where("user_id = ?", garden.UserID).Count(&owned).Error; err != nil {
+			return err
+		}
+		if int(owned) >= MaxGardens(level) {
+			return gardenLimitError{owned: int(owned), nextLevel: 2*int(owned) + 1}
+		}
+		return tx.Create(&garden).Error
+	})
+	var limit gardenLimitError
+	switch {
+	case errors.As(err, &limit):
+		c.JSON(http.StatusForbidden, gin.H{"error": limit.Error()})
+		return
+	case err != nil:
 		h.auditService.LogFailure(c, audit.AuditActionGardenCreate, audit.AuditResourceGarden, &garden.ID, gin.H{"error": "Failed to create garden"})
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create garden"})
 		return
@@ -298,14 +320,14 @@ func (h *GardenHandler) DeleteGarden(c *gin.Context) {
 
 // PlantSeed godoc
 // @Summary Plant a seed
-// @Description Plant a seed in a garden
+// @Description Plant one of your seeds in a garden plot and earn experience
 // @Tags plants
 // @Accept json
 // @Produce json
 // @Security bearer
 // @Param id path string true "Garden ID" example("123e4567-e89b-12d3-a456-426614174000")
 // @Param request body PlantRequest true "Plant data"
-// @Success 201 {object} map[string]interface{} "Planted seed"
+// @Success 201 {object} map[string]interface{} "Planted seed and the planting reward"
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Failure 404 {object} map[string]interface{} "Garden or plant type not found"
@@ -346,12 +368,16 @@ func (h *GardenHandler) PlantSeed(c *gin.Context) {
 		return
 	}
 
+	now := time.Now()
 	plant := Plant{
 		GardenID:    gardenID,
 		PlantTypeID: req.PlantTypeID,
+		GrowerID:    userID.(uuid.UUID),
 		Position:    *req.Position,
-		PlantedAt:   time.Now(),
+		PlantedAt:   now,
+		GrownAt:     now,
 	}
+	reward := Reward{UserID: plant.GrowerID, Experience: auth.PlantingExperience}
 	err = h.db.DB.Transaction(func(tx *gorm.DB) error {
 		// Spend a seed only while the caller still has one, so concurrent
 		// requests cannot plant more seeds than they own.
@@ -374,7 +400,10 @@ func (h *GardenHandler) PlantSeed(c *gin.Context) {
 		if created.RowsAffected == 0 {
 			return errPositionTaken
 		}
-		return nil
+
+		var err error
+		reward.Level, reward.LevelUp, err = auth.GrantExperience(tx, reward.UserID, reward.Experience)
+		return err
 	})
 	switch {
 	case errors.Is(err, errNoSeeds):
@@ -402,19 +431,19 @@ func (h *GardenHandler) PlantSeed(c *gin.Context) {
 		"plant_id":      plant.ID,
 	})
 
-	c.JSON(http.StatusCreated, gin.H{"plant": plant})
+	c.JSON(http.StatusCreated, gin.H{"plant": plant, "reward": reward})
 }
 
 // HarvestPlant godoc
 // @Summary Harvest a plant
-// @Description Harvest a mature plant to get rewards
+// @Description Harvest a ripe plant, freeing its plot. Its grower, who planted or bought it, earns its coins and experience
 // @Tags plants
 // @Accept json
 // @Produce json
 // @Security bearer
 // @Param id path string true "Garden ID" example("123e4567-e89b-12d3-a456-426614174000")
 // @Param plantId path string true "Plant ID" example("123e4567-e89b-12d3-a456-426614174001")
-// @Success 200 {object} map[string]interface{} "Harvest results"
+// @Success 200 {object} map[string]interface{} "Reward paid to the plant's grower"
 // @Failure 400 {object} map[string]interface{} "Bad Request - Plant not ready for harvest"
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Failure 404 {object} map[string]interface{} "Plant not found"
@@ -422,12 +451,6 @@ func (h *GardenHandler) PlantSeed(c *gin.Context) {
 // @Failure 403 {object} map[string]interface{} "Forbidden - Missing garden permission"
 // @Router /gardens/{id}/plants/{plantId}/harvest [post]
 func (h *GardenHandler) HarvestPlant(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
-		return
-	}
-
 	gardenID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid garden ID"})
@@ -462,40 +485,33 @@ func (h *GardenHandler) HarvestPlant(c *gin.Context) {
 		return
 	}
 
-	coinsEarned := plant.PlantType.HarvestValue * plant.PlantType.Yield
-	now := time.Now()
-	var user auth.User
-	var oldLevel int
+	// The plant's grower earns the harvest, whoever harvests it.
+	reward := Reward{
+		Coins:      plant.PlantType.HarvestValue * plant.PlantType.Yield,
+		Experience: plant.PlantType.GrowthTime,
+	}
 	err = h.db.DB.Transaction(func(tx *gorm.DB) error {
-		// Only one request can move the plant out of harvestable, so it pays once.
-		claim := tx.Model(&Plant{}).
-			Where("id = ? AND stage = ?", plantID, PlantStageHarvestable).
-			Updates(map[string]any{
-				"stage":           PlantStageSeed,
-				"growth_progress": 0,
-				"planted_at":      now,
-				"harvested_at":    now,
-			})
-		if claim.Error != nil {
-			return claim.Error
+		if err := deleteListingsOf(tx, "SELECT id FROM plants WHERE id = ?", plantID); err != nil {
+			return err
 		}
-		if claim.RowsAffected == 0 {
+		// Deleting the plant claims it, so concurrent harvests pay once.
+		var harvested Plant
+		if err := tx.Raw(`DELETE FROM plants WHERE id = ? AND garden_id = ? AND stage = ? RETURNING *`,
+			plantID, gardenID, PlantStageHarvestable).Scan(&harvested).Error; err != nil {
+			return err
+		}
+		if harvested.ID == uuid.Nil {
 			return errNotHarvestable
 		}
 
-		if err := tx.Model(&auth.User{}).Where("id = ?", userID).
-			Update("coins", gorm.Expr("coins + ?", coinsEarned)).Error; err != nil {
+		reward.UserID = harvested.GrowerID
+		if err := tx.Model(&auth.User{}).Where("id = ?", reward.UserID).
+			Update("coins", gorm.Expr("coins + ?", reward.Coins)).Error; err != nil {
 			return err
 		}
-		if err := tx.Take(&user, "id = ?", userID).Error; err != nil {
-			return err
-		}
-		oldLevel = user.Level
-		user.Level = calculateLevel(user.Experience)
-		if user.Level == oldLevel {
-			return nil
-		}
-		return tx.Model(&user).Update("level", user.Level).Error
+		var err error
+		reward.Level, reward.LevelUp, err = auth.GrantExperience(tx, reward.UserID, reward.Experience)
+		return err
 	})
 	switch {
 	case errors.Is(err, errNotHarvestable):
@@ -505,29 +521,18 @@ func (h *GardenHandler) HarvestPlant(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to harvest plant"})
 		return
 	}
-	if err := h.db.DB.Preload("PlantType").Take(&plant, "id = ?", plantID).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch plant"})
-		return
-	}
-
-	response := gin.H{
-		"plant": plant,
-		"harvest": gin.H{
-			"coins_earned": coinsEarned,
-			"level_up":     user.Level > oldLevel,
-			"new_level":    user.Level,
-		},
-	}
 
 	h.auditService.LogSuccess(c, audit.AuditActionPlantHarvest, audit.AuditResourcePlant, &plant.ID, gin.H{
 		"garden_id":    gardenID,
 		"plant_id":     plantID,
-		"coins_earned": coinsEarned,
-		"level_up":     user.Level > oldLevel,
-		"new_level":    user.Level,
+		"rewarded":     reward.UserID,
+		"coins_earned": reward.Coins,
+		"experience":   reward.Experience,
+		"level_up":     reward.LevelUp,
+		"new_level":    reward.Level,
 	})
 
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, gin.H{"reward": reward})
 }
 
 // RemovePlant godoc
@@ -604,7 +609,7 @@ func (h *GardenHandler) RemovePlant(c *gin.Context) {
 // @Router /plants [get]
 func (h *GardenHandler) ListPlantTypes(c *gin.Context) {
 	var plantTypes []PlantType
-	if err := h.db.DB.Find(&plantTypes).Error; err != nil {
+	if err := h.db.DB.Order("unlock_level, seed_price, name").Find(&plantTypes).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch plant types"})
 		return
 	}
@@ -622,17 +627,3 @@ var (
 	errPositionTaken  = errors.New("garden position already occupied")
 	errNotHarvestable = errors.New("plant is not ready for harvest")
 )
-
-// Helper function to calculate level from experience
-func calculateLevel(experience int) int {
-	// Simple level calculation: every 100 XP = 1 level
-	return (experience / 100) + 1
-}
-
-// Helper function to get minimum value
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

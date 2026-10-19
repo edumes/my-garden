@@ -8,6 +8,25 @@ Deliver a complete and rewarding garden loop before expanding secondary systems.
 
 - Phase 2 has secured inventory, balances, and garden access.
 
+## Decisions
+
+Made by Eduardo on 2026-10-19:
+
+- `growth_time` is real minutes. `GAME_SPEED` multiplies growth to speed up development and tests without changing the rules.
+- Harvesting removes the plant and frees its plot; replanting needs a new seed. The seed catalog is rebalanced so every harvest pays back its seed with a profit.
+- The plant's grower earns the harvest's coins and experience, whoever harvests: the player who planted it, or who bought it on the marketplace.
+- Ripe plants never wither.
+- Planting, harvesting, marketplace sales, and completed deliveries grant experience. Going from level n to n+1 costs 100×n experience.
+- Levels unlock seed types and more gardens.
+- The `/game/status` and `/game/leaderboard` placeholders are removed; leaderboards belong to Phase 6.
+
+Values chosen during implementation, open to tuning after playtesting:
+
+- Planting grants 2 XP; harvesting grants the plant's growth time in minutes; each sale or completed delivery grants 10 XP.
+- A player owns at most (level + 1) / 2 gardens: one at levels 1 and 2, two at levels 3 and 4, and so on.
+- Seeds unlock in six tiers by price, from level 1 to level 6. Each harvest returns the seed price plus growth minutes × a rate from 0.20 coins per minute at level 1 to 0.45 at level 6.
+- Marketplace purchases need a free plot in one of the buyer's gardens, so the garden limit has no loophole.
+
 ## Player loop
 
 1. Create a garden.

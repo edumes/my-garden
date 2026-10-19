@@ -29,7 +29,7 @@ func respondError(c *gin.Context, err error) {
 		status = http.StatusForbidden
 	case errors.Is(err, ErrNotFound):
 		status = http.StatusNotFound
-	case errors.Is(err, ErrNotAvailable), errors.Is(err, ErrAlreadyListed), errors.Is(err, ErrRequesterBroke):
+	case errors.Is(err, ErrNotAvailable), errors.Is(err, ErrAlreadyListed), errors.Is(err, ErrRequesterBroke), errors.Is(err, ErrNoFreePlot):
 		status = http.StatusConflict
 	}
 	message := err.Error()
@@ -151,7 +151,7 @@ func (h *Handler) CompleteDeliveryRequest(c *gin.Context) {
 
 // CreatePlantListing godoc
 // @Summary List a plant for sale
-// @Description List a harvestable plant from one of your gardens for 7 days
+// @Description List a harvestable plant you grow for 7 days
 // @Tags marketplace
 // @Accept json
 // @Produce json
@@ -159,7 +159,7 @@ func (h *Handler) CompleteDeliveryRequest(c *gin.Context) {
 // @Param request body CreatePlantListingRequest true "Listing data"
 // @Success 201 {object} PlantListing
 // @Failure 400 {object} ErrorResponse "Invalid price or plant not harvestable"
-// @Failure 403 {object} ErrorResponse "Plant is not in one of your gardens"
+// @Failure 403 {object} ErrorResponse "You do not grow this plant"
 // @Failure 404 {object} ErrorResponse "Plant not found"
 // @Failure 409 {object} ErrorResponse "Plant already listed"
 // @Router /marketplace/listings [post]
@@ -220,7 +220,7 @@ func (h *Handler) GetPlantListings(c *gin.Context) {
 
 // PurchasePlantListing godoc
 // @Summary Buy a plant listing
-// @Description Pay for a listing with coins; the plant moves to a free cell in your gardens
+// @Description Pay for a listing with coins; the plant moves to the first free plot in your gardens
 // @Tags marketplace
 // @Produce json
 // @Security bearer
@@ -228,7 +228,7 @@ func (h *Handler) GetPlantListings(c *gin.Context) {
 // @Success 200 {object} SuccessResponse
 // @Failure 400 {object} ErrorResponse "Own listing or not enough coins"
 // @Failure 404 {object} ErrorResponse "Listing not found"
-// @Failure 409 {object} ErrorResponse "Listing sold, expired, or its plant is gone"
+// @Failure 409 {object} ErrorResponse "Listing sold or expired, its plant is gone, or you have no free plot"
 // @Router /marketplace/listings/{id}/buy [post]
 func (h *Handler) PurchasePlantListing(c *gin.Context) {
 	id, ok := parseID(c)

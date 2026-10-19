@@ -16,8 +16,9 @@ export function UserProfile() {
 
   if (!profile) return null;
 
-  const experienceToNextLevel = (profile.level * 100) - profile.experience;
-  const progressPercentage = (profile.experience % 100);
+  const experienceToNextLevel = profile.next_level_experience - profile.experience;
+  const progressPercentage = 100 * (profile.experience - profile.level_experience) /
+    (profile.next_level_experience - profile.level_experience);
 
   return (
     <div className="space-y-4 sm:space-y-6">

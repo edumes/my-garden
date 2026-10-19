@@ -78,9 +78,10 @@ While the API runs, Swagger UI is available at http://localhost:8080/api/v1/swag
 
 - **Accounts**: registration, login, JWT refresh and logout, profile view and update. Logging out revokes every token of the player, on every device.
 - **Abuse protection**: each client IP may send `RATE_LIMIT_REQUESTS` non-GET requests, sign-in included, per `RATE_LIMIT_WINDOW`; further requests get `429 Too Many Requests`. Outside `ENV=development` the API refuses to start with the development `JWT_SECRET` or `DB_PASSWORD`. See [env.example](env.example).
-- **Gardens**: create, rename, and delete gardens; plant seeds, harvest, and remove plants. A server-side game tick moves plants through seed → sprout → growing → mature → harvestable.
-- **Progression**: harvesting earns coins (harvest value × yield). Players have experience and levels, but no action grants experience yet.
-- **Store**: browse seeds and buy them with coins. Purchases of the same seed add up in one inventory entry, and balances and seed counts can never go negative.
+- **Gardens**: create, rename, and delete gardens of 3×3 plots; plant seeds, harvest, and remove plants. Plants grow in real time: a plant ripens in its growth time in minutes, scaled by the current weather and by `GAME_SPEED` (use 60 in development to turn minutes into seconds), passing through seed → sprout → growing → mature → harvestable. Ripe plants wait until harvested.
+- **Harvests**: harvesting frees the plot and pays harvest value × yield, always more than the seed cost. The plant's grower, who planted or bought it, earns the coins and experience, whoever harvests.
+- **Progression**: planting grants 2 XP, harvesting grants the plant's growth time in minutes as XP, and each marketplace sale or completed delivery grants 10 XP. Going from level n to n+1 costs 100×n XP. Levels unlock seed types (levels 1 to 6) and more gardens: one at levels 1 and 2, then one more every two levels.
+- **Store**: browse seeds and buy the ones your level unlocks with coins. Purchases of the same seed add up in one inventory entry, and balances and seed counts can never go negative.
 - **Weather**: current weather, forecast, history, and seasons. The current weather multiplies plant growth.
 - **Garden sharing**: access links with permissions, expiration dates, and usage limits; joining shared gardens and managing members' permissions. Permissions are independent capabilities (view, plant, harvest, manage): manage grants all of them, any share grants view, and only the owner can delete the garden or manage its shares.
 - **Marketplace**: delivery requests and plant listings paid in coins. Sales and deliveries settle atomically and apply once, even when repeated or concurrent. See [docs/MARKETPLACE.md](docs/MARKETPLACE.md).
@@ -88,7 +89,7 @@ While the API runs, Swagger UI is available at http://localhost:8080/api/v1/swag
 
 ### Not implemented yet
 
-- Real-time updates, game status, and leaderboards: `/api/v1/ws/garden/{gardenId}`, `/api/v1/game/status`, and `/api/v1/game/leaderboard` return "coming soon" placeholders.
+- Real-time updates: `/api/v1/ws/garden/{gardenId}` returns a "coming soon" placeholder. Real-time updates and leaderboards belong to the [social and real-time phase](docs/plans/06-social-and-realtime.md).
 - Achievements: seeded in the database, but no API exposes them.
 - The settings page shows notification, two-factor authentication, and account deletion controls that have no backend.
 

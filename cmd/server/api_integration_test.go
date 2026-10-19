@@ -210,18 +210,25 @@ func TestGardenHappyPath(t *testing.T) {
 	).Error)
 
 	var harvested struct {
-		Harvest struct {
-			CoinsEarned int `json:"coins_earned"`
-		} `json:"harvest"`
+		Reward struct {
+			UserID     uuid.UUID `json:"user_id"`
+			Coins      int       `json:"coins"`
+			Experience int       `json:"experience"`
+		} `json:"reward"`
 	}
 	a.call(http.MethodPost, "/gardens/"+gardenID+"/plants/"+planted.Plant.ID+"/harvest", nil, http.StatusOK, &harvested)
-	require.Equal(t, lettuce.HarvestValue*lettuce.Yield, harvested.Harvest.CoinsEarned)
+	require.Equal(t, player.User.ID, harvested.Reward.UserID)
+	require.Equal(t, lettuce.HarvestValue*lettuce.Yield, harvested.Reward.Coins)
+	require.Greater(t, harvested.Reward.Coins, lettuce.SeedPrice, "a harvest pays back its seed")
 
 	var profile struct {
 		User struct {
-			Coins int `json:"coins"`
+			Coins      int `json:"coins"`
+			Experience int `json:"experience"`
 		} `json:"user"`
 	}
 	a.call(http.MethodGet, "/users/profile", nil, http.StatusOK, &profile)
-	require.Equal(t, purchase.UserCoins+harvested.Harvest.CoinsEarned, profile.User.Coins)
+	require.Equal(t, purchase.UserCoins+harvested.Reward.Coins, profile.User.Coins)
+	require.Equal(t, 2+harvested.Reward.Experience, profile.User.Experience, "planting and harvesting both grant experience")
+	require.EqualValues(t, 0, plantsIn(t, db, gardenID), "harvesting frees the plot")
 }

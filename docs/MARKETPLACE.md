@@ -12,14 +12,14 @@ Players trade with the same coins they earn from harvests and spend in the store
 - The deadline must be at least one hour in the future.
 - The requester must hold the reward when creating the request, but it is charged only when the request is completed.
 - Another player accepts the request before its deadline; only one player can accept it.
-- The accepting player completes the request and receives the reward. Completing after the deadline pays 80% of the reward.
+- The accepting player completes the request and receives the reward and 10 XP. Completing after the deadline pays 80% of the reward.
 
 ### Plant listings
 
-- A player lists a harvestable plant from one of their own gardens at a fixed price of at least 1 coin.
+- A player lists a harvestable plant they grow, in their own or a shared garden, at a fixed price of at least 1 coin.
 - A plant can have only one active listing. Listings expire after 7 days, after which the plant can be listed again.
 - Listings can be filtered by plant type and price range.
-- Buying a listing charges the buyer the full price and pays the seller the price minus a 0.5% commission, rounded down. The plant moves to the first free cell across the buyer's gardens; a "Marketplace Purchases" garden is created when every cell is taken.
+- Buying a listing charges the buyer the full price and pays the seller the price minus a 0.5% commission, rounded down, plus 10 XP. The plant moves to the first free plot across the buyer's gardens, and the buyer becomes its grower, who earns its harvest. A buyer without a free plot gets `409 Conflict` and nothing changes.
 
 ### Integrity guarantees
 
@@ -71,6 +71,6 @@ The [marketplace phase](plans/05-marketplace.md) of the development plan address
 
 - Completing a delivery request does not check or transfer any plant.
 - Accepted requests disappear from `GET /delivery-requests`, so the interface cannot show a player the requests they accepted.
-- Listings cannot be cancelled, and the seller can still harvest or remove a listed plant. Removing it deletes the listing; harvesting it resets it to a seed, which the buyer then receives.
+- Listings cannot be cancelled, and the plant can still be harvested or removed while listed; either deletes the listing.
 - There is no economic history beyond the status and buyer of each listing and request.
 - Reputation no longer exists.

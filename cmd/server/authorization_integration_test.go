@@ -56,15 +56,7 @@ func TestGardenPermissionMatrix(t *testing.T) {
 			}).Error)
 		}
 
-		plant := garden.Plant{
-			GardenID:       g.ID,
-			PlantTypeID:    lettuce.ID,
-			Position:       0,
-			Stage:          garden.PlantStageHarvestable,
-			GrowthProgress: 100,
-			PlantedAt:      time.Now(),
-		}
-		require.NoError(t, db.DB.Create(&plant).Error)
+		plant := ripePlant(t, db, g.ID, owner, lettuce, 0)
 		return g.ID, plant.ID
 	}
 

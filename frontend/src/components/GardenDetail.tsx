@@ -62,14 +62,15 @@ export function GardenDetail({ garden: initialGarden, isOwner, permissions, onBa
 
       switch (action) {
         case 'harvest': {
-          const harvestResponse = await apiService.harvestPlant(garden.id, plantId);
+          const { reward } = await apiService.harvestPlant(garden.id, plantId);
           await refreshUser();
 
-          const message = `Harvested! +${harvestResponse.harvest.coins_earned} coins`;
-          if (harvestResponse.harvest.level_up) {
-            toast.success(`${message} | Level up! You're now level ${harvestResponse.harvest.new_level}`);
+          if (reward.user_id !== user?.id) {
+            toast.success(`Harvested! ${reward.coins} coins and ${reward.experience} XP went to the player who grew it`);
+          } else if (reward.level_up) {
+            toast.success(`Harvested! +${reward.coins} coins, +${reward.experience} XP | Level up! You're now level ${reward.level}`);
           } else {
-            toast.success(message);
+            toast.success(`Harvested! +${reward.coins} coins, +${reward.experience} XP`);
           }
           break;
         }
@@ -99,15 +100,17 @@ export function GardenDetail({ garden: initialGarden, isOwner, permissions, onBa
     if (selectedPosition === null) return;
 
     try {
-      await apiService.plantSeed(garden.id, {
+      const { reward } = await apiService.plantSeed(garden.id, {
         plant_type_id: plantTypeId,
         position: selectedPosition,
       });
 
       setShowPlantModal(false);
       setSelectedPosition(null);
-      await loadGardenDetails();
-      toast.success('Seed planted successfully!');
+      await Promise.all([loadGardenDetails(), refreshUser()]);
+      toast.success(reward.level_up
+        ? `Seed planted successfully! Level up! You're now level ${reward.level}`
+        : 'Seed planted successfully!');
     } catch (error) {
       console.error('Failed to plant seed:', error);
       toast.error('Failed to plant seed');

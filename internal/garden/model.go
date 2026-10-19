@@ -40,19 +40,27 @@ type Plant struct {
 	// Position in garden grid (0-8 for 3x3 grid)
 	Position int `json:"position" gorm:"not null;uniqueIndex:idx_plants_garden_position"`
 
+	// GrowerID earns the harvest's coins and experience, whoever harvests:
+	// the player who spent the seed, or who bought the plant on the
+	// marketplace.
+	GrowerID uuid.UUID `json:"grower_id" gorm:"type:uuid;not null"`
+
 	// Plant state
 	Stage          PlantStage `json:"stage" gorm:"default:'seed'"`
 	GrowthProgress float64    `json:"growth_progress" gorm:"default:0"` // 0-100
 
 	// Timestamps
-	PlantedAt   time.Time  `json:"planted_at"`
-	HarvestedAt *time.Time `json:"harvested_at"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	PlantedAt time.Time `json:"planted_at"`
+	// GrownAt is when growth was last applied; the next tick grows the plant
+	// from here.
+	GrownAt   time.Time `json:"grown_at" gorm:"not null;default:CURRENT_TIMESTAMP"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 
 	// Relationships
-	Garden    Garden    `json:"garden" gorm:"foreignKey:GardenID"`
-	PlantType PlantType `json:"plant_type" gorm:"foreignKey:PlantTypeID"`
+	Garden    Garden           `json:"garden" gorm:"foreignKey:GardenID"`
+	PlantType PlantType        `json:"plant_type" gorm:"foreignKey:PlantTypeID"`
+	Grower    *auth.PublicUser `json:"grower,omitempty" gorm:"foreignKey:GrowerID"`
 }
 
 func (p *Plant) BeforeCreate(tx *gorm.DB) error {
@@ -81,12 +89,13 @@ type PlantType struct {
 	Icon        string    `json:"icon"`
 
 	// Growth properties
-	GrowthTime   int `json:"growth_time" gorm:"not null"` // in minutes
+	GrowthTime   int `json:"growth_time" gorm:"not null"` // minutes to ripen at normal weather and GAME_SPEED=1
 	Yield        int `json:"yield" gorm:"default:1"`      // items per harvest
-	HarvestValue int `json:"harvest_value"`
+	HarvestValue int `json:"harvest_value"`               // coins per item
 
 	// Store properties
-	SeedPrice int `json:"seed_price" gorm:"default:10"` // coins per seed
+	SeedPrice   int `json:"seed_price" gorm:"default:10"`           // coins per seed
+	UnlockLevel int `json:"unlock_level" gorm:"not null;default:1"` // level needed to buy its seeds
 }
 
 // SeedInventory represents user's purchased seeds

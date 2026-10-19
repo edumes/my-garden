@@ -86,66 +86,16 @@ func (g *GameEngine) weatherUpdateLoop() {
 }
 
 func (g *GameEngine) processGameTick() {
-	log.Println("Processing game tick...")
-
-	// Get current weather
-	currentWeather, err := g.weatherSvc.GetCurrentWeather()
-	if err != nil {
-		log.Printf("Failed to get current weather: %v", err)
-		return
+	// Without current weather, plants grow at the normal rate.
+	multiplier := 1.0
+	if current, err := g.weatherSvc.GetCurrentWeather(); err == nil {
+		multiplier = current.GrowthMultiplier
+	} else {
+		log.Printf("Growing plants without weather effects: %v", err)
 	}
 
-	// Process all plants
-	var plants []garden.Plant
-	if err := g.db.DB.Preload("PlantType").Preload("Garden").Find(&plants).Error; err != nil {
-		log.Printf("Failed to fetch plants: %v", err)
-		return
-	}
-
-	for _, plant := range plants {
-		g.processPlantGrowth(&plant, currentWeather)
-	}
-}
-
-func (g *GameEngine) processPlantGrowth(plant *garden.Plant, weather *weather.Weather) {
-	// Skip if plant is already harvested or withered
-	if plant.Stage == garden.PlantStageHarvestable {
-		return
-	}
-
-	// Calculate growth progress
-	baseGrowthRate := 5000.0 / float64(plant.PlantType.GrowthTime) // Growth per minute
-	weatherMultiplier := weather.GrowthMultiplier
-
-	// Calculate total growth for this tick
-	tickDuration := g.config.Game.TickInterval.Minutes()
-	growthIncrement := baseGrowthRate * weatherMultiplier * tickDuration
-
-	plant.GrowthProgress += growthIncrement
-
-	// Update plant stage based on growth progress
-	g.updatePlantStage(plant)
-
-	// Save plant changes
-	if err := g.db.DB.Save(plant).Error; err != nil {
-		log.Printf("Failed to save plant %s: %v", plant.ID, err)
-	}
-}
-
-func (g *GameEngine) updatePlantStage(plant *garden.Plant) {
-	progress := plant.GrowthProgress
-
-	switch {
-	case progress < 20:
-		plant.Stage = garden.PlantStageSeed
-	case progress < 40:
-		plant.Stage = garden.PlantStageSprout
-	case progress < 70:
-		plant.Stage = garden.PlantStageGrowing
-	case progress < 100:
-		plant.Stage = garden.PlantStageMature
-	default:
-		plant.Stage = garden.PlantStageHarvestable
+	if err := garden.GrowPlants(g.db.DB, time.Now(), multiplier, g.config.Game.Speed); err != nil {
+		log.Printf("Failed to grow plants: %v", err)
 	}
 }
 

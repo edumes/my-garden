@@ -67,6 +67,8 @@ export function Store({ onClose, open }: StoreProps) {
     return user.coins >= getTotalCost(plantType);
   };
 
+  const isLocked = (plantType: PlantType) => (user?.level ?? 1) < plantType.unlock_level;
+
   const handlePurchase = async (plantType: PlantType) => {
     if (!user) return;
 
@@ -199,7 +201,7 @@ export function Store({ onClose, open }: StoreProps) {
                     <Button
                       className="w-full"
                       onClick={() => handlePurchase(plantType)}
-                      disabled={!canAfford(plantType) || purchasing === plantType.id}
+                      disabled={isLocked(plantType) || !canAfford(plantType) || purchasing === plantType.id}
                     >
                       {purchasing === plantType.id ? (
                         'Purchasing...'
@@ -211,7 +213,11 @@ export function Store({ onClose, open }: StoreProps) {
                       )}
                     </Button>
 
-                    {!canAfford(plantType) && (
+                    {isLocked(plantType) ? (
+                      <p className="text-xs text-muted-foreground text-center">
+                        Unlocks at level {plantType.unlock_level}
+                      </p>
+                    ) : !canAfford(plantType) && (
                       <p className="text-xs text-destructive text-center">
                         Not enough coins
                       </p>

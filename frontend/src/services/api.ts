@@ -19,6 +19,7 @@ import {
   Plant,
   PlantListing,
   PlantType,
+  Reward,
   SeedInventory,
   SharedGardenResponse,
   UpdateProfileRequest,
@@ -147,21 +148,15 @@ class ApiService {
 
   // Plants
   async plantSeed(gardenId: string, data: { plant_type_id: string; position: number }) {
-    return this.request<{ plant: Plant }>(`/gardens/${gardenId}/plants`, {
+    return this.request<{ plant: Plant; reward: Reward }>(`/gardens/${gardenId}/plants`, {
       method: 'POST',
       data: data,
     });
   }
 
+  // Harvesting removes the plant; its grower receives the reward.
   async harvestPlant(gardenId: string, plantId: string) {
-    return this.request<{
-      plant: Plant;
-      harvest: {
-        coins_earned: number;
-        level_up: boolean;
-        new_level: number;
-      }
-    }>(`/gardens/${gardenId}/plants/${plantId}/harvest`, {
+    return this.request<{ reward: Reward }>(`/gardens/${gardenId}/plants/${plantId}/harvest`, {
       method: 'POST',
     });
   }

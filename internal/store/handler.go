@@ -66,6 +66,7 @@ func (h *StoreHandler) GetStoreInventory(c *gin.Context) {
 // @Success 200 {object} BuySeedResponse "Purchase successful"
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 403 {object} map[string]interface{} "Seed unlocks at a higher level"
 // @Failure 404 {object} map[string]interface{} "Plant type not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /store/buy [post]
@@ -89,6 +90,8 @@ func (h *StoreHandler) BuySeed(c *gin.Context) {
 		switch {
 		case errors.Is(err, ErrInvalidQuantity), errors.Is(err, ErrInsufficientCoins):
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case errors.Is(err, ErrLocked):
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		case errors.Is(err, gorm.ErrRecordNotFound):
 			c.JSON(http.StatusNotFound, gin.H{"error": "Plant type not found"})
 		default:

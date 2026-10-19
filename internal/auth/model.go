@@ -8,23 +8,26 @@ import (
 )
 
 type User struct {
-	ID           uuid.UUID         `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
-	Username     string            `json:"username" gorm:"uniqueIndex;not null"`
-	Email        string            `json:"email" gorm:"uniqueIndex;not null"`
-	FirstName    string            `json:"first_name"`
-	LastName     string            `json:"last_name"`
-	PasswordHash string            `json:"-" gorm:"not null"`
-	Avatar       string            `json:"avatar"`
-	Level        int               `json:"level" gorm:"default:1"`
-	Experience   int               `json:"experience" gorm:"default:0"`
-	Coins        int               `json:"coins" gorm:"default:100;check:chk_users_coins,coins >= 0"`
-	Timezone     string            `json:"timezone" gorm:"default:'UTC'"`
-	Language     string            `json:"language" gorm:"default:'en'"`
-	LastLoginAt  *time.Time        `json:"last_login_at"`
-	TokenVersion int               `json:"-" gorm:"not null;default:0"`
-	CreatedAt    time.Time         `json:"created_at"`
-	UpdatedAt    time.Time         `json:"updated_at"`
-	Achievements []UserAchievement `gorm:"foreignKey:UserID"`
+	ID           uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+	Username     string    `json:"username" gorm:"uniqueIndex;not null"`
+	Email        string    `json:"email" gorm:"uniqueIndex;not null"`
+	FirstName    string    `json:"first_name"`
+	LastName     string    `json:"last_name"`
+	PasswordHash string    `json:"-" gorm:"not null"`
+	Avatar       string    `json:"avatar"`
+	Level        int       `json:"level" gorm:"default:1"`
+	Experience   int       `json:"experience" gorm:"default:0"`
+	// Experience at which the current level started and the next one starts.
+	LevelExperience     int               `json:"level_experience" gorm:"-"`
+	NextLevelExperience int               `json:"next_level_experience" gorm:"-"`
+	Coins               int               `json:"coins" gorm:"default:100;check:chk_users_coins,coins >= 0"`
+	Timezone            string            `json:"timezone" gorm:"default:'UTC'"`
+	Language            string            `json:"language" gorm:"default:'en'"`
+	LastLoginAt         *time.Time        `json:"last_login_at"`
+	TokenVersion        int               `json:"-" gorm:"not null;default:0"`
+	CreatedAt           time.Time         `json:"created_at"`
+	UpdatedAt           time.Time         `json:"updated_at"`
+	Achievements        []UserAchievement `gorm:"foreignKey:UserID"`
 }
 
 // PublicUser is the part of a profile other players may see. Use it for

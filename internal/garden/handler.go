@@ -17,40 +17,6 @@ type GardenHandler struct {
 	auditService *audit.AuditService
 }
 
-// checkGardenAccess checks if a user has access to a garden and returns the access level
-func (h *GardenHandler) checkGardenAccess(userID, gardenID uuid.UUID) (GardenPermission, error) {
-	// First check if user owns the garden
-	var garden Garden
-	if err := h.db.DB.Where("id = ? AND user_id = ?", gardenID, userID).First(&garden).Error; err == nil {
-		return GardenPermissionManage, nil // Owner has full permissions
-	}
-
-	// Check if user has shared access
-	var share GardenShare
-	if err := h.db.DB.Where("garden_id = ? AND user_id = ?", gardenID, userID).First(&share).Error; err != nil {
-		return "", err
-	}
-
-	// Return the highest permission level
-	highestPerm := GardenPermissionView
-	for _, perm := range share.Permissions {
-		switch perm {
-		case GardenPermissionManage:
-			return GardenPermissionManage, nil
-		case GardenPermissionHarvest:
-			if highestPerm != GardenPermissionManage {
-				highestPerm = GardenPermissionHarvest
-			}
-		case GardenPermissionPlant:
-			if highestPerm != GardenPermissionManage && highestPerm != GardenPermissionHarvest {
-				highestPerm = GardenPermissionPlant
-			}
-		}
-	}
-
-	return highestPerm, nil
-}
-
 func NewGardenHandler(db *database.Database, auditService *audit.AuditService) *GardenHandler {
 	return &GardenHandler{db: db, auditService: auditService}
 }
@@ -97,7 +63,7 @@ func (h *GardenHandler) GetGardens(c *gin.Context) {
 
 	// Get shared gardens
 	var sharedGardens []GardenShare
-	if err := h.db.DB.Where("user_id = ?", userID).
+	if err := h.db.DB.Scopes(unexpiredShares).Where("user_id = ?", userID).
 		Preload("Garden.Plants.PlantType").
 		Preload("Garden.User").
 		Find(&sharedGardens).Error; err != nil {
@@ -176,15 +142,14 @@ func (h *GardenHandler) CreateGarden(c *gin.Context) {
 // @Produce json
 // @Security bearer
 // @Param id path string true "Garden ID" example("123e4567-e89b-12d3-a456-426614174000")
-// @Success 200 {object} map[string]interface{} "Garden details with plants"
+// @Success 200 {object} map[string]interface{} "Garden with plants, whether the caller owns it, and their permissions"
 // @Failure 400 {object} map[string]interface{} "Bad Request - Invalid garden ID"
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Failure 404 {object} map[string]interface{} "Garden not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /gardens/{id} [get]
 func (h *GardenHandler) GetGarden(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
+	if _, exists := c.Get("user_id"); !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -195,14 +160,8 @@ func (h *GardenHandler) GetGarden(c *gin.Context) {
 		return
 	}
 
-	// Check garden access
-	permission, err := h.checkGardenAccess(userID.(uuid.UUID), gardenID)
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Garden not found or access denied"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check garden access"})
+	access, ok := authorizeGarden(c, h.db.DB, gardenID, GardenPermissionView)
+	if !ok {
 		return
 	}
 
@@ -216,13 +175,11 @@ func (h *GardenHandler) GetGarden(c *gin.Context) {
 		return
 	}
 
-	// Add permission info to response
-	response := gin.H{
-		"garden":     garden,
-		"permission": permission,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, gin.H{
+		"garden":      garden,
+		"is_owner":    access.Owner,
+		"permissions": access.Capabilities(),
+	})
 }
 
 // UpdateGarden godoc
@@ -239,10 +196,10 @@ func (h *GardenHandler) GetGarden(c *gin.Context) {
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Failure 404 {object} map[string]interface{} "Garden not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Failure 403 {object} map[string]interface{} "Forbidden - Missing garden permission"
 // @Router /gardens/{id} [put]
 func (h *GardenHandler) UpdateGarden(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
+	if _, exists := c.Get("user_id"); !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -259,12 +216,12 @@ func (h *GardenHandler) UpdateGarden(c *gin.Context) {
 		return
 	}
 
+	if _, ok := authorizeGarden(c, h.db.DB, gardenID, GardenPermissionManage); !ok {
+		return
+	}
+
 	var garden Garden
-	if err := h.db.DB.Where("id = ? AND user_id = ?", gardenID, userID).First(&garden).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Garden not found"})
-			return
-		}
+	if err := h.db.DB.Where("id = ?", gardenID).First(&garden).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch garden"})
 		return
 	}
@@ -298,10 +255,10 @@ func (h *GardenHandler) UpdateGarden(c *gin.Context) {
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Failure 404 {object} map[string]interface{} "Garden not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Failure 403 {object} map[string]interface{} "Forbidden - Missing garden permission"
 // @Router /gardens/{id} [delete]
 func (h *GardenHandler) DeleteGarden(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
+	if _, exists := c.Get("user_id"); !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -312,19 +269,20 @@ func (h *GardenHandler) DeleteGarden(c *gin.Context) {
 		return
 	}
 
-	// Check if garden exists and belongs to user
-	var garden Garden
-	if err := h.db.DB.Where("id = ? AND user_id = ?", gardenID, userID).First(&garden).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Garden not found"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch garden"})
+	if _, ok := authorizeGarden(c, h.db.DB, gardenID, ownerOnly); !ok {
 		return
 	}
 
-	// Delete garden (this will cascade delete plants)
-	if err := h.db.DB.Delete(&garden).Error; err != nil {
+	// The schema has no cascading deletes, so remove dependents first.
+	err = h.db.DB.Transaction(func(tx *gorm.DB) error {
+		for _, dependent := range []any{&Plant{}, &GardenShare{}, &GardenAccessLink{}} {
+			if err := tx.Where("garden_id = ?", gardenID).Delete(dependent).Error; err != nil {
+				return err
+			}
+		}
+		return tx.Delete(&Garden{ID: gardenID}).Error
+	})
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete garden"})
 		return
 	}
@@ -347,6 +305,7 @@ func (h *GardenHandler) DeleteGarden(c *gin.Context) {
 // @Failure 404 {object} map[string]interface{} "Garden or plant type not found"
 // @Failure 409 {object} map[string]interface{} "Position already occupied"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Failure 403 {object} map[string]interface{} "Forbidden - Missing garden permission"
 // @Router /gardens/{id}/plants [post]
 func (h *GardenHandler) PlantSeed(c *gin.Context) {
 	userID, exists := c.Get("user_id")
@@ -367,30 +326,7 @@ func (h *GardenHandler) PlantSeed(c *gin.Context) {
 		return
 	}
 
-	// Check garden access and permissions
-	permission, err := h.checkGardenAccess(userID.(uuid.UUID), gardenID)
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Garden not found or access denied"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check garden access"})
-		return
-	}
-
-	// Check if user has permission to plant
-	if permission != GardenPermissionManage && permission != GardenPermissionPlant {
-		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to plant in this garden"})
-		return
-	}
-
-	var garden Garden
-	if err := h.db.DB.Where("id = ?", gardenID).First(&garden).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Garden not found"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch garden"})
+	if _, ok := authorizeGarden(c, h.db.DB, gardenID, GardenPermissionPlant); !ok {
 		return
 	}
 
@@ -497,6 +433,7 @@ func (h *GardenHandler) PlantSeed(c *gin.Context) {
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Failure 404 {object} map[string]interface{} "Plant not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Failure 403 {object} map[string]interface{} "Forbidden - Missing garden permission"
 // @Router /gardens/{id}/plants/{plantId}/harvest [post]
 func (h *GardenHandler) HarvestPlant(c *gin.Context) {
 	userID, exists := c.Get("user_id")
@@ -517,11 +454,13 @@ func (h *GardenHandler) HarvestPlant(c *gin.Context) {
 		return
 	}
 
-	// Check if plant exists and belongs to user's garden
+	if _, ok := authorizeGarden(c, h.db.DB, gardenID, GardenPermissionHarvest); !ok {
+		return
+	}
+
 	var plant Plant
-	if err := h.db.DB.Joins("JOIN gardens ON plants.garden_id = gardens.id").
-		Preload("PlantType").
-		Where("plants.id = ? AND gardens.id = ? AND gardens.user_id = ?", plantID, gardenID, userID).
+	if err := h.db.DB.Preload("PlantType").
+		Where("id = ? AND garden_id = ?", plantID, gardenID).
 		First(&plant).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Plant not found"})
@@ -611,10 +550,10 @@ func (h *GardenHandler) HarvestPlant(c *gin.Context) {
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Failure 404 {object} map[string]interface{} "Plant not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Failure 403 {object} map[string]interface{} "Forbidden - Missing garden permission"
 // @Router /gardens/{id}/plants/{plantId} [delete]
 func (h *GardenHandler) RemovePlant(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
+	if _, exists := c.Get("user_id"); !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -631,10 +570,12 @@ func (h *GardenHandler) RemovePlant(c *gin.Context) {
 		return
 	}
 
-	// Check if plant exists and belongs to user's garden
+	if _, ok := authorizeGarden(c, h.db.DB, gardenID, GardenPermissionManage); !ok {
+		return
+	}
+
 	var plant Plant
-	if err := h.db.DB.Joins("JOIN gardens ON plants.garden_id = gardens.id").
-		Where("plants.id = ? AND gardens.id = ? AND gardens.user_id = ?", plantID, gardenID, userID).
+	if err := h.db.DB.Where("id = ? AND garden_id = ?", plantID, gardenID).
 		First(&plant).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Plant not found"})

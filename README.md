@@ -81,9 +81,9 @@ While the API runs, Swagger UI is available at http://localhost:8080/api/v1/swag
 - **Progression**: harvesting earns coins (harvest value × yield). Players have experience and levels, but no action grants experience yet.
 - **Store**: browse seeds and buy them with coins.
 - **Weather**: current weather, forecast, history, and seasons. The current weather multiplies plant growth.
-- **Garden sharing**: access links with permissions, expiration dates, and usage limits; joining shared gardens and managing members' permissions.
+- **Garden sharing**: access links with permissions, expiration dates, and usage limits; joining shared gardens and managing members' permissions. Permissions are independent capabilities (view, plant, harvest, manage): manage grants all of them, any share grants view, and only the owner can delete the garden or manage its shares.
 - **Marketplace**: delivery requests, plant listings, wallets, and signed transactions. See [docs/MARKETPLACE.md](docs/MARKETPLACE.md).
-- **Audit log**: API actions are recorded and can be queried. See [docs/AUDIT_SYSTEM.md](docs/AUDIT_SYSTEM.md).
+- **Audit log**: API actions are recorded, and each player can query their own. See [docs/AUDIT_SYSTEM.md](docs/AUDIT_SYSTEM.md).
 
 ### Not implemented yet
 

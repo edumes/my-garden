@@ -403,7 +403,6 @@ export interface AuditStats {
   successful_actions: number;
   failed_actions: number;
   error_actions: number;
-  unique_users: number;
   top_actions: { action: string; count: number }[];
   top_resources: { resource: string; count: number }[];
 }

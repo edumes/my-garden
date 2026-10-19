@@ -22,7 +22,7 @@ const docTemplate = `{
                         "bearer": []
                     }
                 ],
-                "description": "Get recent activity for a specific garden",
+                "description": "Get the current user's recent actions in a garden",
                 "consumes": [
                     "application/json"
                 ],
@@ -88,7 +88,7 @@ const docTemplate = `{
                         "bearer": []
                     }
                 ],
-                "description": "Get audit logs with optional filtering",
+                "description": "Get the current user's audit logs with optional filtering",
                 "consumes": [
                     "application/json"
                 ],
@@ -100,12 +100,6 @@ const docTemplate = `{
                 ],
                 "summary": "Get audit logs",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "User ID filter",
-                        "name": "user_id",
-                        "in": "query"
-                    },
                     {
                         "type": "string",
                         "description": "Action filter",
@@ -196,7 +190,7 @@ const docTemplate = `{
                         "bearer": []
                     }
                 ],
-                "description": "Get audit statistics for the system",
+                "description": "Get audit statistics for the current user's actions",
                 "consumes": [
                     "application/json"
                 ],
@@ -255,7 +249,7 @@ const docTemplate = `{
                         "bearer": []
                     }
                 ],
-                "description": "Get recent activity for a specific user",
+                "description": "Get the current user's recent activity; other users' activity is forbidden",
                 "consumes": [
                     "application/json"
                 ],
@@ -299,6 +293,13 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Another user's activity",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1320,7 +1321,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Garden details with plants",
+                        "description": "Garden with plants, whether the caller owns it, and their permissions",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1414,6 +1415,13 @@ const docTemplate = `{
                             "additionalProperties": true
                         }
                     },
+                    "403": {
+                        "description": "Forbidden - Missing garden permission",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
                     "404": {
                         "description": "Garden not found",
                         "schema": {
@@ -1474,6 +1482,13 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Missing garden permission",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1550,6 +1565,13 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Missing garden permission",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1637,6 +1659,13 @@ const docTemplate = `{
                             "additionalProperties": true
                         }
                     },
+                    "403": {
+                        "description": "Forbidden - Missing garden permission",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
                     "404": {
                         "description": "Plant not found",
                         "schema": {
@@ -1707,6 +1736,13 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Missing garden permission",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2804,13 +2840,15 @@ const docTemplate = `{
                 "view",
                 "plant",
                 "harvest",
-                "manage"
+                "manage",
+                "owner"
             ],
             "x-enum-varnames": [
                 "GardenPermissionView",
                 "GardenPermissionPlant",
                 "GardenPermissionHarvest",
-                "GardenPermissionManage"
+                "GardenPermissionManage",
+                "ownerOnly"
             ]
         },
         "garden.JoinGardenRequest": {

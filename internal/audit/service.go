@@ -119,8 +119,8 @@ func (s *AuditService) GetUserActivity(ctx context.Context, userID uuid.UUID, li
 	return s.repository.GetUserActivity(ctx, userID, limit)
 }
 
-func (s *AuditService) GetGardenActivity(ctx context.Context, gardenID uuid.UUID, limit int) ([]AuditLog, error) {
-	return s.repository.GetGardenActivity(ctx, gardenID, limit)
+func (s *AuditService) GetGardenActivity(ctx context.Context, userID, gardenID uuid.UUID, limit int) ([]AuditLog, error) {
+	return s.repository.GetGardenActivity(ctx, userID, gardenID, limit)
 }
 
 func (s *AuditService) getClientIP(r *http.Request) string {

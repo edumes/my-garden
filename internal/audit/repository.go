@@ -2,6 +2,7 @@ package audit
 
 import (
 	"context"
+	"gorm.io/gorm"
 	"time"
 
 	"github.com/google/uuid"
@@ -82,66 +83,41 @@ func (r *AuditRepository) GetUserActivity(ctx context.Context, userID uuid.UUID,
 	return logs, err
 }
 
-func (r *AuditRepository) GetGardenActivity(ctx context.Context, gardenID uuid.UUID, limit int) ([]AuditLog, error) {
+func (r *AuditRepository) GetGardenActivity(ctx context.Context, userID, gardenID uuid.UUID, limit int) ([]AuditLog, error) {
 	var logs []AuditLog
 	err := r.db.GetDB().WithContext(ctx).
-		Where("resource_id = ? AND resource = ?", gardenID, AuditResourceGarden).
+		Where("user_id = ? AND resource_id = ? AND resource = ?", userID, gardenID, AuditResourceGarden).
 		Order("created_at DESC").
 		Limit(limit).
 		Find(&logs).Error
 	return logs, err
 }
 
-func (r *AuditRepository) GetAuditStats(ctx context.Context, startDate time.Time) (AuditStats, error) {
+// GetAuditStats summarizes one user's audit logs since startDate.
+func (r *AuditRepository) GetAuditStats(ctx context.Context, userID uuid.UUID, startDate time.Time) (AuditStats, error) {
 	var stats AuditStats
-
-	if err := r.db.GetDB().WithContext(ctx).Model(&AuditLog{}).
-		Where("created_at >= ?", startDate).
-		Count(&stats.TotalActions).Error; err != nil {
-		return stats, err
+	logs := func() *gorm.DB {
+		return r.db.GetDB().WithContext(ctx).Model(&AuditLog{}).
+			Where("user_id = ? AND created_at >= ?", userID, startDate)
 	}
 
-	if err := r.db.GetDB().WithContext(ctx).Model(&AuditLog{}).
-		Where("created_at >= ? AND status = ?", startDate, string(AuditStatusSuccess)).
-		Count(&stats.SuccessfulActions).Error; err != nil {
+	if err := logs().Count(&stats.TotalActions).Error; err != nil {
 		return stats, err
 	}
-
-	if err := r.db.GetDB().WithContext(ctx).Model(&AuditLog{}).
-		Where("created_at >= ? AND status = ?", startDate, string(AuditStatusFailure)).
-		Count(&stats.FailedActions).Error; err != nil {
+	if err := logs().Where("status = ?", string(AuditStatusSuccess)).Count(&stats.SuccessfulActions).Error; err != nil {
 		return stats, err
 	}
-
-	if err := r.db.GetDB().WithContext(ctx).Model(&AuditLog{}).
-		Where("created_at >= ? AND status = ?", startDate, string(AuditStatusError)).
-		Count(&stats.ErrorActions).Error; err != nil {
+	if err := logs().Where("status = ?", string(AuditStatusFailure)).Count(&stats.FailedActions).Error; err != nil {
 		return stats, err
 	}
-
-	if err := r.db.GetDB().WithContext(ctx).Model(&AuditLog{}).
-		Where("created_at >= ? AND user_id IS NOT NULL", startDate).
-		Distinct("user_id").
-		Count(&stats.UniqueUsers).Error; err != nil {
+	if err := logs().Where("status = ?", string(AuditStatusError)).Count(&stats.ErrorActions).Error; err != nil {
 		return stats, err
 	}
-
-	if err := r.db.GetDB().WithContext(ctx).Model(&AuditLog{}).
-		Select("action, COUNT(*) as count").
-		Where("created_at >= ?", startDate).
-		Group("action").
-		Order("count DESC").
-		Limit(10).
+	if err := logs().Select("action, COUNT(*) as count").Group("action").Order("count DESC").Limit(10).
 		Find(&stats.TopActions).Error; err != nil {
 		return stats, err
 	}
-
-	if err := r.db.GetDB().WithContext(ctx).Model(&AuditLog{}).
-		Select("resource, COUNT(*) as count").
-		Where("created_at >= ?", startDate).
-		Group("resource").
-		Order("count DESC").
-		Limit(10).
+	if err := logs().Select("resource, COUNT(*) as count").Group("resource").Order("count DESC").Limit(10).
 		Find(&stats.TopResources).Error; err != nil {
 		return stats, err
 	}

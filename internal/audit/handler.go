@@ -23,7 +23,6 @@ func NewAuditHandler(db db.Database, auditService *AuditService) *AuditHandler {
 }
 
 type GetAuditLogsRequest struct {
-	UserID     *uuid.UUID `form:"user_id"`
 	Action     string     `form:"action"`
 	Resource   string     `form:"resource"`
 	ResourceID *uuid.UUID `form:"resource_id"`
@@ -36,12 +35,11 @@ type GetAuditLogsRequest struct {
 
 // GetAuditLogs godoc
 // @Summary Get audit logs
-// @Description Get audit logs with optional filtering
+// @Description Get the current user's audit logs with optional filtering
 // @Tags audit
 // @Accept json
 // @Produce json
 // @Security bearer
-// @Param user_id query string false "User ID filter"
 // @Param action query string false "Action filter"
 // @Param resource query string false "Resource filter"
 // @Param resource_id query string false "Resource ID filter"
@@ -62,8 +60,10 @@ func (h *AuditHandler) GetAuditLogs(c *gin.Context) {
 		return
 	}
 
+	// Users only ever see their own audit trail.
+	userID := c.MustGet("user_id").(uuid.UUID)
 	filters := AuditFilters{
-		UserID:     req.UserID,
+		UserID:     &userID,
 		Action:     req.Action,
 		Resource:   req.Resource,
 		ResourceID: req.ResourceID,
@@ -101,7 +101,7 @@ func (h *AuditHandler) GetAuditLogs(c *gin.Context) {
 
 // GetUserActivity godoc
 // @Summary Get user activity
-// @Description Get recent activity for a specific user
+// @Description Get the current user's recent activity; other users' activity is forbidden
 // @Tags audit
 // @Accept json
 // @Produce json
@@ -112,11 +112,16 @@ func (h *AuditHandler) GetAuditLogs(c *gin.Context) {
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Failure 403 {object} map[string]interface{} "Forbidden - Another user's activity"
 // @Router /audit/users/{user_id}/activity [get]
 func (h *AuditHandler) GetUserActivity(c *gin.Context) {
 	userID, err := uuid.Parse(c.Param("user_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+	if userID != c.MustGet("user_id").(uuid.UUID) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You can only view your own activity"})
 		return
 	}
 
@@ -142,7 +147,7 @@ func (h *AuditHandler) GetUserActivity(c *gin.Context) {
 
 // GetGardenActivity godoc
 // @Summary Get garden activity
-// @Description Get recent activity for a specific garden
+// @Description Get the current user's recent actions in a garden
 // @Tags audit
 // @Accept json
 // @Produce json
@@ -168,7 +173,7 @@ func (h *AuditHandler) GetGardenActivity(c *gin.Context) {
 		}
 	}
 
-	logs, err := h.auditService.GetGardenActivity(c.Request.Context(), gardenID, limit)
+	logs, err := h.auditService.GetGardenActivity(c.Request.Context(), c.MustGet("user_id").(uuid.UUID), gardenID, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch garden activity"})
 		return
@@ -183,7 +188,7 @@ func (h *AuditHandler) GetGardenActivity(c *gin.Context) {
 
 // GetAuditStats godoc
 // @Summary Get audit statistics
-// @Description Get audit statistics for the system
+// @Description Get audit statistics for the current user's actions
 // @Tags audit
 // @Accept json
 // @Produce json
@@ -204,7 +209,7 @@ func (h *AuditHandler) GetAuditStats(c *gin.Context) {
 
 	startDate := time.Now().AddDate(0, 0, -days)
 
-	stats, err := h.auditService.repository.GetAuditStats(c.Request.Context(), startDate)
+	stats, err := h.auditService.repository.GetAuditStats(c.Request.Context(), c.MustGet("user_id").(uuid.UUID), startDate)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch audit stats"})
 		return

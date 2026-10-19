@@ -23,7 +23,6 @@ type AuditStats struct {
 	SuccessfulActions int64           `json:"successful_actions"`
 	FailedActions     int64           `json:"failed_actions"`
 	ErrorActions      int64           `json:"error_actions"`
-	UniqueUsers       int64           `json:"unique_users"`
 	TopActions        []ActionCount   `json:"top_actions"`
 	TopResources      []ResourceCount `json:"top_resources"`
 }

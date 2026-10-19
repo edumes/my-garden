@@ -112,9 +112,8 @@ Returns system-wide audit statistics for the specified number of days.
 The audit system includes a React component (`AuditLogs.tsx`) that provides:
 
 - **Real-time Log Viewing**: Display audit logs with filtering and pagination
-- **Statistics Dashboard**: View system-wide audit statistics
-- **User Activity Tracking**: Monitor specific user actions
-- **Garden Activity Monitoring**: Track garden-specific events
+- **Statistics Dashboard**: View statistics about your own actions
+- **Activity Tracking**: Review your own recent actions, overall or in one garden
 
 ## Security Features
 
@@ -125,7 +124,8 @@ The audit system includes a React component (`AuditLogs.tsx`) that provides:
 
 ### Access Control
 - Audit endpoints require authentication
-- Any authenticated user can currently read every user's audit logs and statistics; restricting this is part of the [security phase](plans/02-security-and-integrity.md) of the development plan
+- Each user reads only their own audit trail: `/audit/logs`, garden activity, and statistics include only their actions, and another user's `/audit/users/{user_id}/activity` returns 403
+- There is no administrator role yet
 
 ## Monitoring and Alerts
 

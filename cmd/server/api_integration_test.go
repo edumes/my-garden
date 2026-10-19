@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/my-garden/api/internal/database"
 	"github.com/my-garden/api/internal/testdb"
 	"github.com/redis/go-redis/v9"
@@ -69,8 +70,9 @@ func (a *testAPI) call(method, path string, body any, wantStatus int, out any) {
 type session struct {
 	Token string `json:"token"`
 	User  struct {
-		Username string `json:"username"`
-		Coins    int    `json:"coins"`
+		ID       uuid.UUID `json:"id"`
+		Username string    `json:"username"`
+		Coins    int       `json:"coins"`
 	} `json:"user"`
 }
 

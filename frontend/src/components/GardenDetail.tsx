@@ -10,13 +10,14 @@ import { Button } from './ui/button';
 
 interface GardenDetailProps {
   garden: Garden;
-  permission?: GardenPermission;
-  isShared?: boolean;
+  isOwner: boolean;
+  permissions: GardenPermission[];
   onBack: () => void;
   onOpenStore?: () => void;
 }
 
-export function GardenDetail({ garden: initialGarden, permission, isShared, onBack, onOpenStore }: GardenDetailProps) {
+export function GardenDetail({ garden: initialGarden, isOwner, permissions, onBack, onOpenStore }: GardenDetailProps) {
+  const can = (permission: GardenPermission) => permissions.includes(permission);
   const [garden, setGarden] = useState<Garden>(initialGarden);
   const [showPlantModal, setShowPlantModal] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
@@ -46,15 +47,13 @@ export function GardenDetail({ garden: initialGarden, permission, isShared, onBa
   }, []);
 
   const handlePlantAction = async (plantId: string, action: 'water' | 'fertilize' | 'harvest' | 'remove') => {
-    if (isShared) {
-      if (action === 'harvest' && permission !== 'manage' && permission !== 'harvest') {
-        toast.error('You don\'t have permission to harvest in this garden');
-        return;
-      }
-      if (action === 'remove' && permission !== 'manage') {
-        toast.error('You don\'t have permission to remove plants from this garden');
-        return;
-      }
+    if (action === 'harvest' && !can('harvest')) {
+      toast.error('You don\'t have permission to harvest in this garden');
+      return;
+    }
+    if (action === 'remove' && !can('manage')) {
+      toast.error('You don\'t have permission to remove plants from this garden');
+      return;
     }
 
     try {
@@ -88,7 +87,7 @@ export function GardenDetail({ garden: initialGarden, permission, isShared, onBa
   };
 
   const handlePlantSeed = (position: number) => {
-    if (isShared && permission !== 'manage' && permission !== 'plant') {
+    if (!can('plant')) {
       toast.error('You don\'t have permission to plant in this garden');
       return;
     }
@@ -129,18 +128,18 @@ export function GardenDetail({ garden: initialGarden, permission, isShared, onBa
           <div>
             <div className="flex items-center space-x-2">
               <h1 className="text-xl sm:text-2xl font-bold text-foreground">{garden.name}</h1>
-              {isShared && (
+              {!isOwner && (
                 <div className="flex items-center space-x-1">
                   <Users className="w-4 h-4 text-blue-500" />
                   <span className="text-sm text-blue-600 dark:text-blue-400">Shared</span>
                 </div>
               )}
-              {permission && (
-                <div className="flex items-center space-x-1">
-                  <Shield className="w-4 h-4 text-green-500" />
-                  <span className="text-sm text-green-600 dark:text-green-400 capitalize">{permission}</span>
-                </div>
-              )}
+              <div className="flex items-center space-x-1">
+                <Shield className="w-4 h-4 text-green-500" />
+                <span className="text-sm text-green-600 dark:text-green-400 capitalize">
+                  {isOwner ? 'Owner' : permissions.join(', ')}
+                </span>
+              </div>
             </div>
             {garden.description && (
               <p className="text-sm sm:text-base text-muted-foreground">{garden.description}</p>

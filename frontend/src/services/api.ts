@@ -129,7 +129,7 @@ class ApiService {
   }
 
   async getGarden(id: string) {
-    return this.request<{ garden: Garden; permission: GardenPermission }>(`/gardens/${id}`);
+    return this.request<{ garden: Garden; is_owner: boolean; permissions: GardenPermission[] }>(`/gardens/${id}`);
   }
 
   async createGarden(data: { name: string; description?: string }) {

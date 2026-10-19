@@ -172,12 +172,14 @@ definitions:
     - plant
     - harvest
     - manage
+    - owner
     type: string
     x-enum-varnames:
     - GardenPermissionView
     - GardenPermissionPlant
     - GardenPermissionHarvest
     - GardenPermissionManage
+    - ownerOnly
   garden.JoinGardenRequest:
     properties:
       token:
@@ -638,7 +640,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get recent activity for a specific garden
+      description: Get the current user's recent actions in a garden
       parameters:
       - description: Garden ID
         in: path
@@ -682,12 +684,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get audit logs with optional filtering
+      description: Get the current user's audit logs with optional filtering
       parameters:
-      - description: User ID filter
-        in: query
-        name: user_id
-        type: string
       - description: Action filter
         in: query
         name: action
@@ -754,7 +752,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get audit statistics for the system
+      description: Get audit statistics for the current user's actions
       parameters:
       - default: 30
         description: Number of days to analyze
@@ -793,7 +791,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get recent activity for a specific user
+      description: Get the current user's recent activity; other users' activity is
+        forbidden
       parameters:
       - description: User ID
         in: path
@@ -820,6 +819,11 @@ paths:
             type: object
         "401":
           description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden - Another user's activity
           schema:
             additionalProperties: true
             type: object
@@ -1511,6 +1515,11 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "403":
+          description: Forbidden - Missing garden permission
+          schema:
+            additionalProperties: true
+            type: object
         "404":
           description: Garden not found
           schema:
@@ -1541,7 +1550,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: Garden details with plants
+          description: Garden with plants, whether the caller owns it, and their permissions
           schema:
             additionalProperties: true
             type: object
@@ -1605,6 +1614,11 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "403":
+          description: Forbidden - Missing garden permission
+          schema:
+            additionalProperties: true
+            type: object
         "404":
           description: Garden not found
           schema:
@@ -1653,6 +1667,11 @@ paths:
             type: object
         "401":
           description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden - Missing garden permission
           schema:
             additionalProperties: true
             type: object
@@ -1712,6 +1731,11 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "403":
+          description: Forbidden - Missing garden permission
+          schema:
+            additionalProperties: true
+            type: object
         "404":
           description: Plant not found
           schema:
@@ -1760,6 +1784,11 @@ paths:
             type: object
         "401":
           description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden - Missing garden permission
           schema:
             additionalProperties: true
             type: object

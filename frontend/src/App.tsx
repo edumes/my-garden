@@ -45,7 +45,8 @@ function GardenDetailRoute() {
 
 function GardenDetailPage({ id }: { id: string }) {
   const [garden, setGarden] = useState<Garden | null>(null);
-  const [permission, setPermission] = useState<GardenPermission | undefined>();
+  const [isOwner, setIsOwner] = useState(false);
+  const [permissions, setPermissions] = useState<GardenPermission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showStore, setShowStore] = useState(false);
@@ -54,7 +55,8 @@ function GardenDetailPage({ id }: { id: string }) {
     apiService.getGarden(id)
       .then((res) => {
         setGarden(res.garden);
-        setPermission(res.permission);
+        setIsOwner(res.is_owner);
+        setPermissions(res.permissions);
       })
       .catch(() => setError('Garden not found'))
       .finally(() => setLoading(false));
@@ -74,8 +76,8 @@ function GardenDetailPage({ id }: { id: string }) {
     <>
       <GardenDetail
         garden={garden}
-        permission={permission}
-        isShared={!!permission && permission !== 'manage'}
+        isOwner={isOwner}
+        permissions={permissions}
         onBack={() => window.history.back()}
         onOpenStore={() => setShowStore(true)}
       />

@@ -282,11 +282,11 @@ export function AuditLogs() {
 
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Unique Users</CardTitle>
-                                <User className="h-4 w-4 text-muted-foreground" />
+                                <CardTitle className="text-sm font-medium">Errors</CardTitle>
+                                <Activity className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">{stats.unique_users}</div>
+                                <div className="text-2xl font-bold text-orange-600">{stats.error_actions}</div>
                             </CardContent>
                         </Card>
 

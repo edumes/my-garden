@@ -8,6 +8,18 @@ Make authorization, shared access, inventory, and currency safe under failure an
 
 - Phase 1 validation and integration-test foundations are complete.
 
+## Decisions
+
+Made by Eduardo on 2026-10-19:
+
+- Audit data is user-scoped: each user reads only their own logs, activity, and statistics. An administrator role waits for an administrator feature.
+- Share permissions are independent capabilities: manage grants all of them, and any share grants view. Deleting a garden and managing its shares stay owner-only.
+- User coins are the only currency. Wallets, private keys, the ledger, and the `/wallet` and `/blockchain` endpoints are removed.
+- Repeated seed purchases aggregate into one inventory row per user and plant type.
+- Logout revokes every session of the user through a token version stored on the user.
+- Rate limiting is in memory, per IP, at authentication and mutation boundaries.
+- No deployed environment holds real data, so new constraints need no data migration.
+
 ## Scope
 
 ### 1. Authorization model

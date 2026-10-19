@@ -26,6 +26,7 @@ Deliver a complete and rewarding garden loop before expanding secondary systems.
 - Grant experience for gameplay actions: today nothing increases `experience`, so levels never change.
 - Make time calculations deterministic and testable.
 - Decide what happens after harvest: reset, regrow, or remove the plant.
+- Decide who earns rewards in shared gardens: today the harvester receives the coins, not the owner or the planter.
 - Define level thresholds and actual unlocks.
 
 ### 2. Reliable engine

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -63,70 +64,86 @@ func Load() (*Config, error) {
 		fmt.Println("No .env file found, using environment variables")
 	}
 
+	e := &env{}
 	config := &Config{
 		Server: ServerConfig{
-			Port: getEnv("PORT", "8080"),
-			Env:  getEnv("ENV", "development"),
+			Port: e.get("PORT", "8080"),
+			Env:  e.get("ENV", "development"),
 		},
 		Database: DatabaseConfig{
-			Host:     getEnv("DB_HOST", "localhost"),
-			Port:     getEnv("DB_PORT", "5432"),
-			User:     getEnv("DB_USER", "postgres"),
-			Password: getEnv("DB_PASSWORD", "password"),
-			Name:     getEnv("DB_NAME", "my_garden"),
-			SSLMode:  getEnv("DB_SSL_MODE", "disable"),
+			Host:     e.get("DB_HOST", "localhost"),
+			Port:     e.get("DB_PORT", "5432"),
+			User:     e.get("DB_USER", "postgres"),
+			Password: e.get("DB_PASSWORD", "password"),
+			Name:     e.get("DB_NAME", "my_garden"),
+			SSLMode:  e.get("DB_SSL_MODE", "disable"),
 		},
 		Redis: RedisConfig{
-			Host:     getEnv("REDIS_HOST", "localhost"),
-			Port:     getEnv("REDIS_PORT", "6379"),
-			Password: getEnv("REDIS_PASSWORD", ""),
-			DB:       getEnvAsInt("REDIS_DB", 0),
+			Host:     e.get("REDIS_HOST", "localhost"),
+			Port:     e.get("REDIS_PORT", "6379"),
+			Password: e.get("REDIS_PASSWORD", ""),
+			DB:       e.getInt("REDIS_DB", 0),
 		},
 		JWT: JWTConfig{
-			Secret: getEnv("JWT_SECRET", "your-super-secret-jwt-key-change-in-production"),
-			Expiry: getEnvAsDuration("JWT_EXPIRY", 24*time.Hour),
+			Secret: e.get("JWT_SECRET", "your-super-secret-jwt-key-change-in-production"),
+			Expiry: e.getDuration("JWT_EXPIRY", 24*time.Hour),
 		},
 		Game: GameConfig{
-			TickInterval:          getEnvAsDuration("GAME_TICK_INTERVAL", 5*time.Minute),
-			WeatherUpdateInterval: getEnvAsDuration("WEATHER_UPDATE_INTERVAL", 10*time.Minute),
-			PlantGrowthInterval:   getEnvAsDuration("PLANT_GROWTH_INTERVAL", 15*time.Minute),
+			TickInterval:          e.getDuration("GAME_TICK_INTERVAL", 5*time.Minute),
+			WeatherUpdateInterval: e.getDuration("WEATHER_UPDATE_INTERVAL", 10*time.Minute),
+			PlantGrowthInterval:   e.getDuration("PLANT_GROWTH_INTERVAL", 15*time.Minute),
 		},
 		API: APIConfig{
-			CORSOrigin:        getEnv("CORS_ORIGIN", "http://localhost:3000"),
-			RateLimitRequests: getEnvAsInt("RATE_LIMIT_REQUESTS", 100),
-			RateLimitWindow:   getEnvAsDuration("RATE_LIMIT_WINDOW", time.Minute),
+			CORSOrigin:        e.get("CORS_ORIGIN", "http://localhost:5173"),
+			RateLimitRequests: e.getInt("RATE_LIMIT_REQUESTS", 100),
+			RateLimitWindow:   e.getDuration("RATE_LIMIT_WINDOW", time.Minute),
 		},
 	}
 
+	if err := errors.Join(e.errs...); err != nil {
+		return nil, fmt.Errorf("invalid configuration:\n%w", err)
+	}
 	return config, nil
 }
 
-func getEnv(key, defaultValue string) string {
+// env reads environment variables and collects every malformed value, so
+// startup reports all configuration mistakes at once instead of silently
+// falling back to defaults.
+type env struct {
+	errs []error
+}
+
+func (e *env) get(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
 	}
 	return defaultValue
 }
 
-func getEnvAsInt(key string, defaultValue int) int {
-	if value := os.Getenv(key); value != "" {
-		if intValue, err := strconv.Atoi(value); err == nil {
-			return intValue
-		}
+func (e *env) getInt(key string, defaultValue int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
 	}
-	return defaultValue
+	intValue, err := strconv.Atoi(value)
+	if err != nil {
+		e.errs = append(e.errs, fmt.Errorf("%s=%q is not an integer", key, value))
+		return defaultValue
+	}
+	return intValue
 }
 
-func getEnvAsDuration(key string, defaultValue time.Duration) time.Duration {
-	if value := os.Getenv(key); value != "" {
-		duration, err := time.ParseDuration(value)
-		if err != nil {
-			fmt.Printf("Failed to parse duration for %s: %s (error: %v)\n", key, value, err)
-			return defaultValue
-		}
-		return duration
+func (e *env) getDuration(key string, defaultValue time.Duration) time.Duration {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
 	}
-	return defaultValue
+	duration, err := time.ParseDuration(value)
+	if err != nil {
+		e.errs = append(e.errs, fmt.Errorf("%s=%q is not a duration (examples: 30s, 5m, 24h)", key, value))
+		return defaultValue
+	}
+	return duration
 }
 
 func (c *Config) GetDatabaseDSN() string {

@@ -46,7 +46,8 @@ func NewDatabase(cfg *config.Config) (*Database, error) {
 
 	gormDB, err := gorm.Open(postgres.Open(dsn), gormConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
+		return nil, fmt.Errorf("failed to connect to PostgreSQL at %s:%s (database %q, user %q); check the DB_* settings or start local services with `docker compose up -d --wait`: %w",
+			cfg.Database.Host, cfg.Database.Port, cfg.Database.Name, cfg.Database.User, err)
 	}
 
 	return &Database{DB: gormDB}, nil

@@ -19,8 +19,9 @@ type GardenAccess struct {
 }
 
 // ownerOnly marks actions no share can grant, such as deleting the garden or
-// managing who it is shared with.
-const ownerOnly GardenPermission = "owner"
+// managing who it is shared with. It is a var, not a const, so swag does not
+// list it among the GardenPermission values in the API documentation.
+var ownerOnly GardenPermission = "owner"
 
 var allPermissions = GardenPermissions{
 	GardenPermissionView,

@@ -183,14 +183,12 @@ definitions:
     - plant
     - harvest
     - manage
-    - owner
     type: string
     x-enum-varnames:
     - GardenPermissionView
     - GardenPermissionPlant
     - GardenPermissionHarvest
     - GardenPermissionManage
-    - ownerOnly
   garden.JoinGardenRequest:
     properties:
       token:

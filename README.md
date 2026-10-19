@@ -79,7 +79,7 @@ While the API runs, Swagger UI is available at http://localhost:8080/api/v1/swag
 - **Accounts**: registration, login, JWT refresh and logout, profile view and update.
 - **Gardens**: create, rename, and delete gardens; plant seeds, harvest, and remove plants. A server-side game tick moves plants through seed → sprout → growing → mature → harvestable.
 - **Progression**: harvesting earns coins (harvest value × yield). Players have experience and levels, but no action grants experience yet.
-- **Store**: browse seeds and buy them with coins.
+- **Store**: browse seeds and buy them with coins. Purchases of the same seed add up in one inventory entry, and balances and seed counts can never go negative.
 - **Weather**: current weather, forecast, history, and seasons. The current weather multiplies plant growth.
 - **Garden sharing**: access links with permissions, expiration dates, and usage limits; joining shared gardens and managing members' permissions. Permissions are independent capabilities (view, plant, harvest, manage): manage grants all of them, any share grants view, and only the owner can delete the garden or manage its shares.
 - **Marketplace**: delivery requests, plant listings, wallets, and signed transactions. See [docs/MARKETPLACE.md](docs/MARKETPLACE.md).

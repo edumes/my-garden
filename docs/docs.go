@@ -2864,15 +2864,13 @@ const docTemplate = `{
                 "view",
                 "plant",
                 "harvest",
-                "manage",
-                "owner"
+                "manage"
             ],
             "x-enum-varnames": [
                 "GardenPermissionView",
                 "GardenPermissionPlant",
                 "GardenPermissionHarvest",
-                "GardenPermissionManage",
-                "ownerOnly"
+                "GardenPermissionManage"
             ]
         },
         "garden.JoinGardenRequest": {

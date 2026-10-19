@@ -1,12 +1,15 @@
 package store
 
 import (
-	"fmt"
+	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/my-garden/api/internal/auth"
 	"github.com/my-garden/api/internal/database"
 	"github.com/my-garden/api/internal/garden"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Repository struct {
@@ -33,45 +36,54 @@ func (r *Repository) GetPlantTypeByID(id uuid.UUID) (*garden.PlantType, error) {
 	return &plantType, nil
 }
 
-func (r *Repository) GetUserByID(id uuid.UUID) (*auth.User, error) {
-	var user auth.User
-	if err := r.db.DB.First(&user, id).Error; err != nil {
-		return nil, err
-	}
-	return &user, nil
-}
+// ErrInsufficientCoins means the user cannot afford the purchase.
+var ErrInsufficientCoins = errors.New("insufficient coins")
 
-func (r *Repository) UpdateUserCoins(userID uuid.UUID, newCoins int) error {
-	return r.db.DB.Model(&auth.User{}).Where("id = ?", userID).Update("coins", newCoins).Error
-}
+// BuySeeds charges the user and adds the seeds to their inventory in one
+// transaction, returning the coins left. Checking the balance and charging it
+// is a single conditional update, so concurrent purchases cannot overspend.
+func (r *Repository) BuySeeds(userID uuid.UUID, plantType garden.PlantType, quantity int) (int, error) {
+	totalCost := plantType.SeedPrice * quantity
+	var coins int
+	err := r.db.DB.Transaction(func(tx *gorm.DB) error {
+		charge := tx.Model(&auth.User{}).
+			Where("id = ? AND coins >= ?", userID, totalCost).
+			Update("coins", gorm.Expr("coins - ?", totalCost))
+		if charge.Error != nil {
+			return charge.Error
+		}
+		if charge.RowsAffected == 0 {
+			return ErrInsufficientCoins
+		}
 
-func (r *Repository) CreateSeedInventory(inventory *garden.SeedInventory) error {
-	return r.db.DB.Create(inventory).Error
+		seeds := garden.SeedInventory{
+			UserID:      userID,
+			PlantTypeID: plantType.ID,
+			Quantity:    quantity,
+			PurchasedAt: time.Now(),
+		}
+		if err := tx.Clauses(clause.OnConflict{
+			Columns: []clause.Column{{Name: "user_id"}, {Name: "plant_type_id"}},
+			DoUpdates: clause.Assignments(map[string]any{
+				"quantity":     gorm.Expr("seed_inventories.quantity + EXCLUDED.quantity"),
+				"purchased_at": gorm.Expr("EXCLUDED.purchased_at"),
+			}),
+		}).Create(&seeds).Error; err != nil {
+			return err
+		}
+
+		return tx.Model(&auth.User{}).Select("coins").Where("id = ?", userID).Scan(&coins).Error
+	})
+	return coins, err
 }
 
 func (r *Repository) GetUserSeedInventory(userID uuid.UUID) ([]garden.SeedInventory, error) {
 	var seedInventory []garden.SeedInventory
 	if err := r.db.DB.Preload("PlantType").
-		Where("user_id = ?", userID).
+		Where("user_id = ? AND quantity > 0", userID).
 		Order("purchased_at DESC").
 		Find(&seedInventory).Error; err != nil {
 		return nil, err
 	}
-	fmt.Println(seedInventory)
 	return seedInventory, nil
-}
-
-func (r *Repository) ExecuteInTransaction(fn func(*database.Database) error) error {
-	tx := r.db.DB.Begin()
-	if tx.Error != nil {
-		return tx.Error
-	}
-
-	txDB := &database.Database{DB: tx}
-	if err := fn(txDB); err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	return tx.Commit().Error
 }

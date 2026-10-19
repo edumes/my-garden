@@ -127,14 +127,16 @@ func TestGardenPermissionMatrix(t *testing.T) {
 		},
 	}
 
+	// Planting needs seeds in the caller's own inventory.
+	for _, actor := range actors {
+		require.NoError(t, db.DB.Create(&garden.SeedInventory{
+			UserID: sessions[actor].User.ID, PlantTypeID: lettuce.ID, Quantity: len(actions),
+		}).Error)
+	}
+
 	for action, tc := range actions {
 		for i, actor := range actors {
 			t.Run(action+"/"+actor, func(t *testing.T) {
-				// Planting needs a seed in the caller's own inventory.
-				require.NoError(t, db.DB.Create(&garden.SeedInventory{
-					UserID: sessions[actor].User.ID, PlantTypeID: lettuce.ID, Quantity: 1,
-				}).Error)
-
 				gardenID, plantID := newGarden(t)
 				req := tc.request(gardenID, plantID)
 				caller := &testAPI{t: t, base: a.base, token: sessions[actor].Token}

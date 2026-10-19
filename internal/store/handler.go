@@ -1,12 +1,14 @@
 package store
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/my-garden/api/internal/audit"
 	"github.com/my-garden/api/internal/garden"
+	"gorm.io/gorm"
 )
 
 type StoreHandler struct {
@@ -84,17 +86,13 @@ func (h *StoreHandler) BuySeed(c *gin.Context) {
 	if err != nil {
 		h.auditService.LogFailure(c, audit.AuditActionSeedPurchase, audit.AuditResourceStore, &req.PlantTypeID, gin.H{"error": err.Error()})
 
-		switch err.Error() {
-		case "quantity must be between 1 and 10":
+		switch {
+		case errors.Is(err, ErrInvalidQuantity), errors.Is(err, ErrInsufficientCoins):
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		case "record not found":
+		case errors.Is(err, gorm.ErrRecordNotFound):
 			c.JSON(http.StatusNotFound, gin.H{"error": "Plant type not found"})
 		default:
-			if contains(err.Error(), "insufficient coins") {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process purchase"})
-			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process purchase"})
 		}
 		return
 	}
@@ -135,8 +133,4 @@ func (h *StoreHandler) GetUserSeedInventory(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"seed_inventory": seedInventory,
 	})
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && s[0:len(substr)] == substr
 }

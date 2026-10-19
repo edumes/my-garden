@@ -1,6 +1,7 @@
 package garden
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/my-garden/api/internal/auth"
 	"github.com/my-garden/api/internal/database"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type GardenHandler struct {
@@ -331,14 +333,6 @@ func (h *GardenHandler) PlantSeed(c *gin.Context) {
 		return
 	}
 
-	// Check if position is already occupied
-	var existingPlant Plant
-	if err := h.db.DB.Where("garden_id = ? AND position = ?", gardenID, req.Position).First(&existingPlant).Error; err == nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "Position already occupied"})
-		return
-	}
-
-	// Check if plant type exists
 	var plantType PlantType
 	if err := h.db.DB.First(&plantType, req.PlantTypeID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -349,61 +343,49 @@ func (h *GardenHandler) PlantSeed(c *gin.Context) {
 		return
 	}
 
-	// Check if user has purchased seeds for this plant type
-	var seedInventory SeedInventory
-	if err := h.db.DB.Where("user_id = ? AND plant_type_id = ? AND quantity > 0", userID, req.PlantTypeID).First(&seedInventory).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error":           "You don't have any seeds for this plant type. Please purchase seeds from the store first.",
-				"plant_type_name": plantType.Name,
-			})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check seed inventory"})
-		return
-	}
-
-	// Start transaction
-	tx := h.db.DB.Begin()
-	if tx.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
-		return
-	}
-
-	// Create plant
 	plant := Plant{
 		GardenID:    gardenID,
 		PlantTypeID: req.PlantTypeID,
 		Position:    *req.Position,
 		PlantedAt:   time.Now(),
 	}
-
-	if err := tx.Create(&plant).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to plant seed"})
-		return
-	}
-
-	// Deduct one seed from inventory
-	if err := tx.Model(&seedInventory).Update("quantity", seedInventory.Quantity-1).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update seed inventory"})
-		return
-	}
-
-	// Delete seed inventory record if quantity becomes 0
-	if seedInventory.Quantity-1 <= 0 {
-		if err := tx.Delete(&seedInventory).Error; err != nil {
-			tx.Rollback()
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clean up empty seed inventory"})
-			return
+	err = h.db.DB.Transaction(func(tx *gorm.DB) error {
+		// Spend a seed only while the caller still has one, so concurrent
+		// requests cannot plant more seeds than they own.
+		spend := tx.Model(&SeedInventory{}).
+			Where("user_id = ? AND plant_type_id = ? AND quantity > 0", userID, req.PlantTypeID).
+			Update("quantity", gorm.Expr("quantity - 1"))
+		if spend.Error != nil {
+			return spend.Error
 		}
-	}
+		if spend.RowsAffected == 0 {
+			return errNoSeeds
+		}
 
-	// Commit transaction
-	if err := tx.Commit().Error; err != nil {
-		h.auditService.LogFailure(c, audit.AuditActionPlantSeed, audit.AuditResourcePlant, &plant.ID, gin.H{"error": "Failed to commit transaction"})
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
+		// The unique (garden, position) index settles races for one cell;
+		// the losing request rolls its spent seed back.
+		created := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&plant)
+		if created.Error != nil {
+			return created.Error
+		}
+		if created.RowsAffected == 0 {
+			return errPositionTaken
+		}
+		return nil
+	})
+	switch {
+	case errors.Is(err, errNoSeeds):
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":           "You don't have any seeds for this plant type. Please purchase seeds from the store first.",
+			"plant_type_name": plantType.Name,
+		})
+		return
+	case errors.Is(err, errPositionTaken):
+		c.JSON(http.StatusConflict, gin.H{"error": "Position already occupied"})
+		return
+	case err != nil:
+		h.auditService.LogFailure(c, audit.AuditActionPlantSeed, audit.AuditResourcePlant, &plant.ID, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to plant seed"})
 		return
 	}
 
@@ -477,45 +459,53 @@ func (h *GardenHandler) HarvestPlant(c *gin.Context) {
 		return
 	}
 
-	// Get user to update coins and experience
-	var user auth.User
-	if err := h.db.DB.First(&user, userID).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user"})
-		return
-	}
-
-	// Calculate harvest rewards
 	coinsEarned := plant.PlantType.HarvestValue * plant.PlantType.Yield
-
-	// Update user stats
-	user.Coins += coinsEarned
-
-	// Check for level up
-	oldLevel := user.Level
-	user.Level = calculateLevel(user.Experience)
-
-	// Reset plant to seed state
 	now := time.Now()
-	plant.GrowthProgress = 0
-	plant.Stage = PlantStageSeed
-	plant.PlantedAt = now
-	plant.HarvestedAt = &now
+	var user auth.User
+	var oldLevel int
+	err = h.db.DB.Transaction(func(tx *gorm.DB) error {
+		// Only one request can move the plant out of harvestable, so it pays once.
+		claim := tx.Model(&Plant{}).
+			Where("id = ? AND stage = ?", plantID, PlantStageHarvestable).
+			Updates(map[string]any{
+				"stage":           PlantStageSeed,
+				"growth_progress": 0,
+				"planted_at":      now,
+				"harvested_at":    now,
+			})
+		if claim.Error != nil {
+			return claim.Error
+		}
+		if claim.RowsAffected == 0 {
+			return errNotHarvestable
+		}
 
-	// Save changes in a transaction
-	tx := h.db.DB.Begin()
-	if err := tx.Save(&user).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+		if err := tx.Model(&auth.User{}).Where("id = ?", userID).
+			Update("coins", gorm.Expr("coins + ?", coinsEarned)).Error; err != nil {
+			return err
+		}
+		if err := tx.Take(&user, "id = ?", userID).Error; err != nil {
+			return err
+		}
+		oldLevel = user.Level
+		user.Level = calculateLevel(user.Experience)
+		if user.Level == oldLevel {
+			return nil
+		}
+		return tx.Model(&user).Update("level", user.Level).Error
+	})
+	switch {
+	case errors.Is(err, errNotHarvestable):
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Plant is not ready for harvest"})
+		return
+	case err != nil:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to harvest plant"})
 		return
 	}
-
-	if err := tx.Save(&plant).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update plant"})
+	if err := h.db.DB.Preload("PlantType").Take(&plant, "id = ?", plantID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch plant"})
 		return
 	}
-
-	tx.Commit()
 
 	response := gin.H{
 		"plant": plant,
@@ -612,6 +602,12 @@ func (h *GardenHandler) ListPlantTypes(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"plant_types": plantTypes})
 }
+
+var (
+	errNoSeeds        = errors.New("no seeds of this plant type")
+	errPositionTaken  = errors.New("garden position already occupied")
+	errNotHarvestable = errors.New("plant is not ready for harvest")
+)
 
 // Helper function to calculate level from experience
 func calculateLevel(experience int) int {

@@ -34,11 +34,11 @@ func (g *Garden) BeforeCreate(tx *gorm.DB) error {
 // Plant represents a plant in a garden
 type Plant struct {
 	ID          uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
-	GardenID    uuid.UUID `json:"garden_id" gorm:"type:uuid;not null"`
+	GardenID    uuid.UUID `json:"garden_id" gorm:"type:uuid;not null;uniqueIndex:idx_plants_garden_position"`
 	PlantTypeID uuid.UUID `json:"plant_type_id" gorm:"type:uuid;not null"`
 
 	// Position in garden grid (0-8 for 3x3 grid)
-	Position int `json:"position" gorm:"not null"`
+	Position int `json:"position" gorm:"not null;uniqueIndex:idx_plants_garden_position"`
 
 	// Plant state
 	Stage          PlantStage `json:"stage" gorm:"default:'seed'"`
@@ -92,9 +92,9 @@ type PlantType struct {
 // SeedInventory represents user's purchased seeds
 type SeedInventory struct {
 	ID          uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
-	UserID      uuid.UUID `json:"user_id" gorm:"type:uuid;not null"`
-	PlantTypeID uuid.UUID `json:"plant_type_id" gorm:"type:uuid;not null"`
-	Quantity    int       `json:"quantity" gorm:"not null"`
+	UserID      uuid.UUID `json:"user_id" gorm:"type:uuid;not null;uniqueIndex:idx_seed_inventories_user_plant_type"`
+	PlantTypeID uuid.UUID `json:"plant_type_id" gorm:"type:uuid;not null;uniqueIndex:idx_seed_inventories_user_plant_type"`
+	Quantity    int       `json:"quantity" gorm:"not null;check:chk_seed_inventories_quantity,quantity >= 0"`
 	PurchasedAt time.Time `json:"purchased_at"`
 	PlantType   PlantType `json:"plant_type" gorm:"foreignKey:PlantTypeID;references:ID"`
 }

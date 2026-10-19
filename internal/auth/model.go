@@ -17,7 +17,7 @@ type User struct {
 	Avatar       string            `json:"avatar"`
 	Level        int               `json:"level" gorm:"default:1"`
 	Experience   int               `json:"experience" gorm:"default:0"`
-	Coins        int               `json:"coins" gorm:"default:100"`
+	Coins        int               `json:"coins" gorm:"default:100;check:chk_users_coins,coins >= 0"`
 	Timezone     string            `json:"timezone" gorm:"default:'UTC'"`
 	Language     string            `json:"language" gorm:"default:'en'"`
 	LastLoginAt  *time.Time        `json:"last_login_at"`

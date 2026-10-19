@@ -1,5 +1,5 @@
 import { Coins, Loader, Package, ShoppingCart, TrendingUp } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { apiService } from '../services/api';
 import {
@@ -19,25 +19,29 @@ export function Marketplace() {
     const [stats, setStats] = useState<MarketplaceStats | null>(null);
     const [wallet, setWallet] = useState<Wallet | null>(null);
 
-    useEffect(() => {
-        loadInitialData();
-    }, []);
+    const loadData = useCallback(() =>
+        Promise.all([
+            apiService.getMarketplaceStats(),
+            apiService.getWalletBalance()
+        ])
+            .then(([statsResponse, walletResponse]) => {
+                setStats(statsResponse);
+                setWallet(walletResponse.wallet);
+            })
+            .catch((error) => {
+                console.error('Failed to load marketplace data:', error);
+                toast.error('Failed to load marketplace data');
+            })
+            .finally(() => setLoading(false)),
+    []);
 
-    const loadInitialData = async () => {
-        try {
-            setLoading(true);
-            const [statsResponse, walletResponse] = await Promise.all([
-                apiService.getMarketplaceStats(),
-                apiService.getWalletBalance()
-            ]);
-            setStats(statsResponse);
-            setWallet(walletResponse.wallet);
-        } catch (error) {
-            console.error('Failed to load marketplace data:', error);
-            toast.error('Failed to load marketplace data');
-        } finally {
-            setLoading(false);
-        }
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
+
+    const refresh = () => {
+        setLoading(true);
+        return loadData();
     };
 
     if (loading) {
@@ -141,11 +145,11 @@ export function Marketplace() {
                     </TabsList>
                     <TabsContents className="mt-6">
                         <TabsContent value="delivery-requests">
-                            <DeliveryRequestsTab onRefresh={loadInitialData} />
+                            <DeliveryRequestsTab onRefresh={refresh} />
                         </TabsContent>
 
                         <TabsContent value="listings">
-                            <PlantListingsTab onRefresh={loadInitialData} />
+                            <PlantListingsTab onRefresh={refresh} />
                         </TabsContent>
 
                         <TabsContent value="blockchain">
@@ -153,7 +157,7 @@ export function Marketplace() {
                         </TabsContent>
 
                         <TabsContent value="wallet">
-                            <WalletTab wallet={wallet} onRefresh={loadInitialData} />
+                            <WalletTab wallet={wallet} onRefresh={refresh} />
                         </TabsContent>
                     </TabsContents>
                 </Tabs>

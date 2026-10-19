@@ -1,6 +1,6 @@
 "use client";
 
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router";
 import { useState } from "react";
 import { ChevronDown, Dot, LucideIcon } from "lucide-react";
 
@@ -36,7 +36,6 @@ type Submenu = {
 interface CollapseMenuButtonProps {
   icon: LucideIcon;
   label: string;
-  active: boolean;
   submenus: Submenu[];
   isOpen: boolean | undefined;
   onMobileClose?: () => void;
@@ -45,7 +44,6 @@ interface CollapseMenuButtonProps {
 export function CollapseMenuButton({
   icon: Icon,
   label,
-  active,
   submenus,
   isOpen,
   onMobileClose

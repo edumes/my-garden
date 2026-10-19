@@ -51,6 +51,14 @@ export interface RegisterRequest {
   last_name?: string;
 }
 
+export interface UpdateProfileRequest {
+  first_name?: string;
+  last_name?: string;
+  avatar?: string;
+  timezone?: string;
+  language?: string;
+}
+
 export interface Garden {
   id: string;
   user_id: string;
@@ -135,15 +143,32 @@ export interface FertilizePlantRequest {
 }
 
 export interface Weather {
-  current_temp: number;
-  humidity: number;
+  id: string;
   condition: string;
+  temperature: number;
+  humidity: number;
+  wind_speed: number;
+  pressure: number;
+  growth_multiplier: number;
+  water_evaporation_rate: number;
+  created_at: string;
+  valid_until: string;
+}
+
+export interface CurrentWeatherResponse {
+  weather: Weather;
   season: string;
-  timestamp: string;
+  updated_at: string;
 }
 
 export interface WeatherForecast {
-  forecasts: Weather[];
+  id: string;
+  condition: string;
+  temperature: number;
+  humidity: number;
+  probability: number;
+  forecast_for: string;
+  created_at: string;
 }
 
 export type GardenPermission = 'view' | 'plant' | 'harvest' | 'manage';
@@ -346,4 +371,46 @@ export interface MarketplaceStats {
   active_listings: number;
   total_transactions: number;
   total_volume: number;
+}
+
+// Audit Types
+export interface AuditLog {
+  id: string;
+  user_id: string | null;
+  action: string;
+  resource: string;
+  resource_id: string | null;
+  ip_address: string;
+  status: string;
+  created_at: string;
+}
+
+export interface AuditLogsResponse {
+  logs: AuditLog[];
+  total: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
+}
+
+export interface AuditActivityResponse {
+  activity: AuditLog[];
+  count: number;
+}
+
+export interface AuditStats {
+  total_actions: number;
+  successful_actions: number;
+  failed_actions: number;
+  error_actions: number;
+  unique_users: number;
+  top_actions: { action: string; count: number }[];
+  top_resources: { resource: string; count: number }[];
+}
+
+export interface AuditStatsResponse {
+  period_days: number;
+  start_date: string;
+  end_date: string;
+  stats: AuditStats;
 }

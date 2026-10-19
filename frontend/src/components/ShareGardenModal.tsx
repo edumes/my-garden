@@ -16,17 +16,16 @@ import { apiService } from '@/services/api';
 import { Garden, GardenAccessLink, GardenPermission } from '@/types/api';
 import { CalendarDate } from '@internationalized/date';
 import { Check, Copy } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 interface ShareGardenModalProps {
   garden: Garden;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onShareCreated?: () => void;
 }
 
-const ShareGardenModal: React.FC<ShareGardenModalProps> = ({ garden, open, onOpenChange, onShareCreated }) => {
+const ShareGardenModal: React.FC<ShareGardenModalProps> = ({ garden, open, onOpenChange }) => {
   const [permissions, setPermissions] = useState<GardenPermission[]>(['view']);
   const [maxUses, setMaxUses] = useState<string>('');
   const [expiresAt, setExpiresAt] = useState<CalendarDate | null>(null);
@@ -41,20 +40,17 @@ const ShareGardenModal: React.FC<ShareGardenModalProps> = ({ garden, open, onOpe
     { value: 'manage', label: 'Manage', description: 'Full access to garden management' },
   ];
 
+  const loadAccessLinks = useCallback(() =>
+    apiService.getAccessLinks(garden.id)
+      .then((response) => setAccessLinks(response.access_links))
+      .catch((error) => console.error('Failed to load access links:', error)),
+  [garden.id]);
+
   useEffect(() => {
     if (open) {
       loadAccessLinks();
     }
-  }, [open]);
-
-  const loadAccessLinks = async () => {
-    try {
-      const response = await apiService.getAccessLinks(garden.id);
-      setAccessLinks(response.access_links);
-    } catch (error) {
-      console.error('Failed to load access links:', error);
-    }
-  };
+  }, [open, loadAccessLinks]);
 
   const handlePermissionChange = (permission: GardenPermission, checked: boolean) => {
     if (checked) {
@@ -79,9 +75,8 @@ const ShareGardenModal: React.FC<ShareGardenModalProps> = ({ garden, open, onOpe
         expires_at: expiresAt ? expiresAt.toString() : undefined,
       };
 
-      const response = await apiService.createAccessLink(request);
+      await apiService.createAccessLink(request);
       await loadAccessLinks();
-      // onShareCreated?.();
     } catch (error) {
       console.error('Failed to create access link:', error);
       toast.error('Failed to create access link');

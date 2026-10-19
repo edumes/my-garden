@@ -1,5 +1,5 @@
 import { CheckCircle, DollarSign, Loader, Plus, Search, ShoppingCart, XCircle } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { apiService } from '../../services/api';
 import { ListingStatus, Plant, PlantListing } from '../../types/api';
@@ -23,33 +23,38 @@ export function PlantListingsTab({ onRefresh }: PlantListingsTabProps) {
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
   const [showCreateModal, setShowCreateModal] = useState(false);
 
+  // Status filtering happens on the client; the API returns active listings only.
+  const loadData = useCallback(() =>
+    Promise.all([
+      apiService.getPlantListings(),
+      apiService.getGardens()
+    ])
+      .then(([listingsResponse, gardensResponse]) => {
+        setListings(listingsResponse.listings);
+
+        // Get user's plants from all gardens
+        const allPlants: Plant[] = [];
+        gardensResponse.owned_gardens.forEach(garden => {
+          if (garden.plants) {
+            allPlants.push(...garden.plants);
+          }
+        });
+        setUserPlants(allPlants);
+      })
+      .catch((error) => {
+        console.error('Failed to load plant listings:', error);
+        toast.error('Failed to load plant listings');
+      })
+      .finally(() => setLoading(false)),
+  []);
+
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const [listingsResponse, gardensResponse] = await Promise.all([
-        apiService.getPlantListings({ status: filterStatus === 'all' ? undefined : filterStatus }),
-        apiService.getGardens()
-      ]);
-      setListings(listingsResponse.listings);
-
-      // Get user's plants from all gardens
-      const allPlants: Plant[] = [];
-      gardensResponse.owned_gardens.forEach(garden => {
-        if (garden.plants) {
-          allPlants.push(...garden.plants);
-        }
-      });
-      setUserPlants(allPlants);
-    } catch (error) {
-      console.error('Failed to load plant listings:', error);
-      toast.error('Failed to load plant listings');
-    } finally {
-      setLoading(false);
-    }
+  const reload = () => {
+    setLoading(true);
+    return loadData();
   };
 
   const handleBuyListing = async (listingId: string) => {
@@ -58,7 +63,7 @@ export function PlantListingsTab({ onRefresh }: PlantListingsTabProps) {
       const signature = "mygarden"; // This should be generated using the user's private key
       await apiService.buyPlantListing(listingId, { signature });
       toast.success('Plant purchased successfully');
-      loadData();
+      reload();
       onRefresh();
     } catch (error) {
       if (error instanceof Error) {
@@ -226,7 +231,7 @@ export function PlantListingsTab({ onRefresh }: PlantListingsTabProps) {
         userPlants={userPlants}
         onSuccess={() => {
           setShowCreateModal(false);
-          loadData();
+          reload();
           onRefresh();
         }}
       />

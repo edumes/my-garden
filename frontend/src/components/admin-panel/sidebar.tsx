@@ -3,18 +3,15 @@ import { Menu } from "@/components/admin-panel/menu";
 import { SidebarToggle } from "@/components/admin-panel/sidebar-toggle";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/hooks/use-sidebar";
-import { useStore } from "@/hooks/use-store";
 import { cn } from "@/lib/utils";
 import { PanelsTopLeft, Menu as MenuIcon } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { useState } from "react";
 
 export function Sidebar() {
-  const sidebar = useStore(useSidebar, (x) => x);
+  const { isOpen, toggleOpen, getOpenState, setIsHover, settings } = useSidebar();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  
-  if (!sidebar) return null;
-  const { isOpen, toggleOpen, getOpenState, setIsHover, settings } = sidebar;
+
   
   return (
     <>

@@ -182,7 +182,7 @@ function TooltipProvider({
   const globalId = React.useId();
   const [currentTooltip, setCurrentTooltip] =
     React.useState<TooltipData | null>(null);
-  const timeoutRef = React.useRef<number>(null) as any;
+  const timeoutRef = React.useRef<number | null>(null);
   const lastCloseTimeRef = React.useRef<number>(0);
 
   const showTooltip = React.useCallback(
@@ -262,9 +262,7 @@ type TooltipPortalProps = {
 };
 
 function TooltipPortal({ children }: TooltipPortalProps) {
-  const [isMounted, setIsMounted] = React.useState(false);
-  React.useEffect(() => setIsMounted(true), []);
-  return isMounted ? createPortal(children, document.body) : null;
+  return createPortal(children, document.body);
 }
 
 function TooltipOverlay() {

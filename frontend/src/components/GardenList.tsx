@@ -1,5 +1,5 @@
 import { Loader, Plus, Users } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { apiService } from '../services/api';
 import { Garden, SharedGardenResponse } from '../types/api';
 import { CreateGardenModal } from './CreateGardenModal';
@@ -16,20 +16,16 @@ export function GardenList({ onSelectGarden }: GardenListProps) {
   const [loading, setLoading] = useState(true);
   const [shareGarden, setShareGarden] = useState<Garden | null>(null);
 
+  const loadGardens = useCallback(() =>
+    apiService.getGardens()
+      .then(setGardenData)
+      .catch((error) => console.error('Failed to load gardens:', error))
+      .finally(() => setLoading(false)),
+  []);
+
   useEffect(() => {
     loadGardens();
-  }, []);
-
-  const loadGardens = async () => {
-    try {
-      const response = await apiService.getGardens();
-      setGardenData(response);
-    } catch (error) {
-      console.error('Failed to load gardens:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [loadGardens]);
 
   const handleCreateGarden = async (data: { name: string; description?: string }) => {
     try {
@@ -43,7 +39,7 @@ export function GardenList({ onSelectGarden }: GardenListProps) {
     }
   };
 
-  const handleGardenJoined = (garden: Garden) => {
+  const handleGardenJoined = () => {
     loadGardens();
   };
 
@@ -131,10 +127,6 @@ export function GardenList({ onSelectGarden }: GardenListProps) {
             if (!open) {
               setShareGarden(null);
             }
-          }}
-          onShareCreated={() => {
-            loadGardens();
-            setShareGarden(null);
           }}
         />
       )}

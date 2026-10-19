@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { User } from '../types/api';
@@ -19,8 +19,6 @@ import {
   Palette, 
   Globe, 
   Clock, 
-  Save, 
-  X,
   Camera,
   Trash2,
   AlertTriangle
@@ -70,16 +68,17 @@ export function Settings() {
   });
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      setFormData({
-        first_name: user.first_name || '',
-        last_name: user.last_name || '',
-        timezone: user.timezone || '',
-        language: user.language || '',
-      });
-    }
-  }, [user]);
+  // Reset the form whenever the signed-in user's data changes.
+  const [formUser, setFormUser] = useState<typeof user>(null);
+  if (user && user !== formUser) {
+    setFormUser(user);
+    setFormData({
+      first_name: user.first_name || '',
+      last_name: user.last_name || '',
+      timezone: user.timezone || '',
+      language: user.language || '',
+    });
+  }
 
   const handleInputChange = (field: keyof SettingsFormData, value: string) => {
     setFormData(prev => ({

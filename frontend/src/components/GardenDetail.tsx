@@ -1,16 +1,16 @@
 import { ArrowLeft, Calendar, Clock, Coins, Leaf, Shield, TreePine, TrendingUp, User, Users } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
-import { Garden, PlantType } from '../types/api';
+import { Garden, GardenPermission, PlantType } from '../types/api';
 import { GardenGrid } from './GardenGrid';
 import { PlantSeedModal } from './PlantSeedModal';
 import { Button } from './ui/button';
 
 interface GardenDetailProps {
   garden: Garden;
-  permission?: string;
+  permission?: GardenPermission;
   isShared?: boolean;
   onBack: () => void;
   onOpenStore?: () => void;
@@ -20,44 +20,30 @@ export function GardenDetail({ garden: initialGarden, permission, isShared, onBa
   const [garden, setGarden] = useState<Garden>(initialGarden);
   const [showPlantModal, setShowPlantModal] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
   const [plantTypes, setPlantTypes] = useState<PlantType[]>([]);
   const [plantTypesLoading, setPlantTypesLoading] = useState(true);
   const { refreshUser } = useAuth();
 
+  const gardenId = initialGarden.id;
+
+  const loadGardenDetails = useCallback(() =>
+    apiService.getGarden(gardenId)
+      .then((response) => setGarden(response.garden))
+      .catch((error) => console.error('Failed to load garden details:', error)),
+  [gardenId]);
+
   useEffect(() => {
     loadGardenDetails();
-    loadPlantTypes();
-  }, []);
+    const interval = setInterval(loadGardenDetails, 2000);
+    return () => clearInterval(interval);
+  }, [loadGardenDetails]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      loadGardenDetails();
-    }, 2000);
-
-    return () => clearInterval(interval);
+    apiService.getPlantTypes()
+      .then((response) => setPlantTypes(response.plant_types))
+      .catch((error) => console.error('Failed to load plant types:', error))
+      .finally(() => setPlantTypesLoading(false));
   }, []);
-
-  const loadGardenDetails = async () => {
-    try {
-      const response = await apiService.getGarden(garden.id);
-      setGarden(response.garden);
-    } catch (error) {
-      console.error('Failed to load garden details:', error);
-    }
-  };
-
-  const loadPlantTypes = async () => {
-    setPlantTypesLoading(true);
-    try {
-      const response = await apiService.getPlantTypes();
-      setPlantTypes(response.plant_types);
-    } catch (error) {
-      console.error('Failed to load plant types:', error);
-    } finally {
-      setPlantTypesLoading(false);
-    }
-  };
 
   const handlePlantAction = async (plantId: string, action: 'water' | 'fertilize' | 'harvest' | 'remove') => {
     if (isShared) {
@@ -71,13 +57,12 @@ export function GardenDetail({ garden: initialGarden, permission, isShared, onBa
       }
     }
 
-    setLoading(true);
     try {
       const plant = garden.plants?.find(p => p.id === plantId);
       if (!plant) return;
 
       switch (action) {
-        case 'harvest':
+        case 'harvest': {
           const harvestResponse = await apiService.harvestPlant(garden.id, plantId);
           await refreshUser();
 
@@ -88,6 +73,7 @@ export function GardenDetail({ garden: initialGarden, permission, isShared, onBa
             toast.success(message);
           }
           break;
+        }
         case 'remove':
           await apiService.removePlant(garden.id, plantId);
           toast.success('Plant removed successfully');
@@ -98,8 +84,6 @@ export function GardenDetail({ garden: initialGarden, permission, isShared, onBa
     } catch (error) {
       console.error(`Failed to ${action} plant:`, error);
       toast.error(`Failed to ${action} plant`);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -115,7 +99,6 @@ export function GardenDetail({ garden: initialGarden, permission, isShared, onBa
   const handlePlantSubmit = async (plantTypeId: string) => {
     if (selectedPosition === null) return;
 
-    setLoading(true);
     try {
       await apiService.plantSeed(garden.id, {
         plant_type_id: plantTypeId,
@@ -129,8 +112,6 @@ export function GardenDetail({ garden: initialGarden, permission, isShared, onBa
     } catch (error) {
       console.error('Failed to plant seed:', error);
       toast.error('Failed to plant seed');
-    } finally {
-      setLoading(false);
     }
   };
 

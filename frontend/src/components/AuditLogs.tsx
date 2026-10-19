@@ -3,46 +3,20 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 import { SelectTrigger } from '@radix-ui/react-select';
-import { Activity, BarChart3, BlocksIcon, BrainIcon, Clock, CpuIcon, DatabaseIcon, GlobeIcon, LayoutIcon, LineChartIcon, NetworkIcon, SearchIcon, ServerIcon, User } from 'lucide-react';
+import { Activity, BarChart3, BrainIcon, Clock, CpuIcon, DatabaseIcon, LineChartIcon, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiService } from '../services/api';
+import type { AuditLog, AuditStats } from '../types/api';
 import SearchSelect from './SearchSelect';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectValue } from './ui/select';
 
-interface AuditLog {
-    id: string;
-    user_id?: string;
-    action: string;
-    resource: string;
-    resource_id?: string;
-    details: any;
-    ip_address: string;
-    user_agent: string;
-    status: string;
-    created_at: string;
-    user?: {
-        username: string;
-        email: string;
-    };
-}
-
-interface AuditStats {
-    total_actions: number;
-    successful_actions: number;
-    failed_actions: number;
-    error_actions: number;
-    unique_users: number;
-    top_actions: Array<{ action: string; count: number }>;
-    top_resources: Array<{ resource: string; count: number }>;
-}
-
 export function AuditLogs() {
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [stats, setStats] = useState<AuditStats | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [filters, setFilters] = useState({
         action: '',
         resource: '',
@@ -56,39 +30,28 @@ export function AuditLogs() {
     const [total, setTotal] = useState(0);
     const [view, setView] = useState<'logs' | 'stats'>('logs');
 
-    const loadAuditLogs = async () => {
+    // Show the loading state again whenever the view or filters change.
+    const [loadedQuery, setLoadedQuery] = useState({ view, filters });
+    if (loadedQuery.view !== view || loadedQuery.filters !== filters) {
+        setLoadedQuery({ view, filters });
         setLoading(true);
-        try {
-            const response = await apiService.getAuditLogs(filters) as any;
-            setLogs(response.logs);
-            setTotal(response.total);
-        } catch (error) {
-            console.error('Failed to load audit logs:', error);
-            toast.error('Failed to load audit logs');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const loadStats = async () => {
-        setLoading(true);
-        try {
-            const response = await apiService.getAuditStats(30) as any;
-            setStats(response.stats);
-        } catch (error) {
-            console.error('Failed to load audit stats:', error);
-            toast.error('Failed to load audit stats');
-        } finally {
-            setLoading(false);
-        }
-    };
+    }
 
     useEffect(() => {
-        if (view === 'logs') {
-            loadAuditLogs();
-        } else {
-            loadStats();
-        }
+        const request = view === 'logs'
+            ? apiService.getAuditLogs(filters).then((response) => {
+                setLogs(response.logs);
+                setTotal(response.total);
+            })
+            : apiService.getAuditStats(30).then((response) => setStats(response.stats));
+
+        request
+            .catch((error) => {
+                const subject = view === 'logs' ? 'audit logs' : 'audit stats';
+                console.error(`Failed to load ${subject}:`, error);
+                toast.error(`Failed to load ${subject}`);
+            })
+            .finally(() => setLoading(false));
     }, [view, filters]);
 
     const formatDate = (dateString: string) => {
@@ -270,20 +233,12 @@ export function AuditLogs() {
                                                     </div>
                                                     <div>
                                                         <span className="font-medium">User:</span>{' '}
-                                                        {log.user ? log.user.username : 'Anonymous'}
+                                                        {log.user_id ?? 'Anonymous'}
                                                     </div>
                                                     <div>
                                                         <span className="font-medium">IP:</span> {log.ip_address}
                                                     </div>
                                                 </div>
-                                                {log.details && (
-                                                    <div className="mt-2">
-                                                        <span className="font-medium">Details:</span>
-                                                        <pre className="mt-1 text-xs bg-muted p-2 rounded overflow-x-auto">
-                                                            {JSON.stringify(log.details, null, 2)}
-                                                        </pre>
-                                                    </div>
-                                                )}
                                             </div>
                                         ))}
                                     </div>

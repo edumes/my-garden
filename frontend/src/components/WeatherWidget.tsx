@@ -1,15 +1,8 @@
 import { Cloud, CloudRain, Droplets, Sun, Thermometer, Wind } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import type { CurrentWeatherResponse } from '../types/api';
 import { apiService } from '../services/api';
 import { Card } from './ui/card';
-
-interface Weather {
-  temperature: number;
-  humidity: number;
-  condition: string;
-  season: string;
-  timestamp: string;
-}
 
 const weatherIcons = {
   sunny: Sun,
@@ -19,23 +12,15 @@ const weatherIcons = {
 };
 
 export function WeatherWidget() {
-  const [weather, setWeather] = useState<Weather | null>(null);
+  const [current, setCurrent] = useState<CurrentWeatherResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadWeather();
+    apiService.getCurrentWeather()
+      .then(setCurrent)
+      .catch((error) => console.error('Failed to load weather:', error))
+      .finally(() => setLoading(false));
   }, []);
-
-  const loadWeather = async () => {
-    try {
-      const response = await apiService.getCurrentWeather();
-      setWeather(response.weather);
-    } catch (error) {
-      console.error('Failed to load weather:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -46,7 +31,7 @@ export function WeatherWidget() {
     );
   }
 
-  if (!weather) {
+  if (!current) {
     return (
       <div className="bg-card rounded-xl shadow-sm border border-border p-4 sm:p-6">
         <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Weather</h3>
@@ -55,13 +40,14 @@ export function WeatherWidget() {
     );
   }
 
+  const { weather, season } = current;
   const WeatherIcon = weatherIcons[weather.condition as keyof typeof weatherIcons] || Cloud;
 
   return (
     <Card className="rounded-xl shadow-sm border border-border p-4 sm:p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-base sm:text-lg font-semibold text-foreground">Weather</h3>
-        <span className="text-sm text-muted-foreground capitalize">{weather.season}</span>
+        <span className="text-sm text-muted-foreground capitalize">{season}</span>
       </div>
 
       <div className="flex items-center space-x-4">

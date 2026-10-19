@@ -7,23 +7,12 @@ import { Label } from './ui/label';
 export function UserProfile() {
   const { user } = useAuth();
   const [profile, setProfile] = useState(user);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    loadProfile();
+    apiService.getUserProfile()
+      .then((response) => setProfile(response.user))
+      .catch((error) => console.error('Failed to load profile:', error));
   }, []);
-
-  const loadProfile = async () => {
-    setLoading(true);
-    try {
-      const response = await apiService.getUserProfile();
-      setProfile(response.user);
-    } catch (error) {
-      console.error('Failed to load profile:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (!profile) return null;
 

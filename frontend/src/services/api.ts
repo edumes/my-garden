@@ -1,5 +1,9 @@
 import {
   AcceptDeliveryRequestRequest,
+  AuditActivityResponse,
+  AuditLogsResponse,
+  AuditStatsResponse,
+  AuthResponse,
   BlockchainLedger,
   BuyPlantListingRequest,
   BuySeedRequest,
@@ -9,11 +13,15 @@ import {
   CreateDeliveryRequestRequest,
   CreatePlantListingRequest,
   CreateWalletRequest,
+  CurrentWeatherResponse,
   DeliveryRequest,
+  Garden,
   GardenAccessLink,
+  GardenPermission,
   GardenShare,
   JoinGardenRequest,
   MarketplaceStats,
+  Plant,
   PlantListing,
   PlantType,
   SeedInventory,
@@ -22,12 +30,16 @@ import {
   SignResponse,
   Transaction,
   TransferRequest,
+  UpdateProfileRequest,
   UpdateSharePermissionsRequest,
-  Wallet
+  User,
+  Wallet,
+  Weather,
+  WeatherForecast
 } from "@/types/api";
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 
-const API_BASE_URL = 'http://localhost:8080/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 class ApiService {
   private axiosInstance;
@@ -75,7 +87,7 @@ class ApiService {
 
   // Authentication
   async login(credentials: { username: string; password: string }) {
-    const response = await this.request<any>('/auth/login', {
+    const response = await this.request<AuthResponse>('/auth/login', {
       method: 'POST',
       data: credentials,
     });
@@ -94,7 +106,7 @@ class ApiService {
     first_name?: string;
     last_name?: string;
   }) {
-    const response = await this.request<any>('/auth/register', {
+    const response = await this.request<AuthResponse>('/auth/register', {
       method: 'POST',
       data: userData,
     });
@@ -117,18 +129,18 @@ class ApiService {
   }
 
   async getGarden(id: string) {
-    return this.request<{ garden: any; permission?: string }>(`/gardens/${id}`);
+    return this.request<{ garden: Garden; permission: GardenPermission }>(`/gardens/${id}`);
   }
 
   async createGarden(data: { name: string; description?: string }) {
-    return this.request<{ garden: any }>('/gardens', {
+    return this.request<{ garden: Garden }>('/gardens', {
       method: 'POST',
       data: data,
     });
   }
 
   async updateGarden(id: string, data: { name?: string; description?: string }) {
-    return this.request<{ garden: any }>(`/gardens/${id}`, {
+    return this.request<{ garden: Garden }>(`/gardens/${id}`, {
       method: 'PUT',
       data: data,
     });
@@ -140,7 +152,7 @@ class ApiService {
 
   // Plants
   async plantSeed(gardenId: string, data: { plant_type_id: string; position: number }) {
-    return this.request<{ plant: any }>(`/gardens/${gardenId}/plants`, {
+    return this.request<{ plant: Plant }>(`/gardens/${gardenId}/plants`, {
       method: 'POST',
       data: data,
     });
@@ -148,7 +160,7 @@ class ApiService {
 
   async harvestPlant(gardenId: string, plantId: string) {
     return this.request<{
-      plant: any;
+      plant: Plant;
       harvest: {
         coins_earned: number;
         level_up: boolean;
@@ -186,11 +198,11 @@ class ApiService {
 
   // User Profile
   async getUserProfile() {
-    return this.request<{ user: any }>('/users/profile');
+    return this.request<{ user: User }>('/users/profile');
   }
 
-  async updateUserProfile(data: any) {
-    return this.request<{ user: any }>('/users/profile', {
+  async updateUserProfile(data: UpdateProfileRequest) {
+    return this.request<{ user: User }>('/users/profile', {
       method: 'PUT',
       data: data,
     });
@@ -198,15 +210,15 @@ class ApiService {
 
   // Weather
   async getCurrentWeather() {
-    return this.request<{ weather: any }>('/weather/current');
+    return this.request<CurrentWeatherResponse>('/weather/current');
   }
 
   async getWeatherForecast() {
-    return this.request<{ forecasts: any[] }>('/weather/forecast');
+    return this.request<{ forecasts: WeatherForecast[]; generated_at: string }>('/weather/forecast');
   }
 
   async getWeatherHistory() {
-    return this.request<{ history: any[] }>('/weather/history');
+    return this.request<{ history: Weather[]; count: number }>('/weather/history');
   }
 
   // Garden Sharing
@@ -218,7 +230,7 @@ class ApiService {
   }
 
   async joinGarden(request: JoinGardenRequest) {
-    return this.request<{ message: string; garden: any; share: GardenShare }>('/garden-shares/join', {
+    return this.request<{ message: string; garden: Garden; share: GardenShare }>('/garden-shares/join', {
       method: 'POST',
       data: request,
     });
@@ -271,22 +283,22 @@ class ApiService {
         }
       });
     }
-    return this.request(`/audit/logs?${queryParams.toString()}`);
+    return this.request<AuditLogsResponse>(`/audit/logs?${queryParams.toString()}`);
   }
 
   async getUserActivity(userId: string, limit?: number) {
     const queryParams = limit ? `?limit=${limit}` : '';
-    return this.request(`/audit/users/${userId}/activity${queryParams}`);
+    return this.request<AuditActivityResponse>(`/audit/users/${userId}/activity${queryParams}`);
   }
 
   async getGardenActivity(gardenId: string, limit?: number) {
     const queryParams = limit ? `?limit=${limit}` : '';
-    return this.request(`/audit/gardens/${gardenId}/activity${queryParams}`);
+    return this.request<AuditActivityResponse>(`/audit/gardens/${gardenId}/activity${queryParams}`);
   }
 
   async getAuditStats(days?: number) {
     const queryParams = days ? `?days=${days}` : '';
-    return this.request(`/audit/stats${queryParams}`);
+    return this.request<AuditStatsResponse>(`/audit/stats${queryParams}`);
   }
 
   // Marketplace API Methods

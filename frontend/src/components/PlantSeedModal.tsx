@@ -28,23 +28,20 @@ export function PlantSeedModal({ onClose, onSubmit, plantTypes, position, open, 
   const [userSeedInventory, setUserSeedInventory] = useState<SeedInventory[]>([]);
   const [loadingInventory, setLoadingInventory] = useState(false);
 
-  useEffect(() => {
-    if (open) {
-      loadUserSeedInventory();
-    }
-  }, [open]);
+  // Reload the inventory every time the modal opens.
+  const [wasOpen, setWasOpen] = useState(false);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setLoadingInventory(true);
+  }
 
-  const loadUserSeedInventory = async () => {
-    setLoadingInventory(true);
-    try {
-      const response = await apiService.getUserSeedInventory();
-      setUserSeedInventory(response.seed_inventory);
-    } catch (error) {
-      console.error('Failed to load user seed inventory:', error);
-    } finally {
-      setLoadingInventory(false);
-    }
-  };
+  useEffect(() => {
+    if (!open) return;
+    apiService.getUserSeedInventory()
+      .then((response) => setUserSeedInventory(response.seed_inventory))
+      .catch((error) => console.error('Failed to load user seed inventory:', error))
+      .finally(() => setLoadingInventory(false));
+  }, [open]);
 
   const getAvailableSeeds = () => {
     const availablePlantTypes: (PlantType & { availableQuantity: number })[] = [];

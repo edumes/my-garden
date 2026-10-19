@@ -1,6 +1,6 @@
 import { Loader } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router';
 import { TooltipProvider } from './components/animate-ui/components/tooltip';
 import { Dashboard } from './components/Dashboard';
 import { GardenDetail } from './components/GardenDetail';
@@ -17,6 +17,7 @@ import { Toaster } from './components/ui/sonner';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { apiService } from './services/api';
+import type { Garden, GardenPermission } from './types/api';
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const { user, loading } = useAuth();
@@ -38,25 +39,24 @@ function PrivateRoute({ children }: { children: JSX.Element }) {
 
 function GardenDetailRoute() {
   const { id } = useParams();
-  const [garden, setGarden] = useState<any>(null);
-  const [permission, setPermission] = useState<string | undefined>();
+  // Remount per garden so every visit starts from a fresh loading state.
+  return id ? <GardenDetailPage key={id} id={id} /> : null;
+}
+
+function GardenDetailPage({ id }: { id: string }) {
+  const [garden, setGarden] = useState<Garden | null>(null);
+  const [permission, setPermission] = useState<GardenPermission | undefined>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showStore, setShowStore] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
-    setLoading(true);
     apiService.getGarden(id)
       .then((res) => {
         setGarden(res.garden);
         setPermission(res.permission);
-        setError('');
       })
-      .catch(() => {
-        setError('Garden not found');
-        setGarden(null);
-      })
+      .catch(() => setError('Garden not found'))
       .finally(() => setLoading(false));
   }, [id]);
 

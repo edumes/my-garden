@@ -1,4 +1,4 @@
-import { Activity, Coins, Leaf, LogOut, Settings, ShoppingCart, TrendingUp, Trophy, User } from 'lucide-react';
+import { Activity, Coins, Leaf, LogOut, Settings, ShoppingCart, Trophy, User } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';

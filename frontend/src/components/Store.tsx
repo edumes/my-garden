@@ -22,30 +22,31 @@ export function Store({ onClose, open }: StoreProps) {
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const { user, refreshUser } = useAuth();
 
+  // Show the loading state again every time the store opens.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setLoading(true);
+  }
+
   useEffect(() => {
-    if (open) {
-      loadInventory();
-    }
+    if (!open) return;
+    apiService.getStoreInventory()
+      .then((response) => {
+        setInventory(response.inventory);
+
+        const initialQuantities: Record<string, number> = {};
+        response.inventory.forEach((item) => {
+          initialQuantities[item.id] = 1;
+        });
+        setQuantities(initialQuantities);
+      })
+      .catch((err) => {
+        toast.error('Failed to load store inventory');
+        console.error('Error loading inventory:', err);
+      })
+      .finally(() => setLoading(false));
   }, [open]);
-
-  const loadInventory = async () => {
-    try {
-      setLoading(true);
-      const response = await apiService.getStoreInventory();
-      setInventory(response.inventory);
-
-      const initialQuantities: Record<string, number> = {};
-      response.inventory.forEach((item) => {
-        initialQuantities[item.id] = 1;
-      });
-      setQuantities(initialQuantities);
-    } catch (err) {
-      toast.error('Failed to load store inventory');
-      console.error('Error loading inventory:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const updateQuantity = (plantTypeId: string, change: number) => {
     const currentQuantity = quantities[plantTypeId] || 1;
@@ -85,7 +86,7 @@ export function Store({ onClose, open }: StoreProps) {
         quantity: quantity
       };
 
-      const response = await apiService.buySeed(request);
+      await apiService.buySeed(request);
 
       await refreshUser();
 
@@ -97,8 +98,8 @@ export function Store({ onClose, open }: StoreProps) {
       const successMsg = `Successfully purchased ${quantity} ${plantType.name} seed${quantity > 1 ? 's' : ''} for ${totalCost} coins!`;
       toast.success(successMsg);
 
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to purchase seeds');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to purchase seeds');
       console.error('Error purchasing seeds:', err);
     } finally {
       setPurchasing(null);

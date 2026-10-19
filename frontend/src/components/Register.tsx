@@ -32,7 +32,7 @@ export function Register({ onToggleMode }: RegisterProps) {
       await register(formData);
       toast.success('Account created successfully!');
       navigate('/login');
-    } catch (err) {
+    } catch {
       toast.error('Registration failed. Please try again.');
     } finally {
       setLoading(false);

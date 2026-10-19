@@ -1,6 +1,6 @@
 "use client";
 
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router";
 import { CircleEllipsis, LogOut } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -24,7 +24,7 @@ interface MenuProps {
 export function Menu({ isOpen, onMobileClose }: MenuProps) {
   const location = useLocation();
   const pathname = location.pathname;
-  const menuList = getMenuList(pathname);
+  const menuList = getMenuList();
   const { logout } = useAuth();
 
   const handleNavigation = () => {
@@ -110,11 +110,6 @@ export function Menu({ isOpen, onMobileClose }: MenuProps) {
                       <CollapseMenuButton
                         icon={Icon}
                         label={label}
-                        active={
-                          active === undefined
-                            ? pathname.startsWith(href)
-                            : active
-                        }
                         submenus={submenus}
                         isOpen={isOpen}
                         onMobileClose={onMobileClose}

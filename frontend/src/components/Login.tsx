@@ -29,7 +29,7 @@ export function Login({ onToggleMode }: LoginProps) {
       await login(formData.username, formData.password);
       toast.success('Successfully signed in!');
       navigate('/');
-    } catch (err) {
+    } catch {
       toast.error('Invalid username or password');
     } finally {
       setLoading(false);

@@ -30,10 +30,10 @@ const JoinGardenPage: React.FC = () => {
         setTimeout(() => {
           navigate(`/garden/${response.garden.id}`);
         }, 2000);
-      } catch (error: any) {
+      } catch (error) {
         console.error('JoinGardenPage: Error joining garden:', error);
         setStatus('error');
-        setMessage(error.message || 'Failed to join garden');
+        setMessage(error instanceof Error ? error.message : 'Failed to join garden');
       }
     };
 

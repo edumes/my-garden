@@ -33,27 +33,15 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => localStorage.getItem('auth_token') !== null);
 
   useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      loadUserProfile();
-    } else {
-      setLoading(false);
-    }
+    if (localStorage.getItem('auth_token') === null) return;
+    apiService.getUserProfile()
+      .then((response) => setUser(response.user))
+      .catch(() => localStorage.removeItem('auth_token'))
+      .finally(() => setLoading(false));
   }, []);
-
-  const loadUserProfile = async () => {
-    try {
-      const response = await apiService.getUserProfile();
-      setUser(response.user);
-    } catch (error) {
-      localStorage.removeItem('auth_token');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const login = async (username: string, password: string) => {
     const response = await apiService.login({ username, password });

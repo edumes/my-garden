@@ -3,7 +3,7 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
-import { Loader, TrendingUp, Hash, Clock, CheckCircle, XCircle, Search, ExternalLink } from 'lucide-react';
+import { Loader, TrendingUp, Hash, Clock, CheckCircle, XCircle, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiService } from '../../services/api';
 import { Block, Transaction, TransactionStatus, TransactionType } from '../../types/api';
@@ -16,21 +16,14 @@ export function BlockchainTab() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
   useEffect(() => {
-    loadBlockchainData();
+    apiService.getBlockchainLedger({ limit: 20 })
+      .then((response) => setBlocks(response.blocks))
+      .catch((error) => {
+        console.error('Failed to load blockchain data:', error);
+        toast.error('Failed to load blockchain data');
+      })
+      .finally(() => setLoading(false));
   }, []);
-
-  const loadBlockchainData = async () => {
-    try {
-      setLoading(true);
-      const response = await apiService.getBlockchainLedger({ limit: 20 });
-      setBlocks(response.blocks);
-    } catch (error) {
-      console.error('Failed to load blockchain data:', error);
-      toast.error('Failed to load blockchain data');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSearchTransaction = async () => {
     if (!searchHash.trim()) {

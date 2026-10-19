@@ -31,8 +31,8 @@ const JoinGardenModal: React.FC<JoinGardenModalProps> = ({ onGardenJoined }) => 
       setToken('');
       setIsOpen(false);
       onGardenJoined?.(response.garden);
-    } catch (error: any) {
-      setError(error.message || 'Failed to join garden');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to join garden');
     } finally {
       setIsLoading(false);
     }

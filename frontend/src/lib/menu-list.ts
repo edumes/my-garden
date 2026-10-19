@@ -5,7 +5,6 @@ import {
   TrendingUp,
   Activity,
   Settings,
-  Users,
   LucideIcon
 } from "lucide-react";
 
@@ -28,7 +27,7 @@ type Group = {
   menus: Menu[];
 };
 
-export function getMenuList(pathname: string): Group[] {
+export function getMenuList(): Group[] {
   return [
     {
       groupLabel: "",

@@ -11,7 +11,8 @@ import {
   type Variant,
 } from 'motion/react';
 
-type MotionEffectProps = HTMLMotionProps<'div'> & {
+type MotionEffectProps = Omit<HTMLMotionProps<'div'>, 'ref'> & {
+  ref?: React.Ref<HTMLDivElement>;
   children: React.ReactNode;
   className?: string;
   transition?: Transition;
@@ -51,7 +52,7 @@ function MotionEffect({
   ...props
 }: MotionEffectProps) {
   const localRef = React.useRef<HTMLDivElement>(null);
-  React.useImperativeHandle(ref as any, () => localRef.current as HTMLDivElement);
+  React.useImperativeHandle(ref, () => localRef.current as HTMLDivElement);
 
   const inViewResult = useInView(localRef, {
     once: inViewOnce,

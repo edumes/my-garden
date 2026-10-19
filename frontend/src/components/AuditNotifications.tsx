@@ -1,28 +1,12 @@
 'use client';
 
-import { Activity, ArrowUpRight, Leaf, ShoppingCart, TreePine, User, User2 } from 'lucide-react';
+import { Activity, ArrowUpRight, Leaf, ShoppingCart, TreePine, User } from 'lucide-react';
 import { motion, type Transition } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { apiService } from '../services/api';
-
-interface AuditLog {
-  id: string;
-  user_id?: string;
-  action: string;
-  resource: string;
-  resource_id?: string;
-  details: any;
-  ip_address: string;
-  user_agent: string;
-  status: string;
-  created_at: string;
-  user?: {
-    username: string;
-    email: string;
-  };
-}
+import type { AuditLog } from '../types/api';
 
 const transition: Transition = {
   type: 'spring',
@@ -105,19 +89,19 @@ const getActionTitle = (action: string) => {
   }
 };
 
-const getActionSubtitle = (action: string, details: any, status: string) => {
+const getActionSubtitle = (action: string, status: string) => {
   switch (action) {
     case 'user_register':
     case 'user_login':
-      return details?.username ? `by ${details.username}` : 'User action';
+      return 'User action';
     case 'garden_create':
-      return details?.garden_name ? `"${details.garden_name}"` : 'New garden';
+      return 'New garden';
     case 'plant_seed':
-      return details?.plant_type_id ? `Plant type: ${details.plant_type_id}` : 'Plant seeded';
+      return 'Plant seeded';
     case 'plant_harvest':
-      return details?.coins_earned ? `+${details.coins_earned} coins` : 'Plant harvested';
+      return 'Plant harvested';
     case 'seed_purchase':
-      return details?.total_cost ? `${details.quantity} seeds for ${details.total_cost} coins` : 'Seeds purchased';
+      return 'Seeds purchased';
     default:
       return status === 'success' ? 'Action completed' : 'Action failed';
   }
@@ -144,37 +128,20 @@ const formatTimeAgo = (dateString: string) => {
 
 function AuditNotifications() {
   const [notifications, setNotifications] = useState<AuditLog[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const loadRecentAuditLogs = async () => {
-    setLoading(true);
-    try {
-      const response = await apiService.getAuditLogs({
-        limit: 5,
-        status: 'success'
-      }) as any;
-
-      const recentLogs = response.logs.map((log: AuditLog) => ({
-        ...log,
-        title: getActionTitle(log.action),
-        subtitle: getActionSubtitle(log.action, log.details, log.status),
-        time: formatTimeAgo(log.created_at),
-        icon: getActionIcon(log.action),
-      }));
-
-      setNotifications(recentLogs);
-    } catch (error) {
-      console.error('Failed to load audit notifications:', error);
-      toast.error('Failed to load recent activity');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadRecentAuditLogs();
+    const loadRecentAuditLogs = () =>
+      apiService.getAuditLogs({ limit: 5, status: 'success' })
+        .then((response) => setNotifications(response.logs))
+        .catch((error) => {
+          console.error('Failed to load audit notifications:', error);
+          toast.error('Failed to load recent activity');
+        })
+        .finally(() => setLoading(false));
 
+    loadRecentAuditLogs();
     const interval = setInterval(loadRecentAuditLogs, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -212,15 +179,11 @@ function AuditNotifications() {
                 {getActionIcon(notification.action)}
                 <h1 className="text-sm font-medium">{getActionTitle(notification.action)}</h1>
               </div>
-              <div className="flex items-center text-xs gap-0.5 font-medium text-neutral-500 dark:text-neutral-300">
-                <User2 className="size-3" />
-                <span>{notification.user?.username || 'Unknown'}</span>
-              </div>
             </div>
             <div className="text-xs text-neutral-500 font-medium">
               <span>{formatTimeAgo(notification.created_at)}</span>
               &nbsp;•&nbsp;
-              <span>{getActionSubtitle(notification.action, notification.details, notification.status)}</span>
+              <span>{getActionSubtitle(notification.action, notification.status)}</span>
             </div>
           </motion.div>
         ))}

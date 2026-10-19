@@ -26,20 +26,12 @@ export function WalletTab({ wallet, onRefresh }: WalletTabProps) {
   });
 
   useEffect(() => {
-    if (wallet) {
-      loadRecentTransactions();
-    }
-  }, [wallet]);
-
-  const loadRecentTransactions = async () => {
-    try {
-      const response = await apiService.getBlockchainLedger({ limit: 10 });
+    if (!wallet) return;
+    apiService.getBlockchainLedger({ limit: 10 })
       // Filter transactions for current user (this would need backend support)
-      setRecentTransactions(response.blocks.flatMap(block => block.transactions).slice(0, 10));
-    } catch (error) {
-      console.error('Failed to load recent transactions:', error);
-    }
-  };
+      .then((response) => setRecentTransactions(response.blocks.flatMap(block => block.transactions).slice(0, 10)))
+      .catch((error) => console.error('Failed to load recent transactions:', error));
+  }, [wallet]);
 
   const handleCreateWallet = async () => {
     try {

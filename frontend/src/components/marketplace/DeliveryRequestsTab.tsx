@@ -1,13 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
-import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Textarea } from '../ui/textarea';
-import { Loader, Package, Clock, CheckCircle, XCircle, Plus, Search, Filter } from 'lucide-react';
+import { Loader, Package, Clock, CheckCircle, XCircle, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiService } from '../../services/api';
 import { DeliveryRequest, PlantType, RequestStatus } from '../../types/api';
@@ -25,25 +22,30 @@ export function DeliveryRequestsTab({ onRefresh }: DeliveryRequestsTabProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
+  // Status filtering happens on the client; the API returns open requests only.
+  const loadData = useCallback(() =>
+    Promise.all([
+      apiService.getDeliveryRequests(),
+      apiService.getPlantTypes()
+    ])
+      .then(([requestsResponse, plantTypesResponse]) => {
+        setRequests(requestsResponse.delivery_requests);
+        setPlantTypes(plantTypesResponse.plant_types);
+      })
+      .catch((error) => {
+        console.error('Failed to load delivery requests:', error);
+        toast.error('Failed to load delivery requests');
+      })
+      .finally(() => setLoading(false)),
+  []);
+
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const [requestsResponse, plantTypesResponse] = await Promise.all([
-        apiService.getDeliveryRequests({ status: filterStatus === 'all' ? undefined : filterStatus }),
-        apiService.getPlantTypes()
-      ]);
-      setRequests(requestsResponse.delivery_requests);
-      setPlantTypes(plantTypesResponse.plant_types);
-    } catch (error) {
-      console.error('Failed to load delivery requests:', error);
-      toast.error('Failed to load delivery requests');
-    } finally {
-      setLoading(false);
-    }
+  const reload = () => {
+    setLoading(true);
+    return loadData();
   };
 
   const handleAcceptRequest = async (requestId: string) => {
@@ -52,7 +54,7 @@ export function DeliveryRequestsTab({ onRefresh }: DeliveryRequestsTabProps) {
       const signature = "mock_signature"; // This should be generated using the user's private key
       await apiService.acceptDeliveryRequest(requestId, { signature });
       toast.success('Delivery request accepted successfully');
-      loadData();
+      reload();
       onRefresh();
     } catch (error) {
       console.error('Failed to accept delivery request:', error);
@@ -65,7 +67,7 @@ export function DeliveryRequestsTab({ onRefresh }: DeliveryRequestsTabProps) {
       const signature = "mock_signature"; // This should be generated using the user's private key
       await apiService.completeDeliveryRequest(requestId, { signature });
       toast.success('Delivery request completed successfully');
-      loadData();
+      reload();
       onRefresh();
     } catch (error) {
       console.error('Failed to complete delivery request:', error);
@@ -224,7 +226,7 @@ export function DeliveryRequestsTab({ onRefresh }: DeliveryRequestsTabProps) {
         plantTypes={plantTypes}
         onSuccess={() => {
           setShowCreateModal(false);
-          loadData();
+          reload();
           onRefresh();
         }}
       />

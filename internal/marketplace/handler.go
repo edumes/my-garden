@@ -78,10 +78,7 @@ func (h *Handler) GetDeliveryRequests(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"delivery_requests": requests,
-		"total":             len(requests),
-	})
+	c.JSON(http.StatusOK, DeliveryRequestsResponse{DeliveryRequests: requests, Total: len(requests)})
 }
 
 // AcceptDeliveryRequest godoc
@@ -216,10 +213,7 @@ func (h *Handler) GetPlantListings(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"listings": listings,
-		"total":    len(listings),
-	})
+	c.JSON(http.StatusOK, PlantListingsResponse{Listings: listings, Total: len(listings)})
 }
 
 // PurchasePlantListing godoc
@@ -392,11 +386,11 @@ func (h *Handler) GetWalletBalance(c *gin.Context) {
 	wallet, err := h.service.repo.GetWallet(userID)
 	if err != nil {
 		// If wallet doesn't exist, return empty wallet
-		c.JSON(http.StatusOK, gin.H{"wallet": nil})
+		c.JSON(http.StatusOK, WalletResponse{})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"wallet": wallet})
+	c.JSON(http.StatusOK, WalletResponse{Wallet: wallet})
 }
 
 // TransferCurrency godoc
@@ -486,10 +480,7 @@ func (h *Handler) SignTransaction(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"signature": signature,
-		"hash":      transaction.GenerateHash(),
-	})
+	c.JSON(http.StatusOK, SignTransactionResponse{Signature: signature, Hash: transaction.GenerateHash()})
 }
 
 // GetMarketplaceStats godoc
@@ -560,6 +551,25 @@ type SignTransactionRequest struct {
 
 type BalanceResponse struct {
 	Balance int `json:"balance"`
+}
+
+type DeliveryRequestsResponse struct {
+	DeliveryRequests []DeliveryRequest `json:"delivery_requests"`
+	Total            int               `json:"total"`
+}
+
+type PlantListingsResponse struct {
+	Listings []PlantListing `json:"listings"`
+	Total    int            `json:"total"`
+}
+
+type WalletResponse struct {
+	Wallet *Wallet `json:"wallet"`
+}
+
+type SignTransactionResponse struct {
+	Signature string `json:"signature"`
+	Hash      string `json:"hash"`
 }
 
 type SuccessResponse struct {

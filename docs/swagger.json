@@ -482,6 +482,124 @@
                 }
             }
         },
+        "/blockchain/ledger": {
+            "get": {
+                "description": "Get the blockchain ledger with pagination",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "blockchain"
+                ],
+                "summary": "Get blockchain ledger",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Number of blocks to return (default 10)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of blocks to skip (default 0)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/marketplace.Block"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/blockchain/transactions": {
+            "post": {
+                "description": "Submit a signed transaction to the blockchain",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "blockchain"
+                ],
+                "summary": "Submit a blockchain transaction",
+                "parameters": [
+                    {
+                        "description": "Transaction details",
+                        "name": "transaction",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.Transaction"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.Transaction"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/blockchain/transactions/{hash}": {
+            "get": {
+                "description": "Get the status of a transaction by hash",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "blockchain"
+                ],
+                "summary": "Get transaction status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Transaction hash",
+                        "name": "hash",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.Transaction"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/garden-shares/access-links": {
             "post": {
                 "security": [
@@ -1604,6 +1722,294 @@
                 }
             }
         },
+        "/marketplace/delivery-requests": {
+            "get": {
+                "description": "Get all open delivery requests",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "marketplace"
+                ],
+                "summary": "Get open delivery requests",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.DeliveryRequestsResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new delivery request for a specific plant type",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "marketplace"
+                ],
+                "summary": "Create a delivery request",
+                "parameters": [
+                    {
+                        "description": "Delivery request details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.CreateDeliveryRequestRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.DeliveryRequest"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/marketplace/delivery-requests/{id}/accept": {
+            "post": {
+                "description": "Accept an open delivery request",
+                "tags": [
+                    "marketplace"
+                ],
+                "summary": "Accept a delivery request",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Request ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/marketplace/delivery-requests/{id}/complete": {
+            "post": {
+                "description": "Complete an accepted delivery request",
+                "tags": [
+                    "marketplace"
+                ],
+                "summary": "Complete a delivery request",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Request ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/marketplace/listings": {
+            "get": {
+                "description": "Get all active plant listings with optional filters",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "marketplace"
+                ],
+                "summary": "Get active plant listings",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plant type ID filter",
+                        "name": "plant_type_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Minimum price filter",
+                        "name": "min_price",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Maximum price filter",
+                        "name": "max_price",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.PlantListingsResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new plant listing for sale",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "marketplace"
+                ],
+                "summary": "Create a plant listing",
+                "parameters": [
+                    {
+                        "description": "Plant listing details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.CreatePlantListingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.PlantListing"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/marketplace/listings/{id}/buy": {
+            "post": {
+                "description": "Purchase a plant from a listing",
+                "tags": [
+                    "marketplace"
+                ],
+                "summary": "Purchase a plant listing",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Listing ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/marketplace/stats": {
+            "get": {
+                "description": "Get overall marketplace statistics including active requests, listings, and volume",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "marketplace"
+                ],
+                "summary": "Get marketplace statistics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.MarketplaceStatsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/plants": {
             "get": {
                 "description": "Get a list of all available plant types",
@@ -1878,6 +2284,170 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/wallet": {
+            "post": {
+                "description": "Create a new wallet for the authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallet"
+                ],
+                "summary": "Create a wallet",
+                "parameters": [
+                    {
+                        "description": "Wallet creation details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.CreateWalletRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.Wallet"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/wallet/balance": {
+            "get": {
+                "description": "Get the current user's wallet balance and details",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallet"
+                ],
+                "summary": "Get wallet balance",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.WalletResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/wallet/sign": {
+            "post": {
+                "description": "Generate a signature for a transaction (offline operation)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallet"
+                ],
+                "summary": "Sign a transaction",
+                "parameters": [
+                    {
+                        "description": "Transaction to sign",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.SignTransactionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.SignTransactionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/wallet/transfer": {
+            "post": {
+                "description": "Transfer currency to another user's wallet",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallet"
+                ],
+                "summary": "Transfer currency",
+                "parameters": [
+                    {
+                        "description": "Transfer details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.TransferCurrencyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/marketplace.ErrorResponse"
                         }
                     }
                 }
@@ -2188,6 +2758,39 @@
                 }
             }
         },
+        "garden.Garden": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "plants": {
+                    "description": "Relationships",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/garden.Plant"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/auth.User"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
         "garden.GardenPermission": {
             "type": "string",
             "enum": [
@@ -2214,6 +2817,60 @@
                 }
             }
         },
+        "garden.Plant": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "garden": {
+                    "description": "Relationships",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/garden.Garden"
+                        }
+                    ]
+                },
+                "garden_id": {
+                    "type": "string"
+                },
+                "growth_progress": {
+                    "description": "0-100",
+                    "type": "number"
+                },
+                "harvested_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "plant_type": {
+                    "$ref": "#/definitions/garden.PlantType"
+                },
+                "plant_type_id": {
+                    "type": "string"
+                },
+                "planted_at": {
+                    "description": "Timestamps",
+                    "type": "string"
+                },
+                "position": {
+                    "description": "Position in garden grid (0-8 for 3x3 grid)",
+                    "type": "integer"
+                },
+                "stage": {
+                    "description": "Plant state",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/garden.PlantStage"
+                        }
+                    ]
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "garden.PlantRequest": {
             "type": "object",
             "required": [
@@ -2232,6 +2889,23 @@
                     "example": 0
                 }
             }
+        },
+        "garden.PlantStage": {
+            "type": "string",
+            "enum": [
+                "seed",
+                "sprout",
+                "growing",
+                "mature",
+                "harvestable"
+            ],
+            "x-enum-varnames": [
+                "PlantStageSeed",
+                "PlantStageSprout",
+                "PlantStageGrowing",
+                "PlantStageMature",
+                "PlantStageHarvestable"
+            ]
         },
         "garden.PlantType": {
             "type": "object",
@@ -2293,6 +2967,476 @@
                 },
                 "user_id": {
                     "type": "string"
+                }
+            }
+        },
+        "marketplace.Block": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "hash": {
+                    "type": "string"
+                },
+                "height": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "merkle_root": {
+                    "type": "string"
+                },
+                "prev_hash": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "transactions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/marketplace.Transaction"
+                    }
+                },
+                "validator": {
+                    "description": "Relationships",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/auth.User"
+                        }
+                    ]
+                },
+                "validator_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "marketplace.CreateDeliveryRequestRequest": {
+            "type": "object",
+            "required": [
+                "deadline",
+                "plant_type_id",
+                "reward"
+            ],
+            "properties": {
+                "deadline": {
+                    "type": "string"
+                },
+                "plant_type_id": {
+                    "type": "string"
+                },
+                "reward": {
+                    "type": "integer",
+                    "minimum": 10
+                }
+            }
+        },
+        "marketplace.CreatePlantListingRequest": {
+            "type": "object",
+            "required": [
+                "plant_id",
+                "price"
+            ],
+            "properties": {
+                "plant_id": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "marketplace.CreateWalletRequest": {
+            "type": "object",
+            "required": [
+                "password"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "minLength": 8
+                }
+            }
+        },
+        "marketplace.DeliveryRequest": {
+            "type": "object",
+            "properties": {
+                "accepted_by": {
+                    "type": "string"
+                },
+                "acceptor": {
+                    "$ref": "#/definitions/auth.User"
+                },
+                "completed_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deadline": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "plant_type": {
+                    "$ref": "#/definitions/garden.PlantType"
+                },
+                "plant_type_id": {
+                    "type": "string"
+                },
+                "requester": {
+                    "description": "Relationships",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/auth.User"
+                        }
+                    ]
+                },
+                "requester_id": {
+                    "type": "string"
+                },
+                "reward": {
+                    "type": "integer"
+                },
+                "status": {
+                    "$ref": "#/definitions/marketplace.RequestStatus"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "marketplace.DeliveryRequestsResponse": {
+            "type": "object",
+            "properties": {
+                "delivery_requests": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/marketplace.DeliveryRequest"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "marketplace.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "marketplace.ListingStatus": {
+            "type": "string",
+            "enum": [
+                "active",
+                "sold",
+                "expired",
+                "cancelled"
+            ],
+            "x-enum-varnames": [
+                "ListingStatusActive",
+                "ListingStatusSold",
+                "ListingStatusExpired",
+                "ListingStatusCancelled"
+            ]
+        },
+        "marketplace.MarketplaceStatsResponse": {
+            "type": "object",
+            "properties": {
+                "active_delivery_requests": {
+                    "type": "integer"
+                },
+                "active_listings": {
+                    "type": "integer"
+                },
+                "total_delivery_requests": {
+                    "type": "integer"
+                },
+                "total_listings": {
+                    "type": "integer"
+                },
+                "total_transactions": {
+                    "type": "integer"
+                },
+                "total_volume": {
+                    "type": "integer"
+                }
+            }
+        },
+        "marketplace.PlantListing": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "plant": {
+                    "$ref": "#/definitions/garden.Plant"
+                },
+                "plant_id": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer"
+                },
+                "seller": {
+                    "description": "Relationships",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/auth.User"
+                        }
+                    ]
+                },
+                "seller_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/marketplace.ListingStatus"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "marketplace.PlantListingsResponse": {
+            "type": "object",
+            "properties": {
+                "listings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/marketplace.PlantListing"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "marketplace.RequestStatus": {
+            "type": "string",
+            "enum": [
+                "open",
+                "accepted",
+                "completed",
+                "expired",
+                "cancelled"
+            ],
+            "x-enum-varnames": [
+                "RequestStatusOpen",
+                "RequestStatusAccepted",
+                "RequestStatusCompleted",
+                "RequestStatusExpired",
+                "RequestStatusCancelled"
+            ]
+        },
+        "marketplace.SignTransactionRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "nonce",
+                "password",
+                "receiver_key",
+                "tx_type"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "nonce": {
+                    "type": "integer"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "plant_id": {
+                    "type": "string"
+                },
+                "receiver_key": {
+                    "type": "string"
+                },
+                "tx_type": {
+                    "$ref": "#/definitions/marketplace.TransactionType"
+                }
+            }
+        },
+        "marketplace.SignTransactionResponse": {
+            "type": "object",
+            "properties": {
+                "hash": {
+                    "type": "string"
+                },
+                "signature": {
+                    "type": "string"
+                }
+            }
+        },
+        "marketplace.SuccessResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "marketplace.Transaction": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "block_height": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "hash": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "nonce": {
+                    "type": "integer"
+                },
+                "plant": {
+                    "description": "Relationships",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/garden.Plant"
+                        }
+                    ]
+                },
+                "plant_id": {
+                    "type": "string"
+                },
+                "receiver_key": {
+                    "type": "string"
+                },
+                "sender_key": {
+                    "type": "string"
+                },
+                "signature": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/marketplace.TransactionStatus"
+                },
+                "tx_type": {
+                    "$ref": "#/definitions/marketplace.TransactionType"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "marketplace.TransactionStatus": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "confirmed",
+                "rejected"
+            ],
+            "x-enum-varnames": [
+                "TransactionStatusPending",
+                "TransactionStatusConfirmed",
+                "TransactionStatusRejected"
+            ]
+        },
+        "marketplace.TransactionType": {
+            "type": "string",
+            "enum": [
+                "transfer",
+                "purchase",
+                "reward",
+                "commission"
+            ],
+            "x-enum-varnames": [
+                "TransactionTypeTransfer",
+                "TransactionTypePurchase",
+                "TransactionTypeReward",
+                "TransactionTypeCommission"
+            ]
+        },
+        "marketplace.TransferCurrencyRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "password",
+                "to_public_key"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "password": {
+                    "type": "string"
+                },
+                "to_public_key": {
+                    "type": "string"
+                }
+            }
+        },
+        "marketplace.Wallet": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "encrypted_key": {
+                    "description": "AES-256-GCM encrypted private key",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "nonce": {
+                    "type": "integer"
+                },
+                "public_key": {
+                    "type": "string"
+                },
+                "reputation": {
+                    "type": "number"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user": {
+                    "description": "Relationships",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/auth.User"
+                        }
+                    ]
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "marketplace.WalletResponse": {
+            "type": "object",
+            "properties": {
+                "wallet": {
+                    "$ref": "#/definitions/marketplace.Wallet"
                 }
             }
         },

@@ -1,7 +1,14 @@
 .env
+.DS_Store
+*.exe
+
+# Go build output (make build, air)
+/bin/
+/tmp/
+build-errors.log
+
+# Frontend
 frontend/node_modules
 frontend/dist
-
-# Air temporary files
-backend/tmp/
-build-errors.log
+frontend/test-results
+frontend/playwright-report

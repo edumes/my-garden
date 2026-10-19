@@ -40,7 +40,7 @@ const stageColors = {
 
 export function PlantCell({ position, plant, onPlantAction, onPlantSeed }: PlantCellProps) {
   const [showActions, setShowActions] = useState(false);
-  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const [timeoutId, setTimeoutId] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   if (!plant) {
     return (

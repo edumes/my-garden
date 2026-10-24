@@ -88,3 +88,17 @@ Values chosen during implementation, open to tuning after playtesting:
 - A new player can complete the full loop without database intervention.
 - Every reward and inventory change has one server-authoritative cause.
 
+
+## Completion evidence (2026-10-24)
+
+Phase 3 is implemented and locally validated.
+
+- Garden plots expose their stage, next action, base growth time and total harvest payout. Planting, harvesting and removal use visible, keyboard-accessible controls and current server permissions.
+- Garden refresh failures preserve the last state, show a retry action and suspend plot commands until refreshed. Store and seed inventory failures are distinguished from empty results.
+- Current weather refreshes periodically and displays its growth multiplier. User profile summaries follow refreshed balances and progression instead of keeping a stale copy.
+- The browser smoke test completes registration, login, garden creation, purchase, planting, automatic growth and harvest. It verifies a profitable reward, XP, a free plot, consumed inventory, persistence after reload and refresh recovery. Harvest also runs at a 390px viewport; screenshots cover desktop and mobile.
+- `go test -tags integration ./...` and `go vet -tags integration ./...` passed against an isolated local PostgreSQL 16 instance. Existing suites cover growth boundaries, concurrent ticks, reward ownership, repeated harvests and progression unlocks.
+- A fresh-engine integration check repeats the last tick against persisted plants and valid weather to verify restart idempotency.
+- `npm ci`, `npm run lint`, `npm run build` and `npm run test:e2e` passed. Browser growth is accelerated only in the test-started API.
+
+Remaining Phase 4 work: shared UI ref warnings, eight existing Fast Refresh lint warnings, route splitting (the main bundle remains above 500 kB), and the broader experience redesign. Local validation does not replace production deployment or failure drills from Phase 7.

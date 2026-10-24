@@ -16,10 +16,13 @@ export function WeatherWidget() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiService.getCurrentWeather()
+    const load = () => apiService.getCurrentWeather()
       .then(setCurrent)
-      .catch((error) => console.error('Failed to load weather:', error))
+      .catch(() => setCurrent(null))
       .finally(() => setLoading(false));
+    void load();
+    const interval = setInterval(load, 10_000);
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) {
@@ -70,6 +73,8 @@ export function WeatherWidget() {
         <p className="text-sm text-muted-foreground capitalize">
           Current conditions: {weather.condition}
         </p>
+        <p className="text-sm">Growth rate: {weather.growth_multiplier}x normal</p>
+        <p className="text-xs text-muted-foreground">Base growth times use real minutes at normal weather; current conditions change the pace.</p>
       </div>
     </Card>
   );

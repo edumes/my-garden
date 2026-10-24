@@ -20,13 +20,15 @@ interface PlantSeedModalProps {
   plantTypes: PlantType[];
   position: number;
   open: boolean;
+  busy?: boolean;
   onOpenStore?: () => void;
 }
 
-export function PlantSeedModal({ onClose, onSubmit, plantTypes, position, open, onOpenStore }: PlantSeedModalProps) {
+export function PlantSeedModal({ onClose, onSubmit, plantTypes, position, open, busy = false, onOpenStore }: PlantSeedModalProps) {
   const [selectedPlantType, setSelectedPlantType] = useState<string | null>(null);
   const [userSeedInventory, setUserSeedInventory] = useState<SeedInventory[]>([]);
   const [loadingInventory, setLoadingInventory] = useState(false);
+  const [inventoryError, setInventoryError] = useState(false);
 
   // Reload the inventory every time the modal opens.
   const [wasOpen, setWasOpen] = useState(false);
@@ -39,7 +41,7 @@ export function PlantSeedModal({ onClose, onSubmit, plantTypes, position, open, 
     if (!open) return;
     apiService.getUserSeedInventory()
       .then((response) => setUserSeedInventory(response.seed_inventory))
-      .catch((error) => console.error('Failed to load user seed inventory:', error))
+      .catch(() => setInventoryError(true))
       .finally(() => setLoadingInventory(false));
   }, [open]);
 
@@ -80,7 +82,8 @@ export function PlantSeedModal({ onClose, onSubmit, plantTypes, position, open, 
       <DialogContent className="sm:max-w-2xl max-h-[90vh] sm:max-h-128 flex flex-col">
         <DialogHeader>
           <DialogTitle>Plant Seed - Position {position + 1}</DialogTitle>
-          <DialogDescription>
+          <DialogDescription asChild>
+            <div>
             Choose a plant type to plant in this position. You can only plant seeds you have purchased.
             {onOpenStore && (
               <div className="mt-2 p-2 bg-blue-900/20 rounded-lg">
@@ -90,6 +93,7 @@ export function PlantSeedModal({ onClose, onSubmit, plantTypes, position, open, 
                 </div>
               </div>
             )}
+          </div>
           </DialogDescription>
         </DialogHeader>
         
@@ -99,6 +103,8 @@ export function PlantSeedModal({ onClose, onSubmit, plantTypes, position, open, 
               <Package className="w-8 h-8 mx-auto mb-4 animate-pulse" />
               <p className="text-muted-foreground">Loading your seeds...</p>
             </div>
+          ) : inventoryError ? (
+            <p role="alert">Unable to load your seeds. Check your connection and reopen this dialog to retry.</p>
           ) : availableSeeds.length === 0 ? (
             <div className="text-center py-8">
               <Package className="w-8 h-8 mx-auto mb-4 text-muted-foreground" />
@@ -114,12 +120,21 @@ export function PlantSeedModal({ onClose, onSubmit, plantTypes, position, open, 
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-3 sm:gap-4">
+            <div role="radiogroup" aria-label="Available seeds" className="grid grid-cols-1 gap-3 sm:gap-4">
               {availableSeeds.map((plantType) => (
                 <div
                   key={plantType.id}
+                  role="radio"
+                  aria-checked={selectedPlantType === plantType.id}
+                  tabIndex={0}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setSelectedPlantType(plantType.id);
+                    }
+                  }}
                   onClick={() => setSelectedPlantType(plantType.id)}
-                  className={`p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                  className={`p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition-all hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring ${
                     selectedPlantType === plantType.id
                       ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
                       : 'border-border hover:border-muted-foreground'
@@ -156,7 +171,7 @@ export function PlantSeedModal({ onClose, onSubmit, plantTypes, position, open, 
                     <div className="flex justify-between text-xs mb-1">
                       <span className="text-muted-foreground">Harvest Value</span>
                       <span className="text-green-600 dark:text-green-400 font-medium">
-                        {plantType.harvest_value} coins
+                        {plantType.harvest_value * plantType.yield} coins
                       </span>
                     </div>
                     <div className="flex justify-between text-xs">
@@ -192,7 +207,7 @@ export function PlantSeedModal({ onClose, onSubmit, plantTypes, position, open, 
           </DialogClose>
           <Button
             onClick={handleSubmit}
-            disabled={!selectedPlantType || availableSeeds.length === 0}
+            disabled={busy || !selectedPlantType || availableSeeds.length === 0}
             className="bg-green-600 hover:bg-green-700"
           >
             Plant Seed

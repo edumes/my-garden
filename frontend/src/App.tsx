@@ -50,6 +50,7 @@ function GardenDetailPage({ id }: { id: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showStore, setShowStore] = useState(false);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     apiService.getGarden(id)
@@ -58,9 +59,9 @@ function GardenDetailPage({ id }: { id: string }) {
         setIsOwner(res.is_owner);
         setPermissions(res.permissions);
       })
-      .catch(() => setError('Garden not found'))
+      .catch(() => setError('Unable to load this garden. Check your connection and access.'))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, retry]);
 
   if (loading) {
     return (
@@ -70,7 +71,10 @@ function GardenDetailPage({ id }: { id: string }) {
     );
   }
   if (error || !garden) {
-    return <div className="min-h-screen flex items-center justify-center text-2xl text-muted-foreground">Garden not found</div>;
+    return <div role="alert" className="min-h-screen flex flex-col items-center justify-center gap-4 text-muted-foreground">
+      <p>{error}</p>
+      <button onClick={() => { setError(''); setLoading(true); setRetry(value => value + 1); }}>Retry loading garden</button>
+    </div>;
   }
   return (
     <>

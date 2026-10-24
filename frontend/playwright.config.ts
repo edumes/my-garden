@@ -15,7 +15,8 @@ export default defineConfig({
       command: 'go run ./cmd/server',
       cwd: '..',
       url: 'http://localhost:8080/health',
-      reuseExistingServer: true,
+      reuseExistingServer: false,
+      env: { GAME_SPEED: '600', GAME_TICK_INTERVAL: '1s' },
       timeout: 120_000,
     },
     {

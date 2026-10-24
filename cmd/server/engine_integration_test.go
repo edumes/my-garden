@@ -87,6 +87,13 @@ func TestEngineTickGrowsPlantsUnderCurrentWeather(t *testing.T) {
 	require.InDelta(t, 50*current.GrowthMultiplier, reload(t, db, plant).GrowthProgress, 1e-6,
 		"15 of Lettuce's 30 minutes, scaled by the weather")
 
+	// A fresh engine has no in-memory tick history, as after an API restart.
+	beforeRestart := reload(t, db, plant)
+	restarted := game.NewGameEngine(db, cfg)
+	require.NoError(t, restarted.Tick(t0.Add(15*time.Minute)))
+	require.Equal(t, beforeRestart.GrowthProgress, reload(t, db, plant).GrowthProgress)
+	require.EqualValues(t, 1, weatherCount(t, db), "restart preserves valid weather")
+
 	status := engine.Status()
 	require.Equal(t, "stopped", status.State, "Tick runs without Start")
 	require.NotNil(t, status.LastTick)

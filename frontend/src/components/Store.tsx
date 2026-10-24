@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatGrowthTime } from '@/lib/utils';
@@ -18,6 +18,7 @@ interface StoreProps {
 export function Store({ onClose, open }: StoreProps) {
   const [inventory, setInventory] = useState<PlantType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const { user, refreshUser } = useAuth();
@@ -26,7 +27,7 @@ export function Store({ onClose, open }: StoreProps) {
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open) setLoading(true);
+    if (open) { setLoading(true); setLoadError(false); }
   }
 
   useEffect(() => {
@@ -42,6 +43,7 @@ export function Store({ onClose, open }: StoreProps) {
         setQuantities(initialQuantities);
       })
       .catch((err) => {
+        setLoadError(true);
         toast.error('Failed to load store inventory');
         console.error('Error loading inventory:', err);
       })
@@ -112,6 +114,7 @@ export function Store({ onClose, open }: StoreProps) {
     return (
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader><DialogTitle>Garden Store</DialogTitle><DialogDescription>Loading available seeds.</DialogDescription></DialogHeader>
           <div className="text-center">
             <Package className="w-8 h-8 mx-auto mb-4 animate-pulse" />
             <p className="text-muted-foreground">Loading store...</p>
@@ -128,6 +131,7 @@ export function Store({ onClose, open }: StoreProps) {
           <div className="flex items-center space-x-2">
             <ShoppingCart className="w-6 h-6 text-primary" />
             <DialogTitle className="text-2xl font-bold">Garden Store</DialogTitle>
+            <DialogDescription>Buy seeds to plant in your garden.</DialogDescription>
           </div>
           <div className="flex items-center space-x-2">
             <Coins className="w-5 h-5 text-yellow-500" />
@@ -137,6 +141,7 @@ export function Store({ onClose, open }: StoreProps) {
 
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {loadError && <p role="alert">Unable to load seeds. Check your connection and reopen the store to retry.</p>}
             {inventory.map((plantType) => (
               <Card key={plantType.id} className="relative">
                 <CardHeader className="pb-3">
@@ -157,7 +162,7 @@ export function Store({ onClose, open }: StoreProps) {
                   <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
                     <div>Growth: {formatGrowthTime(plantType.growth_time)}</div>
                     <div>Yield: {plantType.yield}</div>
-                    <div>Value: {plantType.harvest_value} coins</div>
+                    <div>Harvest: {plantType.harvest_value * plantType.yield} coins</div>
                     <div className="font-semibold text-primary">
                       Price: {plantType.seed_price} coins
                     </div>

@@ -132,7 +132,7 @@ my-garden/
 
 **Integration tests** carry the `//go:build integration` tag and call the real HTTP API. `testdb.New(t)` from `internal/testdb` gives each test its own randomly named database on the server from the `DB_*` settings (environment first, then `.env`), applies the migrations and seed data, and drops the database when the test ends. Start new integration tests the same way.
 
-**Browser smoke tests** live in `frontend/e2e` and run with Playwright in the installed Google Chrome. Playwright starts the API and the Vite dev server unless they are already running. Each run signs up a new player in the configured database.
+**Browser smoke tests** live in `frontend/e2e` and run with Playwright in the installed Google Chrome. Playwright starts the API and the Vite dev server with accelerated growth (`GAME_SPEED=600`, one-second ticks). Stop an existing API on port 8080 before running them; Vite can be reused. Each run signs up a new player in the configured database and completes the loop through harvesting, verifies coins, XP and consumed inventory after reload, and checks recovery from a failed refresh.
 
 One command runs the same checks as CI:
 

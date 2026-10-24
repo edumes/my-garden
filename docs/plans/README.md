@@ -23,6 +23,10 @@ This directory turns the project audit into incremental, reviewable phases. Work
 | 6 | [Social and real-time](./06-social-and-realtime.md) | Reliable collaboration and live updates | Phases 2-4 |
 | 7 | [Production readiness](./07-production-readiness.md) | Operable deployment for real users | Phases 1-6 |
 
+## Progress (2026-10-24)
+
+Phases 1-3 are implemented. Phase 3's completion evidence and remaining Phase 4 warnings are recorded in [Core gameplay loop](./03-core-gameplay-loop.md#completion-evidence-2026-10-24). Next: Phase 4, starting with authentication and onboarding.
+
 ## Current baseline
 
 Recorded on 2026-10-19 from local execution:

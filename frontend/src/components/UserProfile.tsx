@@ -1,18 +1,9 @@
 import { Calendar, Coins, Medal, Star, Trophy } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { apiService } from '../services/api';
 import { Label } from './ui/label';
 
 export function UserProfile() {
-  const { user } = useAuth();
-  const [profile, setProfile] = useState(user);
-
-  useEffect(() => {
-    apiService.getUserProfile()
-      .then((response) => setProfile(response.user))
-      .catch((error) => console.error('Failed to load profile:', error));
-  }, []);
+  const { user: profile } = useAuth();
 
   if (!profile) return null;
 

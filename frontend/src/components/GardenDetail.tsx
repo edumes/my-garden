@@ -7,6 +7,7 @@ import { Garden, GardenPermission, PlantType } from '../types/api';
 import { GardenGrid } from './GardenGrid';
 import { PlantSeedModal } from './PlantSeedModal';
 import { Button } from './ui/button';
+import { WeatherWidget } from './WeatherWidget';
 
 interface GardenDetailProps {
   garden: Garden;
@@ -17,7 +18,10 @@ interface GardenDetailProps {
 }
 
 export function GardenDetail({ garden: initialGarden, isOwner, permissions, onBack, onOpenStore }: GardenDetailProps) {
-  const can = (permission: GardenPermission) => permissions.includes(permission);
+  const [capabilities, setCapabilities] = useState(permissions);
+  const can = (permission: GardenPermission) => capabilities.includes(permission);
+  const [syncError, setSyncError] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [garden, setGarden] = useState<Garden>(initialGarden);
   const [showPlantModal, setShowPlantModal] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
@@ -29,8 +33,12 @@ export function GardenDetail({ garden: initialGarden, isOwner, permissions, onBa
 
   const loadGardenDetails = useCallback(() =>
     apiService.getGarden(gardenId)
-      .then((response) => setGarden(response.garden))
-      .catch((error) => console.error('Failed to load garden details:', error)),
+      .then((response) => {
+        setGarden(response.garden);
+        setCapabilities(response.permissions);
+        setSyncError(false);
+      })
+      .catch(() => setSyncError(true)),
   [gardenId]);
 
   useEffect(() => {
@@ -42,11 +50,11 @@ export function GardenDetail({ garden: initialGarden, isOwner, permissions, onBa
   useEffect(() => {
     apiService.getPlantTypes()
       .then((response) => setPlantTypes(response.plant_types))
-      .catch((error) => console.error('Failed to load plant types:', error))
+      .catch(() => toast.error('Unable to load plant types. Reload the page to retry.'))
       .finally(() => setPlantTypesLoading(false));
   }, []);
 
-  const handlePlantAction = async (plantId: string, action: 'water' | 'fertilize' | 'harvest' | 'remove') => {
+  const handlePlantAction = async (plantId: string, action: 'harvest' | 'remove') => {
     if (action === 'harvest' && !can('harvest')) {
       toast.error('You don\'t have permission to harvest in this garden');
       return;
@@ -56,6 +64,8 @@ export function GardenDetail({ garden: initialGarden, isOwner, permissions, onBa
       return;
     }
 
+    if (busy) return;
+    setBusy(true);
     try {
       const plant = garden.plants?.find(p => p.id === plantId);
       if (!plant) return;
@@ -83,7 +93,9 @@ export function GardenDetail({ garden: initialGarden, isOwner, permissions, onBa
       await loadGardenDetails();
     } catch (error) {
       console.error(`Failed to ${action} plant:`, error);
-      toast.error(`Failed to ${action} plant`);
+      toast.error(error instanceof Error ? error.message : `Failed to ${action} plant`);
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -97,7 +109,8 @@ export function GardenDetail({ garden: initialGarden, isOwner, permissions, onBa
   };
 
   const handlePlantSubmit = async (plantTypeId: string) => {
-    if (selectedPosition === null) return;
+    if (selectedPosition === null || busy) return;
+    setBusy(true);
 
     try {
       const { reward } = await apiService.plantSeed(garden.id, {
@@ -113,7 +126,9 @@ export function GardenDetail({ garden: initialGarden, isOwner, permissions, onBa
         : 'Seed planted successfully!');
     } catch (error) {
       console.error('Failed to plant seed:', error);
-      toast.error('Failed to plant seed');
+      toast.error(error instanceof Error ? error.message : 'Failed to plant seed');
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -122,6 +137,7 @@ export function GardenDetail({ garden: initialGarden, isOwner, permissions, onBa
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Button
+            aria-label="Back to gardens"
             onClick={onBack}
             variant="secondary"
             className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
@@ -140,7 +156,7 @@ export function GardenDetail({ garden: initialGarden, isOwner, permissions, onBa
               <div className="flex items-center space-x-1">
                 <Shield className="w-4 h-4 text-green-500" />
                 <span className="text-sm text-green-600 dark:text-green-400 capitalize">
-                  {isOwner ? 'Owner' : permissions.join(', ')}
+                  {isOwner ? 'Owner' : capabilities.join(', ')}
                 </span>
               </div>
             </div>
@@ -153,7 +169,13 @@ export function GardenDetail({ garden: initialGarden, isOwner, permissions, onBa
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
         <div className="lg:col-span-3 order-2 lg:order-1">
+          {syncError && <div role="alert" className="mb-4 p-3 border rounded-lg">
+            Garden updates unavailable. Check your connection. Showing the last loaded state.
+            <Button variant="outline" onClick={loadGardenDetails}>Retry</Button>
+          </div>}
           <GardenGrid
+            permissions={syncError ? [] : capabilities}
+            busy={busy}
             plants={garden.plants || []}
             onPlantAction={(plantId, action) => handlePlantAction(plantId, action)}
             onPlantSeed={handlePlantSeed}
@@ -161,6 +183,7 @@ export function GardenDetail({ garden: initialGarden, isOwner, permissions, onBa
         </div>
 
         <div className="space-y-4 sm:space-y-6 order-1 lg:order-2">
+          <WeatherWidget />
           <div className="bg-card rounded-xl shadow-sm border border-border p-4 sm:p-6">
             <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4">Garden Stats</h3>
             <div className="space-y-4">
@@ -190,7 +213,7 @@ export function GardenDetail({ garden: initialGarden, isOwner, permissions, onBa
                     <span className="text-sm text-muted-foreground">Growing</span>
                   </div>
                   <span className="text-sm sm:text-base font-medium">
-                    {garden.plants?.filter(p => p.stage !== 'harvestable' && p.stage !== 'seed').length || 0}
+                    {garden.plants?.filter(p => p.stage !== 'harvestable').length || 0}
                   </span>
                 </div>
               </div>
@@ -278,6 +301,7 @@ export function GardenDetail({ garden: initialGarden, isOwner, permissions, onBa
 
       {showPlantModal && (
         <PlantSeedModal
+          busy={busy}
           open={showPlantModal}
           onClose={() => {
             setShowPlantModal(false);

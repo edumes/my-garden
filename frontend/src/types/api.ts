@@ -9,6 +9,8 @@ export interface User {
   // Experience at which the current level started and the next one starts.
   level_experience: number;
   next_level_experience: number;
+  garden_limit: number;
+  next_garden_level: number;
   coins: number;
   avatar?: string;
   timezone?: string;

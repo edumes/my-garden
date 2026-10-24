@@ -6,12 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// MaxGardens is how many gardens a player of this level may own: one at
-// levels 1 and 2, then one more every two levels. Shared gardens do not count.
-func MaxGardens(level int) int {
-	return (level + 1) / 2
-}
-
 // gardenLimitError reports that the owner needs a higher level for another
 // garden.
 type gardenLimitError struct{ owned, nextLevel int }

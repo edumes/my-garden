@@ -3,6 +3,7 @@ import {
   Leaf,
   ShoppingCart,
   TrendingUp,
+  Trophy,
   Activity,
   Settings,
   LucideIcon
@@ -47,6 +48,12 @@ export function getMenuList(): Group[] {
           href: "/garden",
           label: "My Gardens",
           icon: Leaf,
+          submenus: []
+        },
+        {
+          href: "/profile",
+          label: "Progress",
+          icon: Trophy,
           submenus: []
         }
       ]

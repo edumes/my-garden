@@ -23,6 +23,11 @@ func ExperienceForLevel(level int) int {
 	return 50 * level * (level - 1)
 }
 
+// MaxGardens is the ownership limit at this level. Shared gardens do not count.
+func MaxGardens(level int) int {
+	return (level + 1) / 2
+}
+
 // LevelFor returns the level a player with this much experience has reached.
 func LevelFor(experience int) int {
 	level := 1
@@ -57,5 +62,7 @@ func (u User) MarshalJSON() ([]byte, error) {
 	p := plain(u)
 	p.LevelExperience = ExperienceForLevel(u.Level)
 	p.NextLevelExperience = ExperienceForLevel(u.Level + 1)
+	p.GardenLimit = MaxGardens(u.Level)
+	p.NextGardenLevel = 2*p.GardenLimit + 1
 	return json.Marshal(p)
 }

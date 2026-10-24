@@ -135,7 +135,7 @@ func (h *GardenHandler) CreateGarden(c *gin.Context) {
 		if err := tx.Model(&Garden{}).Where("user_id = ?", garden.UserID).Count(&owned).Error; err != nil {
 			return err
 		}
-		if int(owned) >= MaxGardens(level) {
+		if int(owned) >= auth.MaxGardens(level) {
 			return gardenLimitError{owned: int(owned), nextLevel: 2*int(owned) + 1}
 		}
 		return tx.Create(&garden).Error

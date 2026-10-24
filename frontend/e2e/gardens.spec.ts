@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 test('shared garden cards and plots follow current capabilities', async ({ page, request }) => {
-  const base = 'http://localhost:8080/api/v1';
+  const base = `${test.info().project.use.baseURL}/api/v1`;
   const stamp = Date.now();
   const ownerResponse = await request.post(`${base}/auth/register`, { data: { username: `owner${stamp}`, email: `owner${stamp}@example.com`, password: 'test-password' } });
   expect(ownerResponse.status()).toBe(201);

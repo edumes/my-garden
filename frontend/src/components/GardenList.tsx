@@ -76,12 +76,16 @@ export function GardenList({ onSelectGarden }: GardenListProps) {
         <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">Your gardens</h2>
         <div className="flex items-center space-x-2">
           <JoinGardenModal onGardenJoined={handleGardenJoined} />
+          <fieldset disabled={user?.garden_limit !== undefined && (gardenData.owned_gardens?.length ?? 0) >= user.garden_limit}>
           <CreateGardenModal
             onClose={() => { }}
             onSubmit={handleCreateGarden}
           />
+          </fieldset>
         </div>
       </div>
+
+      {user?.garden_limit !== undefined && <p className="text-sm text-muted-foreground mb-5">{gardenData.owned_gardens?.length ?? 0}/{user.garden_limit} garden slots used. Your next slot unlocks at level {user.next_garden_level}.</p>}
 
       {(gardenData.owned_gardens?.length || 0) === 0 && (gardenData.shared_gardens?.length || 0) === 0 ? (
         <div className="game-panel text-center py-8 sm:py-12">

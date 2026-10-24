@@ -27,11 +27,24 @@ func TestUserJSONIncludesLevelBounds(t *testing.T) {
 	var got struct {
 		LevelExperience     int `json:"level_experience"`
 		NextLevelExperience int `json:"next_level_experience"`
+		GardenLimit         int `json:"garden_limit"`
+		NextGardenLevel     int `json:"next_garden_level"`
 	}
 	if err := json.Unmarshal(raw, &got); err != nil {
 		t.Fatal(err)
 	}
 	if got.LevelExperience != 300 || got.NextLevelExperience != 600 {
 		t.Errorf("got bounds %+v, want 300 and 600", got)
+	}
+	if got.GardenLimit != 2 || got.NextGardenLevel != 5 {
+		t.Errorf("got garden unlocks %+v, want limit 2 and next level 5", got)
+	}
+}
+
+func TestGardenLimitsMatchProfile(t *testing.T) {
+	for level, want := range map[int]int{1: 1, 2: 1, 3: 2, 4: 2, 5: 3, 20: 10} {
+		if got := MaxGardens(level); got != want {
+			t.Errorf("MaxGardens(%d) = %d, want %d", level, got, want)
+		}
 	}
 }

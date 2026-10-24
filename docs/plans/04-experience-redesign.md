@@ -41,7 +41,18 @@ Phase 4 remains in progress; the store increment below follows the garden work.
 - Build and lint passed, with the existing bundle and eight Fast Refresh warnings. The existing four browser tests passed. The new store test exceeded its initial 30-second budget during a parallel cold run, then passed in isolation with a 90-second budget (11.6 seconds): empty bag, two-seed purchase, balance/count refresh, persistence, a failed inventory request and retry, level locks, insufficient funds, responsive layout and route close.
 - Store desktop and inventory mobile screenshots were inspected. A separate local preview database is used for Eduardo's manual testing, with GAME_SPEED=60 and one-second ticks; this does not alter default gameplay settings.
 
-Remaining Phase 4 work includes progression/achievements, marketplace, sharing, settings, navigation cleanup, route splitting and the deferred dependency upgrades.
+The progression increment below follows store and inventory. Achievements still require server-side triggers in Phase 6.
+
+## Progression increment completed (2026-10-24)
+
+- `/profile` separates personal progression from the garden dashboard. It shows current-level and lifetime XP, the next level requirement, current coin balance, unlocked seeds and future seed tiers from the live catalog. The sidebar and account menu link to Progress.
+- User JSON includes `garden_limit` and `next_garden_level`. Garden creation and serialization now share `auth.MaxGardens`; the client does not repeat this limit formula or the XP curve. The garden list displays used slots and disables creation when the limit is reached.
+- Catalog errors preserve XP/garden information and offer retry. A real browser scenario earns 128 XP through four plant/harvest cycles, confirms level 2 and new seed unlocks, verifies reload persistence and tests catalog failure recovery. Desktop/light and mobile/dark captures were inspected.
+- Achievements remain hidden until Phase 6 implements verifiable award triggers; no decorative trophies are presented as earned achievements.
+- Go unit/integration tests, `go vet`, generated Swagger, frontend build and lint passed (the existing eight Fast Refresh warnings and bundle advisory remain). All six browser tests passed together after correcting the isolated test CORS configuration.
+- Browser tests use configurable API/frontend ports, a matching proxy/CORS origin and two workers. Validation ran on ports 8082/5174 against the test database, preserving the manual preview at 5173. The preview API was updated against its existing database without resetting accounts.
+
+Phase 4 remains in progress. Next: marketplace experience, then sharing, settings, remaining navigation/architecture work and deferred dependency upgrades.
 
 ## Experience principles
 

@@ -4,7 +4,7 @@ import { defineConfig } from 'vite';
 
 // The app calls the API through the relative /api path; in development and
 // preview, forward it to the locally running Go server.
-const proxy = { '/api': 'http://localhost:8080' };
+const proxy = { '/api': process.env.API_PROXY_TARGET ?? 'http://localhost:8080' };
 
 // https://vitejs.dev/config/
 export default defineConfig({

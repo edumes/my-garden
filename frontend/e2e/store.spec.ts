@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('store purchases update the bag; inventory survives reload and failed requests recover', async ({ page, request }) => {
   test.setTimeout(90_000);
   const username = `shop${Date.now()}`;
-  const registration = await request.post('http://localhost:8080/api/v1/auth/register', { data: { username, email: `${username}@example.com`, password: 'test-password' } });
+  const registration = await request.post(`${test.info().project.use.baseURL}/api/v1/auth/register`, { data: { username, email: `${username}@example.com`, password: 'test-password' } });
   expect(registration.status()).toBe(201);
   const account = await registration.json();
   await page.addInitScript(token => localStorage.setItem('auth_token', token), account.token);

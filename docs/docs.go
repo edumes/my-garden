@@ -2549,6 +2549,9 @@ const docTemplate = `{
                 "first_name": {
                     "type": "string"
                 },
+                "garden_limit": {
+                    "type": "integer"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -2566,6 +2569,9 @@ const docTemplate = `{
                 },
                 "level_experience": {
                     "description": "Experience at which the current level started and the next one starts.",
+                    "type": "integer"
+                },
+                "next_garden_level": {
                     "type": "integer"
                 },
                 "next_level_experience": {

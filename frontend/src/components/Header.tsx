@@ -80,6 +80,7 @@ export function Header({ onOpenStore }: HeaderProps) {
                   <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuLabel>My Account</DropdownMenuLabel>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate('/profile')}><Trophy className="w-4 h-4 mr-2" /><span>My progress</span></DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate('/settings')}>
                       <Settings className="w-4 h-4 mr-2" />
                       <span>Settings</span>

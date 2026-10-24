@@ -20,6 +20,8 @@ type User struct {
 	// Experience at which the current level started and the next one starts.
 	LevelExperience     int               `json:"level_experience" gorm:"-"`
 	NextLevelExperience int               `json:"next_level_experience" gorm:"-"`
+	GardenLimit         int               `json:"garden_limit" gorm:"-"`
+	NextGardenLevel     int               `json:"next_garden_level" gorm:"-"`
 	Coins               int               `json:"coins" gorm:"default:100;check:chk_users_coins,coins >= 0"`
 	Timezone            string            `json:"timezone" gorm:"default:'UTC'"`
 	Language            string            `json:"language" gorm:"default:'en'"`

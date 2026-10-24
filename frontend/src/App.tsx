@@ -8,6 +8,7 @@ import { Header } from './components/Header';
 import JoinGardenPage from './components/JoinGardenPage';
 import { Login } from './components/Login';
 import { Register } from './components/Register';
+import { UserProfile } from './components/UserProfile';
 import { Store } from './components/Store';
 import { AuditLogs } from './components/AuditLogs';
 import { Marketplace } from './components/Marketplace';
@@ -118,6 +119,7 @@ function AppContent() {
               </PrivateRoute>
             }
           />
+          <Route path="/profile" element={<PrivateRoute><UserProfile /></PrivateRoute>} />
           <Route path="/store" element={<PrivateRoute><Store open onClose={() => navigate('/garden')} /></PrivateRoute>} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />

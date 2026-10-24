@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 import { apiService } from '../services/api';
 import { User } from '../types/api';
 
@@ -69,14 +69,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     try {
       const response = await apiService.getUserProfile();
       setUser(response.user);
     } catch (error) {
       console.error('Failed to refresh user data:', error);
     }
-  };
+  }, []);
 
   const value = {
     user,

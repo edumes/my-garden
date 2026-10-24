@@ -119,6 +119,18 @@
 .seed-inventory-note { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; font-size: 14px; margin-bottom: 20px; }
 .seed-receipt { background: var(--garden-soil); color: var(--garden-ink); border: 1px solid var(--garden-line); padding: 12px; border-radius: 12px; font-size: 14px; margin-bottom: 16px; }
 .seed-shop-error { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 14px; padding: 12px; border: 1px solid hsl(var(--destructive)); border-radius: 12px; margin-bottom: 16px; }
+.progress-avatar { width: 60px; height: 60px; display: grid; place-items: center; flex-shrink: 0; background: var(--garden-lime); color: var(--garden-ink); border: 2px solid var(--garden-line); border-radius: 20px; font-size: 28px; font-weight: 900; }
+.progress-level { margin-bottom: 0; }
+.progress-level .garden-eyebrow { color: inherit; }
+.progress-page .garden-heading { display: grid; grid-template-columns: 60px minmax(0, 1fr) auto; }
+.progress-milestones { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.progress-milestones h2 { margin-top: 10px; font-size: 16px; font-weight: 800; }
+.progress-number { font-size: 42px; line-height: 1.1; font-weight: 900; margin: 14px 0 6px; color: var(--garden-ink); }
+.progress-seed-tiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.seed-tier { padding: 20px; }
+.seed-tier.is-unlocked { border-color: #739a39; }
+.seed-tier.is-unlocked > div > span { color: #568118; }
+.dark .seed-tier.is-unlocked > div > span { color: #cfe988; }
 @media (max-width: 900px) { .seed-catalog { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 767px) {
   .auth-shell { grid-template-columns: 1fr; border-radius: 24px; box-shadow: 4px 4px 0 #173d30; }
@@ -135,6 +147,10 @@
   .seed-shop-heading, .seed-shop-body, .seed-shop-tools { padding-left: 16px; padding-right: 16px; }
   .seed-shop-heading { padding-right: 40px; }
   .seed-catalog { grid-template-columns: 1fr; }
+  .progress-milestones, .progress-seed-tiers { grid-template-columns: 1fr; }
+  .progress-page .garden-heading { grid-template-columns: 48px minmax(0, 1fr); }
+  .progress-page .garden-heading > a { grid-column: 1 / -1; justify-self: start; }
+  .progress-avatar { width: 48px; height: 48px; font-size: 24px; }
 }
 
 @layer base {

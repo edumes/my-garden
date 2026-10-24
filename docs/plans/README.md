@@ -25,7 +25,7 @@ This directory turns the project audit into incremental, reviewable phases. Work
 
 ## Progress (2026-10-24)
 
-Phases 1-3 are implemented. Phase 3's completion evidence and remaining Phase 4 warnings are recorded in [Core gameplay loop](./03-core-gameplay-loop.md#completion-evidence-2026-10-24). Phase 4 has started with the casual-game authentication redesign and automatic-session onboarding; see its first-increment evidence in [Experience redesign](./04-experience-redesign.md). The garden overview/detail increment is also implemented. Next: store and inventory.
+Phases 1-3 are implemented. Phase 3's completion evidence and remaining Phase 4 warnings are recorded in [Core gameplay loop](./03-core-gameplay-loop.md#completion-evidence-2026-10-24). Phase 4 has started with the casual-game authentication redesign and automatic-session onboarding; see its first-increment evidence in [Experience redesign](./04-experience-redesign.md). The garden overview/detail increment is also implemented. Store and inventory are implemented as the following increment. Next: progression and the remaining screens and architecture work in Phase 4.
 
 ## Current baseline
 

@@ -1,0 +1,54 @@
+import { expect, test } from '@playwright/test';
+
+test('store purchases update the bag; inventory survives reload and failed requests recover', async ({ page, request }) => {
+  test.setTimeout(90_000);
+  const username = `shop${Date.now()}`;
+  const registration = await request.post('http://localhost:8080/api/v1/auth/register', { data: { username, email: `${username}@example.com`, password: 'test-password' } });
+  expect(registration.status()).toBe(201);
+  const account = await registration.json();
+  await page.addInitScript(token => localStorage.setItem('auth_token', token), account.token);
+  await page.goto('/store');
+  const store = page.getByRole('dialog', { name: 'Garden Store', exact: true });
+  await expect(store).toBeVisible();
+  await store.getByRole('button', { name: /My seeds/ }).click();
+  await expect(store.getByText("You don't have any seeds yet.")).toBeVisible();
+  await store.getByRole('button', { name: 'Browse seeds', exact: true }).click();
+  await store.getByRole('textbox', { name: 'Search seeds', exact: true }).fill('Lettuce');
+  const lettuce = store.getByRole('article', { name: 'Lettuce seeds', exact: true });
+  await lettuce.getByRole('button', { name: 'More Lettuce seeds', exact: true }).click();
+  const purchased = page.waitForResponse(response => response.url().endsWith('/store/buy') && response.request().method() === 'POST');
+  await lettuce.getByRole('button', { name: 'Buy Seeds', exact: true }).click();
+  const purchase = await (await purchased).json();
+  expect(purchase.quantity).toBe(2);
+  await expect(lettuce.getByText('2 in bag', { exact: true })).toBeVisible();
+  await expect(store.getByText(`${purchase.user_coins} coins`, { exact: true })).toBeVisible();
+  await store.getByRole('button', { name: /My seeds/ }).click();
+  await expect(lettuce.getByText('ready to plant', { exact: true })).toBeVisible();
+  await page.reload();
+  await store.getByRole('button', { name: /My seeds/ }).click();
+  await expect(lettuce.getByText('2 in bag', { exact: true })).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: test.info().outputPath('inventory-mobile.png'), animations: 'disabled' });
+  await expect.poll(() => page.evaluate('document.documentElement.scrollWidth <= window.innerWidth')).toBe(true);
+
+  await page.route('**/api/v1/store/inventory/user', route => route.fulfill({ status: 503, json: { error: 'Temporarily unavailable' } }));
+  await page.reload();
+  await store.getByRole('button', { name: /My seeds/ }).click();
+  await expect(store.getByRole('alert')).toContainText('Unable to load seeds');
+  await page.unroute('**/api/v1/store/inventory/user');
+  await store.getByRole('button', { name: 'Retry loading seeds', exact: true }).click();
+  await expect(lettuce.getByText('2 in bag', { exact: true })).toBeVisible();
+  await expect(store.getByRole('alert')).toHaveCount(0);
+
+  await store.getByRole('button', { name: 'Shop seeds', exact: true }).click();
+  await store.getByRole('textbox', { name: 'Search seeds', exact: true }).fill('Tomato');
+  await expect(store.getByRole('article', { name: 'Tomato seeds', exact: true }).getByRole('button', { name: 'Level 2', exact: true })).toBeDisabled();
+  await store.getByRole('textbox', { name: 'Search seeds', exact: true }).fill('Lettuce');
+  for (let i = 0; i < 9; i++) await lettuce.getByRole('button', { name: 'More Lettuce seeds', exact: true }).click();
+  await expect(lettuce.getByRole('button', { name: 'Buy Seeds', exact: true })).toBeDisabled();
+  await expect(lettuce.getByText('Not enough coins for this quantity.', { exact: true })).toBeVisible();
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.screenshot({ path: test.info().outputPath('store-desktop.png'), animations: 'disabled' });
+  await store.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(page).toHaveURL(/\/garden$/);
+});

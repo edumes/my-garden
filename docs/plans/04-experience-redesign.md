@@ -31,7 +31,17 @@ Phase 4 is still in progress. The broader garden/store redesign, navigation, rou
 - The overview keeps progression and gardens first. Audit activity and generic tips were removed from the dashboard; the audit route remains available. Mobile navigation has an accessible name/state and no longer overlaps the brand.
 - `npm run build` and `npm run lint` passed, with the existing bundle-size and eight Fast Refresh warnings. Four Playwright tests passed, covering authentication, the full garden loop, keyboard card navigation, viewer restrictions and live capability changes; the shared harvest still rewards the grower. Light/mobile and dark shared-garden captures were inspected.
 
-Phase 4 remains in progress. Next: store and inventory, followed by the remaining screen and architecture work listed below.
+Phase 4 remains in progress; the store increment below follows the garden work.
+
+## Store and inventory increment completed (2026-10-24)
+
+- The store follows the casual-game palette and exposes Shop seeds and My seeds views, search, owned quantities, purchase totals, remaining balance and level locks. Purchase controls have explicit accessible names and prevent overlapping submissions within the shop.
+- Inventory comes from the server and refreshes after purchases. Empty results are distinct from request failures; catalog and inventory loading can fail independently, and retry recovers without repeating a purchase.
+- `/store` now opens the same store interface used by quick-buy dialogs, fixing the existing sidebar destination. Closing the route returns to gardens; the inventory also links back to gardens for planting.
+- Build and lint passed, with the existing bundle and eight Fast Refresh warnings. The existing four browser tests passed. The new store test exceeded its initial 30-second budget during a parallel cold run, then passed in isolation with a 90-second budget (11.6 seconds): empty bag, two-seed purchase, balance/count refresh, persistence, a failed inventory request and retry, level locks, insufficient funds, responsive layout and route close.
+- Store desktop and inventory mobile screenshots were inspected. A separate local preview database is used for Eduardo's manual testing, with GAME_SPEED=60 and one-second ticks; this does not alter default gameplay settings.
+
+Remaining Phase 4 work includes progression/achievements, marketplace, sharing, settings, navigation cleanup, route splitting and the deferred dependency upgrades.
 
 ## Experience principles
 

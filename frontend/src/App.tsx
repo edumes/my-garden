@@ -1,6 +1,6 @@
 import { Loader } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
 import { TooltipProvider } from './components/animate-ui/components/tooltip';
 import { Dashboard } from './components/Dashboard';
 import { GardenDetail } from './components/GardenDetail';
@@ -92,6 +92,7 @@ function GardenDetailPage({ id }: { id: string }) {
 
 function AppContent() {
   const location = useLocation();
+  const navigate = useNavigate();
   const hideHeader = location.pathname === '/login' || location.pathname === '/register';
   const [showStore, setShowStore] = useState(false);
 
@@ -117,6 +118,7 @@ function AppContent() {
               </PrivateRoute>
             }
           />
+          <Route path="/store" element={<PrivateRoute><Store open onClose={() => navigate('/garden')} /></PrivateRoute>} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route

@@ -23,6 +23,16 @@ Eduardo chose a casual-game direction: bright colors, playful details and visibl
 
 Phase 4 is still in progress. The broader garden/store redesign, navigation, route splitting, dependency upgrades and remaining screens are not completed by this increment.
 
+## Garden increment completed (2026-10-24)
+
+- Garden cards have a nine-plot preview, planted/harvestable counts, a clear open action, keyboard support and a separate labeled share action. Shared cards display all effective capabilities rather than only the first one.
+- Garden detail uses the casual-game palette, a compact summary and a plot-first layout on mobile. Plant details expand on demand, while growth stages and permitted actions remain visible. Weather, progression, plant counts, metadata and reward ownership remain available.
+- Created/updated dates follow the player's locale and timezone, with a fallback for unsupported saved preferences.
+- The overview keeps progression and gardens first. Audit activity and generic tips were removed from the dashboard; the audit route remains available. Mobile navigation has an accessible name/state and no longer overlaps the brand.
+- `npm run build` and `npm run lint` passed, with the existing bundle-size and eight Fast Refresh warnings. Four Playwright tests passed, covering authentication, the full garden loop, keyboard card navigation, viewer restrictions and live capability changes; the shared harvest still rewards the grower. Light/mobile and dark shared-garden captures were inspected.
+
+Phase 4 remains in progress. Next: store and inventory, followed by the remaining screen and architecture work listed below.
+
 ## Experience principles
 
 - The current garden and its next actions are the primary focus.

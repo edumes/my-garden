@@ -27,7 +27,7 @@ export function Header({ onOpenStore }: HeaderProps) {
     <header className="bg-card border-b border-border sticky top-0 z-50 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 pl-14 lg:pl-0">
             <div className="flex items-center space-x-2">
               <Leaf className="w-8 h-8 text-green-600" />
               <span className="text-lg sm:text-xl font-bold text-foreground">

@@ -61,7 +61,7 @@ export function GardenList({ onSelectGarden }: GardenListProps) {
   if (loadError) return <div role="alert"><p>Unable to load your gardens. Check your connection.</p><Button onClick={loadGardens}>Retry</Button></div>;
 
   return (
-    <div>
+    <div className="garden-overview">
       {user && <section className="quest-panel" aria-label="Your adventure">
         <div className="flex flex-wrap justify-between gap-2"><h2>Your growing adventure</h2><span className="font-bold">Level {user.level}</span></div>
         <p>{user.next_level_experience - user.experience} XP to your next level</p>
@@ -73,7 +73,7 @@ export function GardenList({ onSelectGarden }: GardenListProps) {
         </>}
       </section>}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 space-y-3 sm:space-y-0">
-        <h2 className="text-xl sm:text-2xl font-bold text-foreground">Gardens</h2>
+        <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">Your gardens</h2>
         <div className="flex items-center space-x-2">
           <JoinGardenModal onGardenJoined={handleGardenJoined} />
           <CreateGardenModal
@@ -84,7 +84,7 @@ export function GardenList({ onSelectGarden }: GardenListProps) {
       </div>
 
       {(gardenData.owned_gardens?.length || 0) === 0 && (gardenData.shared_gardens?.length || 0) === 0 ? (
-        <div className="text-center py-8 sm:py-12">
+        <div className="game-panel text-center py-8 sm:py-12">
           <div className="w-24 h-24 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <Plus className="w-12 h-12 text-green-600" />
           </div>
@@ -100,13 +100,12 @@ export function GardenList({ onSelectGarden }: GardenListProps) {
           {(gardenData.owned_gardens?.length || 0) > 0 && (
             <div>
               <h3 className="text-lg font-semibold text-foreground mb-4">My Gardens</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                 {(gardenData.owned_gardens || []).map((garden: Garden) => (
                   <GardenCard
                     key={garden.id}
                     garden={garden}
                     onClick={() => onSelectGarden(garden)}
-                    onEdit={() => {/* TODO: Implement edit functionality */ }}
                     onShare={() => setShareGarden(garden)}
                   />
                 ))}
@@ -120,16 +119,15 @@ export function GardenList({ onSelectGarden }: GardenListProps) {
                 <Users className="w-5 h-5 mr-2" />
                 Shared Gardens
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                 {(gardenData.shared_gardens || []).map((sharedGarden) => (
                   <GardenCard
                     key={sharedGarden.garden.id}
                     garden={sharedGarden.garden}
-                    permission={sharedGarden.permission[0]}
+                    permissions={sharedGarden.permission}
                     isShared={true}
                     sharedBy={sharedGarden.shared_by.username}
                     onClick={() => onSelectGarden(sharedGarden.garden)}
-                    onEdit={() => {/* TODO: Implement edit functionality */ }}
                   />
                 ))}
               </div>

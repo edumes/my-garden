@@ -1,114 +1,38 @@
-import { Calendar, Share2, TreePine, Users } from 'lucide-react';
+import { Leaf, Share2, Users } from 'lucide-react';
 import { Garden, GardenPermission } from '../types/api';
-import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Card } from './ui/card';
-import { MotionEffect } from './animate-ui/effects/motion-effect';
 
 interface GardenCardProps {
   garden: Garden;
-  permission?: GardenPermission;
+  permissions?: GardenPermission[];
   isShared?: boolean;
   sharedBy?: string;
   onClick: () => void;
-  onEdit: () => void;
   onShare?: () => void;
 }
 
-export function GardenCard({
-  garden,
-  permission,
-  isShared,
-  sharedBy,
-  onClick,
-  // onEdit,
-  onShare
-}: GardenCardProps) {
-  const plantCount = garden.plants?.length || 0;
-
+export function GardenCard({ garden, permissions, isShared, sharedBy, onClick, onShare }: GardenCardProps) {
+  const plants = garden.plants ?? [];
+  const ready = plants.filter(plant => plant.stage === 'harvestable').length;
   return (
-    <MotionEffect
-      // key={index}
-      slide={{
-        direction: 'left',
-      }}
-      fade
-      blur
-      zoom
-      inView
-      delay={0.05}
-    >
-
-      <Card className="rounded-xl shadow-sm border border-border hover:shadow-md transition-shadow cursor-pointer">
-        <div onClick={onClick} className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-2">
-              <h3 className="text-lg font-semibold text-foreground">{garden.name}</h3>
-              {isShared && (
-                <Badge variant="secondary" className="text-xs">
-                  <Users className="w-3 h-3 mr-1" />
-                  Shared
-                </Badge>
-              )}
-              {permission && (
-                <Badge variant="outline" className="text-xs">
-                  {permission}
-                </Badge>
-              )}
-            </div>
-            <div className="flex items-center space-x-1">
-              {onShare && (
-                <Button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onShare();
-                  }}
-                  variant="ghost"
-                  className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
-                >
-                  <Share2 className="w-4 h-4" />
-                </Button>
-              )}
-              {/* <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit();
-              }}
-              variant="ghost"
-              className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-            </Button> */}
-            </div>
-          </div>
-
-          {garden.description && (
-            <p className="text-muted-foreground text-sm mb-4">{garden.description}</p>
-          )}
-
-          {isShared && sharedBy && (
-            <p className="text-muted-foreground text-sm mb-4">
-              Shared by: {sharedBy}
-            </p>
-          )}
-
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="flex items-center space-x-2">
-              <TreePine className="w-4 h-4 text-green-500" />
-              <span className="text-sm text-muted-foreground">{plantCount} plants</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center space-x-2">
-              <Calendar className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">
-                {new Date(garden.created_at).toLocaleDateString()}
-              </span>
-            </div>
-          </div>
+    <article className="garden-card">
+      <div className="garden-card-top">
+        <span className="garden-eyebrow">{isShared ? <><Users size={14} /> Shared garden</> : <><Leaf size={14} /> Your garden</>}</span>
+        {onShare && <Button size="icon" variant="ghost" aria-label={`Share garden ${garden.name}`} onClick={onShare}><Share2 /></Button>}
+      </div>
+      <button className="garden-card-open" aria-label={`Open garden ${garden.name}`} onClick={onClick}>
+        <div className="garden-preview" aria-hidden="true">
+          {Array.from({ length: 9 }, (_, position) => {
+            const plant = plants.find(p => p.position === position);
+            return <span key={position} className={plant?.stage === 'harvestable' ? 'is-ripe' : ''}>{plant ? plant.plant_type.icon : '+'}</span>;
+          })}
         </div>
-      </Card>
-    </MotionEffect>
+        <h3>{garden.name}</h3>
+        {garden.description && <p className="text-sm text-muted-foreground line-clamp-2">{garden.description}</p>}
+        <div className="garden-card-counts"><span>{plants.length}/9 plots planted</span><span className={ready ? 'garden-ready' : ''}>{ready} ready to harvest</span></div>
+        <span className="garden-open-label">{ready ? 'Time to harvest' : 'Visit garden'} <span aria-hidden="true">&rarr;</span></span>
+      </button>
+      {isShared && <p className="garden-card-footer">{sharedBy && `Shared by ${sharedBy}. `}{permissions?.join(', ')}</p>}
+    </article>
   );
 }

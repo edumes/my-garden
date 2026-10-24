@@ -47,7 +47,7 @@ export function WeatherWidget() {
   const WeatherIcon = weatherIcons[weather.condition as keyof typeof weatherIcons] || Cloud;
 
   return (
-    <Card className="rounded-xl shadow-sm border border-border p-4 sm:p-6">
+    <Card className="game-panel p-4 sm:p-5">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-base sm:text-lg font-semibold text-foreground">Weather</h3>
         <span className="text-sm text-muted-foreground capitalize">{season}</span>

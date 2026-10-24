@@ -18,6 +18,9 @@ export function Sidebar() {
       {/* Mobile Menu Button */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <Button
+          aria-label={isMobileOpen ? 'Close navigation' : 'Open navigation'}
+          aria-expanded={isMobileOpen}
+          aria-controls="garden-navigation"
           onClick={() => setIsMobileOpen(!isMobileOpen)}
           variant="outline"
           size="icon"
@@ -37,6 +40,7 @@ export function Sidebar() {
 
       {/* Sidebar */}
       <aside
+        id="garden-navigation"
         className={cn(
           "fixed top-0 left-0 z-40 h-screen transition-all duration-300",
           // Mobile: slide in/out from left

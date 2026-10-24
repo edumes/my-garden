@@ -40,6 +40,7 @@ test('a new player completes the garden loop and keeps rewards after reload', as
   await expect(page.getByText(/Growth rate:/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Harvest plant', exact: true })).toBeVisible({ timeout: 90_000 });
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate('window.scrollTo(0, 0)');
   await page.screenshot({ path: test.info().outputPath('garden-ripe-mobile.png'), fullPage: true, animations: 'disabled' });
   await expect.poll(() => page.evaluate('document.documentElement.scrollWidth <= window.innerWidth')).toBe(true);
   const harvestResponse = page.waitForResponse(r => r.url().endsWith('/harvest') && r.request().method() === 'POST');
@@ -49,7 +50,7 @@ test('a new player completes the garden loop and keeps rewards after reload', as
   expect(reward.experience).toBeGreaterThan(0);
   await expect(page.getByText(/Harvested!/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Plant seed in position 1', exact: true })).toBeVisible();
-  const stats = page.getByText('Gardener Stats').locator('..').locator('..');
+  const stats = page.getByRole('region', { name: 'Gardener stats', exact: true });
   await expect(stats).toContainText(`${reward.experience + 2} XP`);
   await expect(stats.getByText(String(purchase.user_coins + reward.coins), { exact: true })).toBeVisible();
   const rewardedStats = await stats.innerText();
@@ -70,8 +71,18 @@ test('a new player completes the garden loop and keeps rewards after reload', as
   await expect(page.getByRole('alert')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Plant seed in position 1', exact: true })).toBeEnabled();
   await page.setViewportSize({ width: 1280, height: 720 });
+  await page.evaluate('window.scrollTo(0, 0)');
   await page.screenshot({ path: test.info().outputPath('garden-desktop.png'), fullPage: true, animations: 'disabled' });
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole('button', { name: 'Plant seed in position 1', exact: true })).toBeVisible();
+  await page.evaluate('window.scrollTo(0, 0)');
   await page.screenshot({ path: test.info().outputPath('garden-mobile.png'), fullPage: true, animations: 'disabled' });
+  await page.getByRole('button', { name: 'Back to gardens', exact: true }).click();
+  const gardenCard = page.getByRole('button', { name: 'Open garden E2E Garden', exact: true });
+  await expect(gardenCard).toContainText('0/9 plots planted');
+  await page.evaluate('window.scrollTo(0, 0)');
+  await page.screenshot({ path: test.info().outputPath('gardens-overview-mobile.png'), fullPage: true, animations: 'disabled' });
+  await gardenCard.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('region', { name: 'Garden plots', exact: true })).toBeVisible();
 });

@@ -28,8 +28,18 @@ export function GardenDetail({ garden: initialGarden, isOwner, permissions, onBa
   const [plantTypes, setPlantTypes] = useState<PlantType[]>([]);
   const [plantTypesLoading, setPlantTypesLoading] = useState(true);
   const { user, refreshUser } = useAuth();
+  const [hasSeeds, setHasSeeds] = useState<boolean | null>(null);
 
   const gardenId = initialGarden.id;
+
+  useEffect(() => {
+    if (user?.experience !== 0) return;
+    let active = true;
+    apiService.getUserSeedInventory()
+      .then(response => { if (active) setHasSeeds(response.seed_inventory.some(seed => seed.quantity > 0)); })
+      .catch(() => { if (active) setHasSeeds(null); });
+    return () => { active = false; };
+  }, [user?.experience, user?.coins]);
 
   const loadGardenDetails = useCallback(() =>
     apiService.getGarden(gardenId)
@@ -167,6 +177,12 @@ export function GardenDetail({ garden: initialGarden, isOwner, permissions, onBa
         </div>
       </div>
 
+      {user?.experience === 0 && can('plant') && <section className="quest-panel" aria-label="First planting quest">
+        <h2>First quest: plant a seed</h2>
+        <ol><li>1. Garden created!</li><li>{hasSeeds ? '2. Seeds ready!' : '2. Buy your seeds'}</li><li>3. Choose an empty plot</li></ol>
+        <p>{hasSeeds ? 'Your seeds are ready. Choose any empty plot below, select a seed and plant it to earn your first 2 XP.' : 'Open the store and buy a level 1 seed. Then choose an empty plot below to plant it.'}</p>
+        {hasSeeds === false && onOpenStore && <Button className="mt-3" onClick={onOpenStore}>Buy first seeds</Button>}
+      </section>}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
         <div className="lg:col-span-3 order-2 lg:order-1">
           {syncError && <div role="alert" className="mb-4 p-3 border rounded-lg">

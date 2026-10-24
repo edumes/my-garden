@@ -1,0 +1,64 @@
+import { expect, test } from '@playwright/test';
+
+test('signup starts a session; duplicate signup and wrong password show errors', async ({ page }) => {
+  const username = `auth${Date.now()}`;
+  const password = `pw-${username}`;
+  await page.goto('/register');
+  await expect(page.locator('aside')).toHaveCount(0);
+  await page.screenshot({ path: test.info().outputPath('register-desktop.png'), fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: test.info().outputPath('register-mobile.png'), fullPage: true });
+  await expect.poll(() => page.evaluate('document.documentElement.scrollWidth <= window.innerWidth')).toBe(true);
+  await page.getByLabel('Username', { exact: true }).fill(username);
+  await page.getByLabel('Email', { exact: true }).fill(`${username}@example.com`);
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Show password', exact: true }).click();
+  await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute('type', 'text');
+  await page.getByRole('button', { name: 'Hide password', exact: true }).click();
+  await page.getByRole('button', { name: 'Create Account', exact: true }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('region', { name: 'Your adventure' })).toContainText('Level 1');
+  await page.reload();
+  await expect(page.getByRole('region', { name: 'Your adventure' })).toBeVisible();
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.getByRole('button', { name: username, exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Logout', exact: true }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await page.getByRole('link', { name: 'Sign up', exact: true }).click();
+  await page.getByLabel('Username', { exact: true }).fill(username);
+  await page.getByLabel('Email', { exact: true }).fill(`${username}@example.com`);
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Create Account', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Username already exists');
+  await page.getByRole('link', { name: 'Sign in', exact: true }).click();
+  await page.getByLabel('Username', { exact: true }).fill(username);
+  await page.getByLabel('Password', { exact: true }).fill('wrong-password');
+  await page.getByRole('button', { name: 'Sign In', exact: true }).click();
+  await expect(page.getByRole('alert')).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath('login-error.png'), fullPage: true });
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Sign In', exact: true }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('region', { name: 'Your adventure' })).toContainText('First quest');
+});
+
+
+test('entry supports dark mode, a narrow screen and keyboard controls', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/login');
+  await expect(page.locator('html')).toHaveClass(/dark/);
+  await expect(page.locator('aside')).toHaveCount(0);
+  await expect.poll(() => page.evaluate('document.documentElement.scrollWidth <= window.innerWidth')).toBe(true);
+  await page.screenshot({ path: test.info().outputPath('login-dark-mobile.png'), fullPage: true });
+  await page.getByLabel('Username', { exact: true }).focus();
+  await page.keyboard.press('Tab');
+  await expect(page.getByLabel('Password', { exact: true })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Show password', exact: true })).toBeFocused();
+  await page.keyboard.press('Space');
+  await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute('type', 'text');
+  expect(errors).toEqual([]);
+});

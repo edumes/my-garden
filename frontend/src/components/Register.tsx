@@ -23,26 +23,40 @@ export function Register({ onToggleMode }: RegisterProps) {
   });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+    setError('');
     setLoading(true);
 
     try {
       await register(formData);
       toast.success('Account created successfully!');
-      navigate('/login');
-    } catch {
-      toast.error('Registration failed. Please try again.');
+      navigate('/', { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-3 sm:p-4 transition-colors duration-200">
-      <div className="max-w-md w-full">
-        <div className="bg-card rounded-2xl shadow-xl p-6 sm:p-8 transition-colors duration-200">
+    <main className="auth-page">
+      <div className="auth-shell">
+        <section className="auth-hero" aria-label="Welcome to My Garden">
+          <Link to="/login" className="auth-brand"><Leaf aria-hidden="true" /> My Garden</Link>
+          <p className="auth-eyebrow">A LITTLE EVERY DAY. A LOT TO DISCOVER.</p>
+          <h2>Small seeds.<br />Big adventures.</h2>
+          <p className="auth-intro">Build your own little world. Plant a seed, collect your harvest and unlock something new.</p>
+          <div className="auth-plot" aria-hidden="true">
+            {Array.from({ length: 9 }, (_, i) => <div key={i} className={i === 4 ? 'auth-plot-ripe' : ''}><Leaf /></div>)}
+            <span className="auth-harvest">Ready for your first harvest?</span>
+          </div>
+          <div className="auth-starter"><span className="auth-coin">100</span><div><strong>Your adventure starts here</strong><p>Starting coins to buy your first seeds</p></div></div>
+        </section>
+        <div className="auth-form-panel">
           <div className="text-center mb-6 sm:mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full mb-4">
               <Leaf className="w-8 h-8 text-green-600" />
@@ -51,14 +65,17 @@ export function Register({ onToggleMode }: RegisterProps) {
             <p className="text-sm sm:text-base text-muted-foreground mt-2">Start your gardening journey</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-3">
+          {error && <p role="alert" className="auth-error">{error}</p>}
+          <form aria-label="Create account" onSubmit={handleSubmit} className="space-y-2 sm:space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <Label className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
-                  First Name
+                <Label htmlFor="register-first_name" className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
+                  First Name (optional)
                 </Label>
                 <Input
                   type="text"
+                  id="register-first_name"
+                  autoComplete="given-name"
                   value={formData.first_name}
                   onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                   className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-input bg-background text-foreground rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
@@ -66,11 +83,13 @@ export function Register({ onToggleMode }: RegisterProps) {
                 />
               </div>
               <div>
-                <Label className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
-                  Last Name
+                <Label htmlFor="register-last_name" className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
+                  Last Name (optional)
                 </Label>
                 <Input
                   type="text"
+                  id="register-last_name"
+                  autoComplete="family-name"
                   value={formData.last_name}
                   onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                   className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-input bg-background text-foreground rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
@@ -80,7 +99,7 @@ export function Register({ onToggleMode }: RegisterProps) {
             </div>
 
             <div>
-              <Label className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
+              <Label htmlFor="register-username" className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
                 Username
               </Label>
               <div className="relative">
@@ -88,6 +107,10 @@ export function Register({ onToggleMode }: RegisterProps) {
                 <Input
                   type="text"
                   required
+                  id="register-username"
+                  autoComplete="username"
+                  minLength={3}
+                  maxLength={20}
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                   className="w-full pl-10 pr-4 py-2.5 sm:py-3 text-sm sm:text-base border border-input bg-background text-foreground rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
@@ -97,7 +120,7 @@ export function Register({ onToggleMode }: RegisterProps) {
             </div>
 
             <div>
-              <Label className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
+              <Label htmlFor="register-email" className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
                 Email
               </Label>
               <div className="relative">
@@ -105,6 +128,8 @@ export function Register({ onToggleMode }: RegisterProps) {
                 <Input
                   type="email"
                   required
+                  id="register-email"
+                  autoComplete="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="w-full pl-10 pr-4 py-2.5 sm:py-3 text-sm sm:text-base border border-input bg-background text-foreground rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
@@ -114,7 +139,7 @@ export function Register({ onToggleMode }: RegisterProps) {
             </div>
 
             <div>
-              <Label className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
+              <Label htmlFor="register-password" className="block text-sm font-medium text-foreground mb-1 sm:mb-2">
                 Password
               </Label>
               <div className="relative">
@@ -123,6 +148,9 @@ export function Register({ onToggleMode }: RegisterProps) {
                   type={showPassword ? 'text' : 'password'}
                   required
                   minLength={6}
+                  aria-describedby="password-hint"
+                  id="register-password"
+                  autoComplete="new-password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   className="w-full pl-10 pr-12 py-2.5 sm:py-3 text-sm sm:text-base border border-input bg-background text-foreground rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
@@ -130,6 +158,8 @@ export function Register({ onToggleMode }: RegisterProps) {
                 />
                 <button
                   type="button"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
@@ -138,6 +168,7 @@ export function Register({ onToggleMode }: RegisterProps) {
               </div>
             </div>
 
+            <p id="password-hint" className="text-xs text-muted-foreground">Use at least 6 characters for your password.</p>
             <Button
               type="submit"
               disabled={loading}
@@ -169,6 +200,6 @@ export function Register({ onToggleMode }: RegisterProps) {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

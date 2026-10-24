@@ -9,7 +9,7 @@ This directory turns the project audit into incremental, reviewable phases. Work
 - Add or update automated checks with every non-trivial behavior change.
 - Treat authorization, money, inventory, and shared access as server-authoritative.
 - Do not claim a feature is complete until its acceptance criteria have been executed.
-- Keep changes uncommitted until Eduardo reviews them, unless he asks otherwise.
+- Commit each completed phase or validated increment, as requested by Eduardo on 2026-10-24.
 
 ## Roadmap
 
@@ -25,7 +25,7 @@ This directory turns the project audit into incremental, reviewable phases. Work
 
 ## Progress (2026-10-24)
 
-Phases 1-3 are implemented. Phase 3's completion evidence and remaining Phase 4 warnings are recorded in [Core gameplay loop](./03-core-gameplay-loop.md#completion-evidence-2026-10-24). Next: Phase 4, starting with authentication and onboarding.
+Phases 1-3 are implemented. Phase 3's completion evidence and remaining Phase 4 warnings are recorded in [Core gameplay loop](./03-core-gameplay-loop.md#completion-evidence-2026-10-24). Phase 4 has started with the casual-game authentication redesign and automatic-session onboarding; see its first-increment evidence in [Experience redesign](./04-experience-redesign.md). Next: garden overview and detail.
 
 ## Current baseline
 

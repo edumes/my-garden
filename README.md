@@ -76,7 +76,7 @@ While the API runs, Swagger UI is available at http://localhost:8080/api/v1/swag
 
 ## 🎮 Features
 
-- **Accounts**: registration, login, JWT refresh and logout, profile view and update. Logging out revokes every token of the player, on every device.
+- **Accounts**: registration with immediate sign-in and a first-planting guide, login, JWT refresh and logout, profile view and update. Logging out revokes every token of the player, on every device.
 - **Abuse protection**: each client IP may send `RATE_LIMIT_REQUESTS` non-GET requests, sign-in included, per `RATE_LIMIT_WINDOW`; further requests get `429 Too Many Requests`. Outside `ENV=development` the API refuses to start with the development `JWT_SECRET` or `DB_PASSWORD`. See [env.example](env.example).
 - **Gardens**: create, rename, and delete gardens of 3×3 plots; plant seeds, harvest, and remove plants. Plants grow in real time: a plant ripens in its growth time in minutes, scaled by the current weather and by `GAME_SPEED` (use 60 in development to turn minutes into seconds), passing through seed → sprout → growing → mature → harvestable. Ripe plants wait until harvested.
 - **Harvests**: harvesting frees the plot and pays harvest value × yield, always more than the seed cost. The plant's grower, who planted or bought it, earns the coins and experience, whoever harvests.

@@ -163,7 +163,7 @@ function AppContent() {
         </Routes>
       </div>
 
-      <Store open={showStore} onClose={() => setShowStore(false)} />
+      {!hideHeader && <Store open={showStore} onClose={() => setShowStore(false)} />}
     </>
   );
 }

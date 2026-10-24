@@ -12,7 +12,7 @@ export function Dashboard() {
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-        <div className="lg:col-span-3 order-2 lg:order-1">
+        <div className="lg:col-span-3 order-1">
           <Tabs defaultValue="gardens" className="w-full">
             <TabsList className="mb-6 bg-muted/50 backdrop-blur-sm border border-border/50">
               <TabsTrigger value="gardens" className="text-sm font-medium">
@@ -33,7 +33,7 @@ export function Dashboard() {
           </Tabs>
         </div>
 
-        <div className="space-y-4 sm:space-y-6 order-1 lg:order-2">
+        <div className="space-y-4 sm:space-y-6 order-2">
           <WeatherWidget />
 
           <div className="flex justify-center">

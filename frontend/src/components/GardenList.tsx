@@ -1,6 +1,8 @@
 import { toast } from 'sonner';
 import { Loader, Plus, Users } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { Button } from './ui/button';
 import { apiService } from '../services/api';
 import { Garden, SharedGardenResponse } from '../types/api';
 import { CreateGardenModal } from './CreateGardenModal';
@@ -13,14 +15,16 @@ interface GardenListProps {
 }
 
 export function GardenList({ onSelectGarden }: GardenListProps) {
+  const { user } = useAuth();
+  const [loadError, setLoadError] = useState(false);
   const [gardenData, setGardenData] = useState<SharedGardenResponse>({ owned_gardens: [], shared_gardens: [] });
   const [loading, setLoading] = useState(true);
   const [shareGarden, setShareGarden] = useState<Garden | null>(null);
 
   const loadGardens = useCallback(() =>
     apiService.getGardens()
-      .then(setGardenData)
-      .catch((error) => console.error('Failed to load gardens:', error))
+      .then(data => { setGardenData(data); setLoadError(false); })
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false)),
   []);
 
@@ -33,8 +37,9 @@ export function GardenList({ onSelectGarden }: GardenListProps) {
       const response = await apiService.createGarden(data);
       setGardenData(prev => ({
         ...prev,
-        owned_gardens: [...prev.owned_gardens, response.garden]
+        owned_gardens: [...(prev.owned_gardens ?? []), response.garden]
       }));
+      if (user?.experience === 0 && !gardenData.owned_gardens?.length) onSelectGarden(response.garden);
     } catch (error) {
       console.error('Failed to create garden:', error);
       toast.error(`Failed to create garden: ${(error as Error).message}`);
@@ -53,8 +58,20 @@ export function GardenList({ onSelectGarden }: GardenListProps) {
     );
   }
 
+  if (loadError) return <div role="alert"><p>Unable to load your gardens. Check your connection.</p><Button onClick={loadGardens}>Retry</Button></div>;
+
   return (
     <div>
+      {user && <section className="quest-panel" aria-label="Your adventure">
+        <div className="flex flex-wrap justify-between gap-2"><h2>Your growing adventure</h2><span className="font-bold">Level {user.level}</span></div>
+        <p>{user.next_level_experience - user.experience} XP to your next level</p>
+        <progress aria-label="Level progress" className="w-full mt-3" value={user.experience - user.level_experience} max={user.next_level_experience - user.level_experience} />
+        {user.experience === 0 && <>
+          <h3 className="mt-4">First quest: plant a seed</h3>
+          <ol><li>1. Create a garden</li><li>2. Buy seeds</li><li>3. Plant your first seed</li></ol>
+          <p>Start with New Garden. Your first seed begins earning experience!</p>
+        </>}
+      </section>}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 space-y-3 sm:space-y-0">
         <h2 className="text-xl sm:text-2xl font-bold text-foreground">Gardens</h2>
         <div className="flex items-center space-x-2">

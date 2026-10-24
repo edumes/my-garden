@@ -2,6 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
+/* The entry screens and first quest share the game's bright starting palette. */
+.auth-page {
+  min-height: 100dvh;
+  padding: clamp(16px, 4vw, 64px);
+  display: grid;
+  place-items: center;
+  background: #ede9fa;
+  background-image: radial-gradient(#c9bfeb 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.auth-shell {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  max-width: 1060px;
+  width: 100%;
+  border: 2px solid #173d30;
+  border-radius: 32px;
+  overflow: hidden;
+  background: hsl(var(--card));
+  box-shadow: 8px 8px 0 #173d30;
+}
+.auth-hero { padding: 36px; background: #ddf568; color: #173d30; }
+.auth-brand { display: inline-flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 800; }
+.auth-eyebrow { margin-top: 36px; font-size: 10px; font-weight: 800; letter-spacing: .15em; }
+.auth-hero h2 { margin: 14px 0; font-size: clamp(36px, 4vw, 52px); font-weight: 900; line-height: 1.06; letter-spacing: -.04em; }
+.auth-intro { max-width: 340px; font-size: 15px; line-height: 1.6; }
+.auth-plot { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 270px; margin: 28px auto 38px; transform: rotate(-5deg); }
+.auth-plot > div { aspect-ratio: 1; display: grid; place-items: center; background: #b6d948; border: 2px solid #648c2f; border-radius: 16px; box-shadow: 0 4px 0 #648c2f; }
+.auth-plot svg { height: 34px; width: 34px; fill: #3a9b55; stroke: #205438; }
+.auth-plot .auth-plot-ripe { background: #fff4bc; transform: translateY(-6px); }
+.auth-harvest { position: absolute; bottom: -18px; right: -22px; padding: 9px 14px; background: #f5adcf; border: 2px solid #173d30; border-radius: 12px; font-size: 12px; font-weight: 800; transform: rotate(8deg); }
+.auth-starter { display: flex; gap: 12px; align-items: center; font-size: 12px; }
+.auth-starter p { margin-top: 3px; }
+.auth-coin { display: grid; place-items: center; width: 44px; height: 44px; border: 2px solid #997012; border-radius: 50%; background: #ffdb6b; font-weight: 900; }
+.auth-form-panel { align-self: center; padding: 32px 40px; }
+.auth-form-panel input { min-height: 44px; border-width: 2px; box-shadow: none; }
+.auth-form-panel button[type="submit"] { min-height: 48px; margin-top: 18px; border: 2px solid #173d30; border-radius: 12px; box-shadow: 0 4px 0 #173d30; }
+.auth-error { padding: 12px; margin-bottom: 16px; border: 1px solid hsl(var(--destructive)); border-radius: 12px; color: hsl(var(--destructive)); font-size: 14px; }
+.quest-panel { padding: 20px; margin-bottom: 24px; border: 2px solid #678829; border-radius: 20px; background: #f1fac7; color: #173d30; box-shadow: 0 4px 0 #d1e49a; }
+.quest-panel h2, .quest-panel h3 { font-weight: 800; }
+.quest-panel p { font-size: 14px; margin-top: 8px; }
+.quest-panel ol { display: flex; flex-wrap: wrap; gap: 12px; margin: 14px 0; font-size: 13px; font-weight: 600; }
+.quest-panel li { padding: 6px 10px; border-radius: 8px; background: #ffffffb3; }
+.dark .auth-page { background-color: #272139; background-image: radial-gradient(#4f435f 1px, transparent 1px); }
+@media (max-width: 767px) {
+  .auth-shell { grid-template-columns: 1fr; border-radius: 24px; box-shadow: 4px 4px 0 #173d30; }
+  .auth-hero { padding: 24px; }
+  .auth-eyebrow { margin-top: 20px; }
+  .auth-hero h2 { font-size: 36px; }
+  .auth-plot, .auth-starter { display: none; }
+  .auth-form-panel { padding: 24px; }
+}
+
 @layer base {
   body {
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
